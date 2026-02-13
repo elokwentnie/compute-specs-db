@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compute Specs DB</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/index.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔧 Compute Specs DB</h1>
+            <p>HPC and Datacenter Compute Specifications</p>
+        </header>
+
+        <div class="search-section">
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search by model, family, codename, or CPU model (e.g., Milan, EPYC, Xeon)...">
+                <button id="searchButton">Search</button>
+            </div>
+        </div>
+
+        <div class="api-links">
+            <div class="api-links-title">📡 Access JSON API:</div>
+            <div class="api-links-container">
+                <a href="/api/cpus" target="_blank" class="api-link">
+                    <span>📋</span>
+                    <span>All CPUs</span>
+                </a>
+                <a href="/visualizations" class="api-link">
+                    <span>📊</span>
+                    <span>Visualizations</span>
+                </a>
+                <a href="/api" target="_blank" class="api-link">
+                    <span>ℹ️</span>
+                    <span>API Info</span>
+                </a>
+                <a href="/docs" target="_blank" class="api-link">
+                    <span>📚</span>
+                    <span>API Docs</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="totalCpus">-</div>
+                <div class="stat-label">Total CPUs</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="uniqueFamilies">-</div>
+                <div class="stat-label">Families</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="uniqueCodenames">-</div>
+                <div class="stat-label">Codenames</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="maxCores">-</div>
+                <div class="stat-label">Max Cores</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="yearRange">-</div>
+                <div class="stat-label">Year Range</div>
+            </div>
+        </div>
+
+            <div class="table-section" id="tableSection">
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading CPU data...</p>
+                </div>
+
+                <div id="error" class="error hidden">
+                    <h3>⚠️ Error Loading Data</h3>
+                    <p id="errorMessage"></p>
+                </div>
+
+                <div id="tableContainer" class="hidden">
+                    <table id="cpuTable">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="id">ID</th>
+                            <th class="sortable" data-sort="cpu_model_name">CPU Model Name</th>
+                            <th class="sortable" data-sort="codename">Codename</th>
+                            <th class="sortable" data-sort="family">Family</th>
+                            <th class="sortable" data-sort="cpu_model">CPU Model</th>
+                            <th class="sortable" data-sort="cores">Cores</th>
+                            <th class="sortable" data-sort="threads">Threads</th>
+                            <th class="sortable" data-sort="max_turbo_frequency_ghz">Turbo GHz</th>
+                            <th class="sortable" data-sort="l3_cache_mb">L3 MB</th>
+                            <th class="sortable" data-sort="tdp_watts">TDP (W)</th>
+                            <th class="sortable" data-sort="launch_year">Year</th>
+                            <th class="sortable" data-sort="max_memory_tb">Mem TB</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <div id="emptyState" class="empty-state hidden">
+                <p>No CPUs found matching your search.</p>
+            </div>
+
+            <div id="pagination" class="pagination-container hidden">
+                <div class="pagination-info">
+                    <span>Show</span>
+                    <select id="pageSizeSelect">
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                        <option value="500">500</option>
+                    </select>
+                    <span>entries</span>
+                    <span id="paginationInfo"></span>
+                </div>
+                <div class="pagination-controls">
+                    <button id="firstPage" class="pagination-btn" disabled>First</button>
+                    <button id="prevPage" class="pagination-btn" disabled>Previous</button>
+                    <span id="pageInfo" class="page-info">Page 1 of 1</span>
+                    <button id="nextPage" class="pagination-btn">Next</button>
+                    <button id="lastPage" class="pagination-btn">Last</button>
+                </div>
+            </div>
+        </div>
+
+        <footer class="data-footer">
+            <p class="data-footer-title">Data Validation</p>
+            <p>All specifications have been manually validated against official manufacturer sources:</p>
+            <div class="data-footer-sources">
+                <a href="https://www.intel.com/content/www/us/en/products/overview.html" target="_blank" rel="noopener">Intel</a>
+                <a href="https://www.amd.com/en/products/specifications/processors.html" target="_blank" rel="noopener">AMD</a>
+                <a href="https://www.techpowerup.com/" target="_blank" rel="noopener">TechPowerUp</a>
+                <a href="https://www.cpubenchmark.net/" target="_blank" rel="noopener">PassMark</a>
+            </div>
+            <p>Found an error? <a href="https://github.com/elokwentnie/compute-specs-db/issues/new?template=report-data-error.yml" target="_blank" rel="noopener">Report it on GitHub</a> | <a href="https://github.com/elokwentnie/compute-specs-db/issues/new?template=new-cpu-request.yml" target="_blank" rel="noopener">Suggest a new CPU</a></p>
+        </footer>
+    </div>
+
+    <footer class="site-footer">
+        <div class="site-footer-inner">
+            <div class="site-footer-top">
+                <span class="site-footer-brand">Compute Specs DB</span>
+                <nav class="site-footer-links">
+                    <a href="/">Data Table</a>
+                    <a href="/visualizations">Visualizations</a>
+                    <a href="/docs" target="_blank">API Docs</a>
+                    <a href="https://github.com/elokwentnie/compute-specs-db" target="_blank" rel="noopener">GitHub</a>
+                    <a href="https://github.com/elokwentnie/compute-specs-db/issues/new/choose" target="_blank" rel="noopener">Contribute</a>
+                </nav>
+            </div>
+            <hr class="site-footer-divider">
+            <div class="site-footer-bottom">
+                <span class="site-footer-disclaimer">Intel, Xeon, and Core are trademarks of Intel Corporation. AMD, EPYC, Ryzen, and Threadripper are trademarks of Advanced Micro Devices, Inc. All other trademarks are the property of their respective owners. Data is provided "as-is" for informational purposes only, without warranty of any kind.</span>
+                <span>&copy; 2026 Compute Specs DB &middot; Open Source</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const API_BASE = '';
+        let currentCPUs = [];
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
+        let currentPage = 1;
+        let pageSize = 25;
+        let totalPages = 1;
+        let searchTimeout = null;
+
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const tableBody = document.getElementById('tableBody');
+        const loadingDiv = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
+        const tableContainer = document.getElementById('tableContainer');
+        const emptyState = document.getElementById('emptyState');
+
+        async function fetchData(url) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                showError(error.message);
+                return null;
+            }
+        }
+
+        function showError(message) {
+            loadingDiv.classList.add('hidden');
+            tableContainer.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            errorDiv.classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function displayCPUs(cpus) {
+            if (!cpus || cpus.length === 0) {
+                loadingDiv.classList.add('hidden');
+                tableContainer.classList.add('hidden');
+                errorDiv.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                currentCPUs = [];
+                currentPage = 1;
+                updatePagination(0);
+                return;
+            }
+
+            currentCPUs = [...cpus];
+            currentPage = 1; // Reset to first page when new data is loaded
+            if (currentSortColumn) {
+                sortCPUs(currentSortColumn, currentSortDirection, false);
+            } else {
+                renderTable(currentCPUs);
+            }
+        }
+
+        function renderTable(cpus) {
+            if (!cpus || cpus.length === 0) {
+                tableBody.innerHTML = '';
+                updatePagination(0);
+                loadingDiv.classList.add('hidden');
+                errorDiv.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                tableContainer.classList.add('hidden');
+                return;
+            }
+
+            // Calculate pagination
+            totalPages = Math.ceil(cpus.length / pageSize);
+            if (currentPage > totalPages && totalPages > 0) {
+                currentPage = totalPages;
+            }
+            if (currentPage < 1) currentPage = 1;
+
+            // Get current page data
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            const pageData = cpus.slice(startIndex, endIndex);
+
+            tableBody.innerHTML = '';
+            pageData.forEach(cpu => {
+                const row = document.createElement('tr');
+                const codename = cpu.codename || '-';
+                const codenameBadge = codename !== '-' 
+                    ? `<span class="codename-badge" data-codename="${codename}" title="Click to filter by ${codename}">${codename}</span>`
+                    : '<span>-</span>';
+                row.innerHTML = `
+                    <td>${cpu.id}</td>
+                    <td><strong>${cpu.cpu_model_name || '-'}</strong></td>
+                    <td>${codenameBadge}</td>
+                    <td>${cpu.family || '-'}</td>
+                    <td>${cpu.cpu_model || '-'}</td>
+                    <td>${cpu.cores ?? '-'}</td>
+                    <td>${cpu.threads ?? '-'}</td>
+                    <td>${cpu.max_turbo_frequency_ghz ?? '-'}</td>
+                    <td>${cpu.l3_cache_mb ?? '-'}</td>
+                    <td>${cpu.tdp_watts ?? '-'}</td>
+                    <td>${cpu.launch_year ?? '-'}</td>
+                    <td>${cpu.max_memory_tb ?? '-'}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+            
+            // Add click handlers to codename badges
+            document.querySelectorAll('.codename-badge').forEach(badge => {
+                badge.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const codename = badge.getAttribute('data-codename');
+                    filterByCodename(codename);
+                });
+                badge.addEventListener('mouseenter', function() {
+                    this.style.background = '#c7d2fe';
+                    this.style.transform = 'scale(1.05)';
+                });
+                badge.addEventListener('mouseleave', function() {
+                    this.style.background = '#e0e7ff';
+                    this.style.transform = 'scale(1)';
+                });
+            });
+
+            updatePagination(cpus.length);
+            loadingDiv.classList.add('hidden');
+            errorDiv.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            tableContainer.classList.remove('hidden');
+        }
+
+        function updatePagination(totalItems) {
+            const paginationDiv = document.getElementById('pagination');
+            if (totalItems === 0) {
+                paginationDiv.classList.add('hidden');
+                return;
+            }
+
+            paginationDiv.classList.remove('hidden');
+            
+            // Update pagination info
+            const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+            const endItem = Math.min(currentPage * pageSize, totalItems);
+            document.getElementById('paginationInfo').textContent = 
+                `Showing ${startItem} to ${endItem} of ${totalItems} entries`;
+
+            // Update page info
+            document.getElementById('pageInfo').textContent = 
+                `Page ${currentPage} of ${totalPages}`;
+
+            // Update button states
+            document.getElementById('firstPage').disabled = currentPage === 1;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+            document.getElementById('lastPage').disabled = currentPage === totalPages;
+        }
+
+        function goToPage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            if (currentSortColumn) {
+                sortCPUs(currentSortColumn, currentSortDirection, false);
+            } else {
+                renderTable(currentCPUs);
+            }
+        }
+
+        function changePageSize(newSize) {
+            pageSize = parseInt(newSize);
+            currentPage = 1; // Reset to first page
+            if (currentSortColumn) {
+                sortCPUs(currentSortColumn, currentSortDirection, false);
+            } else {
+                renderTable(currentCPUs);
+            }
+        }
+
+        function sortCPUs(column, direction, toggle = true) {
+            if (!currentCPUs || currentCPUs.length === 0) return;
+            if (toggle && currentSortColumn === column) {
+                direction = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            }
+            currentSortColumn = column;
+            currentSortDirection = direction;
+
+            const sorted = [...currentCPUs].sort((a, b) => {
+                let aVal = a[column];
+                let bVal = b[column];
+                if (aVal === null || aVal === undefined) aVal = '';
+                if (bVal === null || bVal === undefined) bVal = '';
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return direction === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+                const aStr = String(aVal).toLowerCase();
+                const bStr = String(bVal).toLowerCase();
+                return direction === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+            });
+
+            updateSortIndicators(column, direction);
+            renderTable(sorted);
+        }
+
+        function updateSortIndicators(column, direction) {
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+            if (column && direction) {
+                const header = document.querySelector(`th[data-sort="${column}"]`);
+                if (header) header.classList.add(`sort-${direction}`);
+            }
+        }
+
+        async function loadAllCPUs() {
+            loadingDiv.classList.remove('hidden');
+            const cpus = await fetchData(`${API_BASE}/api/cpus?limit=1000`);
+            if (cpus) displayCPUs(cpus);
+        }
+
+        async function searchCPUs(query) {
+            // Clear any pending search timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+                searchTimeout = null;
+            }
+
+            if (!query || query.trim() === '') {
+                currentSortColumn = null;
+                currentSortDirection = 'asc';
+                updateSortIndicators(null, null);
+                loadAllCPUs();
+                return;
+            }
+            
+            loadingDiv.classList.remove('hidden');
+            const encodedQuery = encodeURIComponent(query.trim());
+            const cpus = await fetchData(`${API_BASE}/api/cpus/search?q=${encodedQuery}`);
+            if (cpus) displayCPUs(cpus);
+        }
+
+        // Debounced search for real-time filtering
+        function debouncedSearch(query) {
+            // Clear existing timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Set new timeout to search after user stops typing
+            searchTimeout = setTimeout(() => {
+                searchCPUs(query);
+            }, 300); // Wait 300ms after user stops typing
+        }
+
+        async function filterByCodename(codename) {
+            if (!codename || codename === '-') return;
+            
+            // Toggle behavior: if already filtering by this codename, reset to show all
+            if (searchInput.value === codename) {
+                searchInput.value = '';
+                await searchCPUs('');
+            } else {
+                searchInput.value = codename;
+                await searchCPUs(codename);
+            }
+        }
+
+        async function loadStats() {
+            const stats = await fetchData(`${API_BASE}/api/stats`);
+            if (stats) {
+                document.getElementById('totalCpus').textContent = stats.total_cpus || '-';
+                document.getElementById('uniqueFamilies').textContent = stats.unique_families || '-';
+                document.getElementById('uniqueCodenames').textContent = stats.unique_codenames || '-';
+                document.getElementById('maxCores').textContent = stats.max_cores || '-';
+                document.getElementById('yearRange').textContent = stats.year_range || '-';
+            }
+        }
+
+        // Real-time search as user types
+        searchInput.addEventListener('input', (e) => {
+            debouncedSearch(e.target.value);
+        });
+
+        // Search button click (immediate search)
+        searchButton.addEventListener('click', () => {
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+                searchTimeout = null;
+            }
+            searchCPUs(searchInput.value);
+        });
+
+        // Enter key (immediate search)
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                if (searchTimeout) {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = null;
+                }
+                searchCPUs(searchInput.value);
+            }
+        });
+
+        document.querySelectorAll('th.sortable').forEach(header => {
+            header.addEventListener('click', () => {
+                const column = header.getAttribute('data-sort');
+                if (column) sortCPUs(column, currentSortDirection);
+            });
+        });
+
+        // Pagination event listeners
+        document.getElementById('firstPage').addEventListener('click', () => goToPage(1));
+        document.getElementById('prevPage').addEventListener('click', () => goToPage(currentPage - 1));
+        document.getElementById('nextPage').addEventListener('click', () => goToPage(currentPage + 1));
+        document.getElementById('lastPage').addEventListener('click', () => goToPage(totalPages));
+        document.getElementById('pageSizeSelect').addEventListener('change', (e) => changePageSize(e.target.value));
+
+        window.addEventListener('load', () => {
+            loadAllCPUs();
+            loadStats();
+        });
+    </script>
+</body>
+</html>
+

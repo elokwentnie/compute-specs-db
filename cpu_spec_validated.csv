@@ -1,0 +1,170 @@
+﻿CPU Model Name,Family,CPU Model,Codename,Cores,Threads,Max Turbo Frequency (GHz),L3 Cache (MB),TDP (W),Launch Year,Max Memory (TB)
+AMD EPYC 4564P 16-Core Processor,AMD EPYC,EPYC 4564P,Genoa,16,32,5.7,64.0,170,2024,1.0
+AMD EPYC 7262 8-Core Processor,AMD EPYC,EPYC 7262,Rome,8,16,3.4,128.0,155,2019,4.0
+AMD EPYC 7282 16-Core Processor,AMD EPYC,EPYC 7282,Rome,16,32,3.2,64.0,120,2019,4.0
+AMD EPYC 7301 16-Core Processor,AMD EPYC,EPYC 7301,Naples,16,32,2.7,64.0,170,2017,4.0
+AMD EPYC 7302 16-Core Processor,AMD EPYC,EPYC 7302,Rome,16,32,3.3,128.0,155,2019,4.0
+AMD EPYC 7313 16-Core Processor,AMD EPYC,EPYC 7313,Milan,16,32,3.7,128.0,155,2021,4.0
+AMD EPYC 7351 16-Core Processor,AMD EPYC,EPYC 7351,Naples,16,32,2.9,64.0,170,2017,2.0
+AMD EPYC 7351P 16-Core Processor,AMD EPYC,EPYC 7351P,Naples,16,32,2.9,64.0,170,2017,2.0
+AMD EPYC 7352 24-Core Processor,AMD EPYC,EPYC 7352,Rome,24,48,3.2,128.0,155,2019,4.0
+AMD EPYC 7402 24-Core Processor,AMD EPYC,EPYC 7402,Rome,24,48,3.35,128.0,180,2019,4.0
+AMD EPYC 7413 24-Core Processor,AMD EPYC,EPYC 7413,Milan,24,48,3.6,128.0,180,2021,4.0
+AMD EPYC 7443 24-Core Processor,AMD EPYC,EPYC 7443,Milan,24,48,4.0,128.0,200,2021,4.0
+AMD EPYC 7451 24-Core Processor,AMD EPYC,EPYC 7451,Naples,24,48,3.2,64.0,180,2017,2.0
+AMD EPYC 7452 32-Core Processor,AMD EPYC,EPYC 7452,Rome,32,64,3.35,128.0,155,2019,4.0
+AMD EPYC 7453 28-Core Processor,AMD EPYC,EPYC 7453,Milan,28,56,3.45,64.0,225,2021,4.0
+AMD EPYC 74F3 24-Core Processor,AMD EPYC,EPYC 74F3,Milan,24,48,4.0,256.0,240,2021,4.0
+AMD EPYC 7501 32-Core Processor,AMD EPYC,EPYC 7501,Naples,32,64,3.0,64.0,170,2017,2.0
+AMD EPYC 7502 32-Core Processor,AMD EPYC,EPYC 7502,Rome,32,64,3.35,128.0,180,2019,4.0
+AMD EPYC 7513 32-Core Processor,AMD EPYC,EPYC 7513,Milan,32,64,3.65,128.0,200,2021,4.0
+AMD EPYC 7532 32-Core Processor,AMD EPYC,EPYC 7532,Milan,32,64,3.3,256.0,200,2020,4.0
+AMD EPYC 7542 32-Core Processor,AMD EPYC,EPYC 7542,Rome,32,64,3.4,128.0,225,2019,4.0
+AMD EPYC 7543 32-Core Processor,AMD EPYC,EPYC 7543,Milan,32,64,3.7,256.0,225,2021,4.0
+AMD EPYC 7551 32-Core Processor,AMD EPYC,EPYC 7551,Naples,32,64,3.0,64.0,180,2017,2.0
+AMD EPYC 7551P 32-Core Processor,AMD EPYC,EPYC 7551P,Naples,32,64,3.0,64.0,180,2017,2.0
+AMD EPYC 75F3 32-Core Processor,AMD EPYC,EPYC 75F3,Milan,32,64,4.0,256.0,280,2021,4.0
+AMD EPYC 7643 48-Core Processor,AMD EPYC,EPYC 7643,Milan,48,96,3.6,256.0,225,2021,4.0
+AMD EPYC 7702 64-Core Processor,AMD EPYC,EPYC 7702,Rome,64,128,3.35,256.0,200,2019,4.0
+AMD EPYC 7702P 64-Core Processor,AMD EPYC,EPYC 7702P,Rome,64,128,3.35,256.0,200,2019,4.0
+AMD EPYC 7713P 64-Core Processor,AMD EPYC,EPYC 7713P,Milan,64,128,3.68,256.0,225,2021,4.0
+AMD EPYC 7742 64-Core Processor,AMD EPYC,EPYC 7742,Rome,64,128,3.4,256.0,225,2019,4.0
+AMD EPYC 7763 64-Core Processor,AMD EPYC,EPYC 7763,Milan,64,128,3.5,256.0,280,2021,4.0
+AMD EPYC 7773X 64-Core Processor,AMD EPYC,EPYC 7773X,Milan-X,64,128,3.5,768.0,280,2022,4.0
+AMD EPYC 7F72 24-Core Processor,AMD EPYC,EPYC 7F72,Rome,24,48,3.7,192.0,240,2020,4.0
+AMD EPYC 7H12 64-Core Processor,AMD EPYC,EPYC 7H12,Rome,64,128,3.3,256.0,280,2019,4.0
+AMD EPYC 9124 16-Core Processor,AMD EPYC,EPYC 9124,Genoa,16,32,3.7,64.0,200,2022,6.0
+AMD EPYC 9334 32-Core Processor,AMD EPYC,EPYC 9334,Genoa,32,64,3.9,128.0,210,2022,6.0
+AMD EPYC 9354 32-Core Processor,AMD EPYC,EPYC 9354,Genoa,32,64,3.8,256.0,280,2022,6.0
+AMD EPYC 9454 48-Core Processor,AMD EPYC,EPYC 9454,Genoa,48,96,3.8,256.0,290,2022,6.0
+AMD EPYC 9534 64-Core Processor,AMD EPYC,EPYC 9534,Genoa,64,128,3.7,256.0,280,2022,6.0
+AMD EPYC 9554 64-Core Processor,AMD EPYC,EPYC 9554,Genoa,64,128,3.75,256.0,360,2022,6.0
+AMD EPYC 9634 84-Core Processor,AMD EPYC,EPYC 9634,Genoa,84,168,3.7,384.0,290,2022,6.0
+AMD EPYC 9654 96-Core Processor,AMD EPYC,EPYC 9654,Genoa,96,192,3.7,384.0,360,2022,6.0
+AMD EPYC 9655 96-Core Processor,AMD EPYC,EPYC 9655,Turin,96,192,4.5,384.0,400,2024,6.0
+AMD EPYC 9754 128-Core Processor,AMD EPYC,EPYC 9754,Bergamo,128,256,3.1,256.0,360,2023,6.0
+AMD Opteron(TM) Processor 6212,AMD Opteron,Opteron 6212,Interlagos,8,8,3.2,16.0,115,2011,0.384
+AMD Opteron(TM) Processor 6234,AMD Opteron,Opteron 6234,Interlagos,12,12,3.0,16.0,115,2012,0.384
+AMD Opteron(TM) Processor 6238,AMD Opteron,Opteron 6238,Interlagos,12,12,3.2,16.0,115,2011,0.384
+AMD Opteron(TM) Processor 6274,AMD Opteron,Opteron 6274,Interlagos,16,16,3.1,16.0,115,2011,0.384
+AMD Opteron(tm) Processor 6320,AMD Opteron,Opteron 6320,Abu Dhabi,8,8,3.3,16.0,115,2012,0.384
+AMD Opteron(tm) Processor 6376,AMD Opteron,Opteron 6376,Abu Dhabi,16,16,3.2,16.0,115,2012,0.384
+AMD Opteron(tm) Processor 6378,AMD Opteron,Opteron 6378,Abu Dhabi,16,16,3.3,16.0,115,2012,0.384
+AMD Ryzen 7 3800X 8-Core Processor,AMD Ryzen,Ryzen 7 3800X,Matisse,8,16,4.5,32.0,105,2019,0.128
+Intel(R) Core(TM) i7-5960X CPU @ 3.00,Intel Core,i7-5960X,Haswell-E,8,16,3.5,20.0,140,2014,0.064
+Intel(R) Xeon(R) CPU W-2125 CPU @ 4.00,Intel Xeon,W-2125,Skylake-W,4,8,4.5,8.25,120,2017,0.512
+Intel(R) Xeon(R) CPU E3-1270 v6 @ 3.80,Intel Xeon E5/E3,E3-1270 v6,Kaby Lake,4,8,4.2,8.0,72,2017,0.064
+Intel(R) Xeon(R) CPU E5-1650 v2 @ 3.50,Intel Xeon E5/E3,E5-1650 v2,Ivy Bridge-EP,6,12,3.9,12.0,130,2013,0.256
+Intel(R) Xeon(R) CPU E5-2450 @ 2.10,Intel Xeon E5/E3,E5-2450 ,Sandy Bridge-EN,8,16,2.9,20.0,95,2012,0.384
+Intel(R) Xeon(R) CPU E5-2450 v2 @ 2.50,Intel Xeon E5/E3,E5-2450 v2,Ivy Bridge-EN,8,16,3.3,20.0,95,2014,0.384
+Intel(R) Xeon(R) CPU E5-2470 v2 @ 2.40,Intel Xeon E5/E3,E5-2470 v2,Ivy Bridge-EN,10,20,3.2,25.0,95,2014,0.384
+Intel(R) Xeon(R) CPU E5-2609 v2 @ 2.50,Intel Xeon E5/E3,E5-2609 v2,Ivy Bridge-EP,4,4,2.5,10.0,80,2013,0.768
+Intel(R) Xeon(R) CPU E5-2618L v3 @ 2.30,Intel Xeon E5/E3,E5-2618L v3,Haswell,8,16,3.4,20.0,75,2014,0.768
+Intel(R) Xeon(R) CPU E5-2618L v4 @ 2.20,Intel Xeon E5/E3,E5-2618L v4,Broadwell,10,20,3.2,25.0,75,2016,1.5
+Intel(R) Xeon(R) CPU E5-2620 @ 2.00,Intel Xeon E5/E3,E5-2620 ,Sandy Bridge-EP,6,12,2.5,15.0,95,2012,0.384
+Intel(R) Xeon(R) CPU E5-2620 v2 @ 2.10,Intel Xeon E5/E3,E5-2620 v2,Ivy Bridge-EP,6,12,2.6,15.0,80,2013,0.768
+Intel(R) Xeon(R) CPU E5-2620 v3 @ 2.40,Intel Xeon E5/E3,E5-2620 v3,Haswell,6,12,3.2,15.0,85,2014,0.768
+Intel(R) Xeon(R) CPU E5-2620 v4 @ 2.10,Intel Xeon E5/E3,E5-2620 v4,Broadwell,8,16,3.0,20.0,85,2016,1.5
+Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60,Intel Xeon E5/E3,E5-2630 v2,Ivy Bridge-EP,6,12,3.1,15.0,80,2013,0.768
+Intel(R) Xeon(R) CPU E5-2630 v3 @ 2.40,Intel Xeon E5/E3,E5-2630 v3,Haswell,8,16,3.2,20.0,85,2014,0.768
+Intel(R) Xeon(R) CPU E5-2630 v4 @ 2.20,Intel Xeon E5/E3,E5-2630 v4,Broadwell,10,20,3.1,25.0,85,2016,1.5
+Intel(R) Xeon(R) CPU E5-2630L @ 2.00,Intel Xeon E5/E3,E5-2630L,Sandy Bridge-EP,6,12,2.5,15.0,60,2012,0.384
+Intel(R) Xeon(R) CPU E5-2630L v2 @ 2.40,Intel Xeon E5/E3,E5-2630L v2,Ivy Bridge-EP,6,12,2.8,15.0,60,2013,0.768
+Intel(R) Xeon(R) CPU E5-2637 v4 @ 3.50,Intel Xeon E5/E3,E5-2637 v4,Broadwell,4,8,3.7,15.0,135,2016,1.5
+Intel(R) Xeon(R) CPU E5-2640 @ 2.50,Intel Xeon E5/E3,E5-2640 0,Sandy Bridge-EP,6,12,3.0,15.0,95,2012,0.384
+Intel(R) Xeon(R) CPU E5-2640 v2 @ 2.00,Intel Xeon E5/E3,E5-2640 v2,Ivy Bridge-EP,8,16,2.5,20.0,95,2013,0.768
+Intel(R) Xeon(R) CPU E5-2640 v3 @ 2.60,Intel Xeon E5/E3,E5-2640 v3,Haswell,8,16,3.4,20.0,90,2014,0.768
+Intel(R) Xeon(R) CPU E5-2640 v4 @ 2.40,Intel Xeon E5/E3,E5-2640 v4,Broadwell,10,20,3.4,25.0,90,2016,1.5
+Intel(R) Xeon(R) CPU E5-2643 v2 @ 3.50,Intel Xeon E5/E3,E5-2643 v2,Ivy Bridge-EP,6,12,3.8,25.0,130,2013,0.768
+Intel(R) Xeon(R) CPU E5-2650 v2 @ 2.60,Intel Xeon E5/E3,E5-2650 v2,Ivy Bridge-EP,8,16,3.4,20.0,95,2013,0.768
+Intel(R) Xeon(R) CPU E5-2650 v3 @ 2.30,Intel Xeon E5/E3,E5-2650 v3,Haswell,10,20,3.0,25.0,105,2014,0.768
+Intel(R) Xeon(R) CPU E5-2650 v4 @ 2.20,Intel Xeon E5/E3,E5-2650 v4,Broadwell,12,24,2.9,30.0,105,2016,1.5
+Intel(R) Xeon(R) CPU E5-2650L @ 1.80,Intel Xeon E5/E3,E5-2650L,Sandy Bridge-EP,8,16,2.3,20.0,70,2012,0.384
+Intel(R) Xeon(R) CPU E5-2650L v2 @ 1.70,Intel Xeon E5/E3,E5-2650L v2,Ivy Bridge-EP,10,20,2.1,25.0,70,2013,0.768
+Intel(R) Xeon(R) CPU E5-2650L v3 @ 1.80,Intel Xeon E5/E3,E5-2650L v3,Haswell,12,24,2.5,30.0,65,2014,0.768
+Intel(R) Xeon(R) CPU E5-2650L v4 @ 1.70,Intel Xeon E5/E3,E5-2650L v4,Broadwell,14,28,2.5,35.0,65,2016,1.5
+Intel(R) Xeon(R) CPU E5-2658A v3 @ 2.20,Intel Xeon E5/E3,E5-2658A v3,Haswell,12,24,2.9,30.0,105,2015,0.768
+Intel(R) Xeon(R) CPU E5-2660 @ 2.20,Intel Xeon E5/E3,E5-2660 ,Sandy Bridge-EP,8,16,3.0,20.0,95,2012,0.384
+Intel(R) Xeon(R) CPU E5-2660 v2 @ 2.20,Intel Xeon E5/E3,E5-2660 v2,Ivy Bridge-EP,10,20,3.0,25.0,95,2013,0.768
+Intel(R) Xeon(R) CPU E5-2660 v3 @ 2.60,Intel Xeon E5/E3,E5-2660 v3,Haswell,10,20,3.3,25.0,105,2014,0.768
+Intel(R) Xeon(R) CPU E5-2660 v4 @ 2.00,Intel Xeon E5/E3,E5-2660 v4,Broadwell,14,28,3.2,35.0,105,2016,1.5
+Intel(R) Xeon(R) CPU E5-2667 v3 @ 3.20,Intel Xeon E5/E3,E5-2667 v3,Haswell,8,16,3.6,20.0,135,2014,0.768
+Intel(R) Xeon(R) CPU E5-2670 @ 2.60,Intel Xeon E5/E3,E5-2670 0,Sandy Bridge-EP,8,16,3.3,20.0,115,2012,0.384
+Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50,Intel Xeon E5/E3,E5-2670 v2,Ivy Bridge-EP,10,20,3.3,25.0,115,2013,0.768
+Intel(R) Xeon(R) CPU E5-2670 v3 @ 2.30,Intel Xeon E5/E3,E5-2670 v3,Haswell,12,24,3.1,30.0,120,2014,0.768
+Intel(R) Xeon(R) CPU E5-2680 v2 @ 2.80,Intel Xeon E5/E3,E5-2680 v2,Ivy Bridge-EP,10,20,3.6,25.0,115,2013,0.768
+Intel(R) Xeon(R) CPU E5-2680 v3 @ 2.50,Intel Xeon E5/E3,E5-2680 v3,Haswell,12,24,3.3,30.0,120,2014,0.768
+Intel(R) Xeon(R) CPU E5-2680 v4 @ 2.40,Intel Xeon E5/E3,E5-2680 v4,Broadwell,14,28,3.3,35.0,120,2016,1.5
+Intel(R) Xeon(R) CPU E5-2683 v4 @ 2.10,Intel Xeon E5/E3,E5-2683 v4,Broadwell,16,32,3.0,40.0,120,2016,1.5
+Intel(R) Xeon(R) CPU E5-2690 v2 @ 3.00,Intel Xeon E5/E3,E5-2690 v2,Ivy Bridge-EP,10,20,3.6,25.0,130,2013,0.768
+Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60,Intel Xeon E5/E3,E5-2690 v3,Haswell,12,24,3.5,30.0,135,2014,0.768
+Intel(R) Xeon(R) CPU E5-2690 v4 @ 2.60,Intel Xeon E5/E3,E5-2690 v4,Broadwell,14,28,3.5,35.0,135,2016,1.5
+Intel(R) Xeon(R) CPU E5-2695 v2 @ 2.40,Intel Xeon E5/E3,E5-2695 v2,Ivy Bridge-EP,12,24,3.2,30.0,115,2013,0.768
+Intel(R) Xeon(R) CPU E5-2697 v3 @ 2.60,Intel Xeon E5/E3,E5-2697 v3,Haswell,14,28,3.6,35.0,145,2014,0.768
+Intel(R) Xeon(R) CPU E5-2697 v4 @ 2.30,Intel Xeon E5/E3,E5-2697 v4,Broadwell,18,36,3.6,45.0,145,2016,1.5
+Intel(R) Xeon(R) CPU E5-2698 v3 @ 2.30,Intel Xeon E5/E3,E5-2698 v3,Haswell,16,32,3.6,40.0,135,2014,0.768
+Intel(R) Xeon(R) CPU E5-2698 v4 @ 2.20,Intel Xeon E5/E3,E5-2698 v4,Broadwell,20,40,3.6,50.0,135,2016,1.5
+Intel(R) Xeon(R) CPU E5520 @ 2.27,Intel Xeon E5/E3,E5520,Nehalem-EP,4,8,2.53,8.0,80,2009,0.144
+Intel(R) Xeon(R) CPU E5620 @ 2.40,Intel Xeon E5/E3,E5620,Westmere-EP,4,8,2.66,12.0,80,2010,0.288
+Intel(R) Xeon(R) CPU E5630 @ 2.53,Intel Xeon E5/E3,E5630,Westmere-EP,4,8,2.8,12.0,80,2010,0.288
+Intel(R) Xeon(R) CPU E5645 @ 2.40,Intel Xeon E5/E3,E5645,Westmere-EP,6,12,2.67,12.0,80,2010,0.288
+Intel(R) Xeon(R) CPU L5630 @ 2.13,Intel Xeon 5600,L5630,Westmere-EP,4,8,2.4,12.0,40,2010,0.288
+Intel(R) Xeon(R) CPU X5560 @ 2.80,Intel Xeon 5600,X5560,Westmere-EP,6,12,3.2,12.0,95,2010,0.288
+Intel(R) Xeon(R) CPU X5570 @ 2.93,Intel Xeon 5600,X5570,Nehalem-EP,4,8,3.33,8.0,95,2009,0.144
+Intel(R) Xeon(R) CPU X5650 @ 2.67,Intel Xeon 5600,X5650,Westmere-EP,6,12,3.06,12.0,95,2010,0.288
+Intel(R) Xeon(R) CPU X5660 @ 2.80,Intel Xeon 5600,X5660,Westmere-EP,6,12,3.2,12.0,95,2010,0.288
+Intel(R) Xeon(R) CPU X5675 @ 3.07,Intel Xeon 5600,X5675,Westmere-EP,6,12,3.46,12.0,95,2011,0.288
+Intel(R) Xeon(R) Gold 5115 CPU @ 2.40,Intel Xeon Gold,Gold 5115,Skylake,10,20,3.2,13.75,85,2017,0.768
+Intel(R) Xeon(R) Gold 5118 CPU @ 2.30,Intel Xeon Gold,Gold 5118,Skylake,12,24,3.2,16.5,105,2017,0.768
+Intel(R) Xeon(R) Gold 5120 CPU @ 2.20,Intel Xeon Gold,Gold 5120,Skylake,14,28,3.2,19.25,105,2017,0.768
+Intel(R) Xeon(R) Gold 5215 CPU @ 2.50,Intel Xeon Gold,Gold 5215,Cascade Lake,10,20,3.4,13.75,85,2019,1.0
+Intel(R) Xeon(R) Gold 5218 CPU @ 2.30,Intel Xeon Gold,Gold 5218,Cascade Lake,16,32,3.9,22.0,125,2019,1.0
+Intel(R) Xeon(R) Gold 5218R CPU @ 2.10,Intel Xeon Gold,Gold 5218R,Cascade Lake,20,40,4.0,27.5,125,2020,1.0
+Intel(R) Xeon(R) Gold 5220 CPU @ 2.20,Intel Xeon Gold,Gold 5220,Cascade Lake,18,36,3.9,24.75,125,2019,1.0
+Intel(R) Xeon(R) Gold 5220R CPU @ 2.20,Intel Xeon Gold,Gold 5220R,Cascade Lake,24,48,4.0,35.75,150,2020,1.0
+Intel(R) Xeon(R) Gold 5222 CPU @ 3.80,Intel Xeon Gold,Gold 5222,Cascade Lake,4,8,3.9,16.5,105,2019,1.0
+Intel(R) Xeon(R) Gold 5320 CPU @ 2.20,Intel Xeon Gold,Gold 5320,Ice Lake,26,52,3.4,39.0,185,2021,6.0
+Intel(R) Xeon(R) Gold 5418Y,Intel Xeon Gold,Gold 5418Y,Sapphire Rapids,24,48,3.8,45.0,185,2023,4.0
+Intel(R) Xeon(R) Gold 6126 CPU @ 2.60,Intel Xeon Gold,Gold 6126,Skylake,12,24,3.7,19.25,125,2017,0.768
+Intel(R) Xeon(R) Gold 6130 CPU @ 2.10,Intel Xeon Gold,Gold 6130,Skylake,16,32,3.7,22.0,125,2017,0.768
+Intel(R) Xeon(R) Gold 6132 CPU @ 2.60,Intel Xeon Gold,Gold 6132,Skylake,14,28,3.7,19.25,140,2017,0.768
+Intel(R) Xeon(R) Gold 6138 CPU @ 2.00,Intel Xeon Gold,Gold 6138,Skylake,20,40,3.7,27.5,125,2017,0.768
+Intel(R) Xeon(R) Gold 6140 CPU @ 2.30,Intel Xeon Gold,Gold 6140,Skylake,18,36,3.7,24.75,140,2017,0.768
+Intel(R) Xeon(R) Gold 6148 CPU @ 2.40,Intel Xeon Gold,Gold 6148,Skylake,20,40,3.7,27.5,150,2017,0.768
+Intel(R) Xeon(R) Gold 6150 CPU @ 2.70,Intel Xeon Gold,Gold 6150,Skylake,18,36,3.7,24.75,165,2017,0.768
+Intel(R) Xeon(R) Gold 6152 CPU @ 2.10,Intel Xeon Gold,Gold 6152,Skylake,22,44,3.7,30.25,140,2017,0.768
+Intel(R) Xeon(R) Gold 6226 CPU @ 2.70,Intel Xeon Gold,Gold 6226,Cascade Lake,12,24,3.7,19.25,125,2019,1.0
+Intel(R) Xeon(R) Gold 6226R CPU @ 2.90,Intel Xeon Gold,Gold 6226R,Cascade Lake,16,32,3.9,22.0,150,2020,1.0
+Intel(R) Xeon(R) Gold 6230 CPU @ 2.10,Intel Xeon Gold,Gold 6230,Cascade Lake,20,40,3.9,27.5,125,2019,1.0
+Intel(R) Xeon(R) Gold 6230R CPU @ 2.10,Intel Xeon Gold,Gold 6230R,Cascade Lake,26,52,4.0,35.75,150,2020,1.0
+Intel(R) Xeon(R) Gold 6238 CPU @ 2.10,Intel Xeon Gold,Gold 6238,Cascade Lake,22,44,3.7,30.25,140,2019,1.0
+Intel(R) Xeon(R) Gold 6240 CPU @ 2.60,Intel Xeon Gold,Gold 6240,Cascade Lake,18,36,3.9,24.75,150,2019,1.0
+Intel(R) Xeon(R) Gold 6240R CPU @ 2.40,Intel Xeon Gold,Gold 6240R,Cascade Lake,24,48,4.0,35.75,165,2020,1.0
+Intel(R) Xeon(R) Gold 6242 CPU @ 2.80,Intel Xeon Gold,Gold 6242,Cascade Lake,16,32,3.9,22.0,150,2019,1.0
+Intel(R) Xeon(R) Gold 6248 CPU @ 2.50,Intel Xeon Gold,Gold 6248,Cascade Lake,20,40,3.9,27.5,150,2019,1.0
+Intel(R) Xeon(R) Gold 6248R CPU @ 3.00,Intel Xeon Gold,Gold 6248R,Cascade Lake,24,48,4.0,35.75,205,2020,1.0
+Intel(R) Xeon(R) Gold 6252 CPU @ 2.10,Intel Xeon Gold,Gold 6252,Cascade Lake,24,48,3.7,35.75,150,2019,1.0
+Intel(R) Xeon(R) Gold 6314U CPU @ 2.30,Intel Xeon Gold,Gold 6314U,Ice Lake,32,64,3.4,48.0,205,2021,6.0
+Intel(R) Xeon(R) Gold 6336Y CPU @ 2.40,Intel Xeon Gold,Gold 6336Y,Ice Lake,24,48,3.6,36.0,185,2021,6.0
+Intel(R) Xeon(R) Gold 6338 CPU @ 2.00,Intel Xeon Gold,Gold 6338,Ice Lake,32,64,3.2,48.0,205,2021,6.0
+Intel(R) Xeon(R) Gold 6342 CPU @ 2.80,Intel Xeon Gold,Gold 6342,Ice Lake,24,48,3.5,36.0,230,2021,6.0
+Intel(R) Xeon(R) Gold 6354 CPU @ 3.00,Intel Xeon Gold,Gold 6354,Ice Lake,18,36,3.6,39.0,205,2021,6.0
+Intel(R) Xeon(R) Gold 6438Y+,Intel Xeon Gold,Gold 6438Y+,Sapphire Rapids,32,64,4.0,60.0,205,2023,4.0
+Intel(R) Xeon(R) Gold 6448Y,Intel Xeon Gold,Gold 6448Y,Sapphire Rapids,32,64,4.1,60.0,225,2023,4.0
+Intel(R) Xeon(R) Platinum 8160 CPU @ 2.10,Intel Xeon Platinum,Platinum 8160,Skylake,24,48,3.7,33.0,150,2017,0.768
+Intel(R) Xeon(R) Platinum 8352Y CPU @ 2.20,Intel Xeon Platinum,Platinum 8352Y,Ice Lake,32,64,3.4,48.0,205,2021,6.0
+Intel(R) Xeon(R) Platinum 8368 CPU @ 2.40,Intel Xeon Platinum,Platinum 8368,Ice Lake,38,76,3.4,57.0,270,2021,6.0
+Intel(R) Xeon(R) Platinum 8468,Intel Xeon Platinum,Platinum 8468,Sapphire Rapids,48,96,3.8,105.0,350,2023,4.0
+Intel(R) Xeon(R) Platinum 8480CL,Intel Xeon Platinum,Platinum 8480CL,Sapphire Rapids,56,112,3.8,105.0,350,2023,4.0
+Intel(R) Xeon(R) Platinum 9242 CPU @ 2.30,Intel Xeon Platinum,Platinum 9242,Cascade Lake,48,96,3.8,71.5,350,2019,not specified
+Intel(R) Xeon(R) Silver 4108 CPU @ 1.80,Intel Xeon Silver,Silver 4108,Skylake,8,16,3.0,11.0,85,2017,0.768
+Intel(R) Xeon(R) Silver 4110 CPU @ 2.10,Intel Xeon Silver,Silver 4110,Skylake,8,16,3.0,11.0,85,2017,0.768
+Intel(R) Xeon(R) Silver 4114 CPU @ 2.20,Intel Xeon Silver,Silver 4114,Skylake,10,20,3.0,13.75,85,2017,0.768
+Intel(R) Xeon(R) Silver 4116 CPU @ 2.10,Intel Xeon Silver,Silver 4116,Skylake,12,24,3.0,16.5,85,2017,0.768
+Intel(R) Xeon(R) Silver 4209T CPU @ 2.20,Intel Xeon Silver,Silver 4209T,Cascade Lake,8,16,3.2,11.0,70,2019,1.0
+Intel(R) Xeon(R) Silver 4210 CPU @ 2.20,Intel Xeon Silver,Silver 4210,Cascade Lake,10,20,3.2,13.75,85,2019,1.0
+Intel(R) Xeon(R) Silver 4210R CPU @ 2.40,Intel Xeon Silver,Silver 4210R,Cascade Lake,10,20,3.2,13.75,100,2020,1.0
+Intel(R) Xeon(R) Silver 4214 CPU @ 2.20,Intel Xeon Silver,Silver 4214,Cascade Lake,12,24,3.2,16.5,85,2019,1.0
+Intel(R) Xeon(R) Silver 4214R CPU @ 2.40,Intel Xeon Silver,Silver 4214R,Cascade Lake,12,24,3.5,16.5,100,2020,1.0
+Intel(R) Xeon(R) Silver 4216 CPU @ 2.10,Intel Xeon Silver,Silver 4216,Cascade Lake,16,32,3.2,22.0,100,2019,1.0
+Intel(R) Xeon(R) Silver 4314 CPU @ 2.40,Intel Xeon Silver,Silver 4314,Ice Lake,16,32,3.4,24.0,135,2021,6.0

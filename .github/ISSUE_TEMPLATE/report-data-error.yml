@@ -1,0 +1,70 @@
+name: Report Data Error
+description: Report incorrect or outdated data for an existing CPU entry
+title: "[Data Error] "
+labels: ["data-error"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us keep the database accurate! Please describe what's wrong
+        and provide a source so we can verify the correction.
+
+  - type: input
+    id: cpu_model_name
+    attributes:
+      label: CPU Model Name
+      description: The exact name as it appears in the database
+      placeholder: e.g. AMD EPYC 9754
+    validations:
+      required: true
+
+  - type: dropdown
+    id: incorrect_field
+    attributes:
+      label: Which field is incorrect?
+      options:
+        - Family
+        - CPU Model
+        - Codename
+        - Cores
+        - Threads
+        - Max Turbo Frequency (GHz)
+        - L3 Cache (MB)
+        - TDP (Watts)
+        - Launch Year
+        - Max Memory (TB)
+        - Multiple fields
+    validations:
+      required: true
+
+  - type: input
+    id: current_value
+    attributes:
+      label: Current (incorrect) value
+      placeholder: e.g. 512 MB
+    validations:
+      required: true
+
+  - type: input
+    id: correct_value
+    attributes:
+      label: Correct value
+      placeholder: e.g. 256 MB
+    validations:
+      required: true
+
+  - type: input
+    id: source_url
+    attributes:
+      label: Source URL
+      description: Link to official spec page or trusted hardware database
+      placeholder: e.g. https://www.amd.com/en/products/specifications/processors.html
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Any extra details that help explain the correction
+      placeholder: e.g. The L3 cache was likely confused with the EPYC 9754S variant which has 512 MB

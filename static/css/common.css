@@ -1,0 +1,267 @@
+/* ==========================================================================
+   Common Styles - Shared across all pages
+   ========================================================================== */
+
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: #f5f7fa;
+    color: #2c3e50;
+    line-height: 1.6;
+}
+
+/* ---------- Utility classes ---------- */
+.hidden {
+    display: none !important;
+}
+
+.overflow-x-auto {
+    overflow-x: auto;
+}
+
+.text-muted {
+    color: #64748b;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* ---------- Common components ---------- */
+
+/* Loading state */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #64748b;
+}
+
+/* Error state */
+.error {
+    background: #fee2e2;
+    color: #dc2626;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+/* Spinner animation */
+.spinner {
+    border: 4px solid #e2e8f0;
+    border-top: 4px solid #3b82f6;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ---------- Form elements ---------- */
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #334155;
+}
+
+input, select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ---------- Buttons ---------- */
+button {
+    padding: 12px 24px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+button:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+button:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-danger {
+    background: #dc2626;
+}
+
+.btn-danger:hover {
+    background: #b91c1c;
+}
+
+.btn-secondary {
+    background: #64748b;
+}
+
+.btn-secondary:hover {
+    background: #475569;
+}
+
+/* ---------- Data footer ---------- */
+.data-footer {
+    padding: 25px 30px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    text-align: center;
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.8;
+}
+
+.data-footer-title {
+    font-weight: 700;
+    color: #334155;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.data-footer-sources {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 10px 0;
+}
+
+.data-footer-sources a {
+    color: #1e40af;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 4px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.data-footer-sources a:hover {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.data-footer a {
+    color: #1e40af;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.data-footer a:hover {
+    text-decoration: underline;
+}
+
+/* ---------- Site footer ---------- */
+.site-footer {
+    background: #1e293b;
+    color: #94a3b8;
+    font-size: 13px;
+    line-height: 1.7;
+    padding: 30px 24px 20px;
+    margin-top: 0;
+}
+
+.site-footer-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.site-footer-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.site-footer-brand {
+    font-weight: 600;
+    color: #e2e8f0;
+    font-size: 14px;
+}
+
+.site-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+}
+
+.site-footer-links a {
+    color: #94a3b8;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.site-footer-links a:hover {
+    color: #e2e8f0;
+}
+
+.site-footer-divider {
+    border: none;
+    border-top: 1px solid #334155;
+}
+
+.site-footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.site-footer-disclaimer {
+    max-width: 640px;
+}
+
+@media (max-width: 640px) {
+    .site-footer-top {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .site-footer-links {
+        justify-content: center;
+    }
+
+    .site-footer-bottom {
+        flex-direction: column;
+        text-align: center;
+    }
+}

@@ -1,0 +1,11 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+sqlalchemy>=2.0.36
+pandas>=2.2.0
+openpyxl>=3.1.2
+python-multipart==0.0.22
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+aiofiles==23.2.1
+slowapi>=0.1.8
+

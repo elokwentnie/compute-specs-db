@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Compute Specs DB</title>
+    <link rel="icon" type="image/png" href="/static/images/server-logo.png">
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Admin Panel</h1>
+            <a href="/" class="header-link">← Back to View</a>
+        </header>
+
+        <div class="auth-section" id="authSection">
+            <div class="auth-form">
+                <h2>Authentication Required</h2>
+                <p class="auth-description">Enter your admin password to access the admin panel.</p>
+                
+                <div class="form-group">
+                    <label for="passwordInput">Admin Password</label>
+                    <input type="password" id="passwordInput" placeholder="Enter your admin password">
+                </div>
+                
+                <button onclick="authenticate()">Login</button>
+                <p class="auth-note">
+                    <strong>Note:</strong> Password is set via ADMIN_PASSWORD environment variable on the server.
+                </p>
+            </div>
+        </div>
+
+        <div class="admin-panel" id="adminPanel">
+            <div class="tabs">
+                <button class="tab" data-tab="browse" onclick="switchTab('browse')">📋 Browse & Edit</button>
+                <button class="tab active" data-tab="create" onclick="switchTab('create')">➕ Create CPU</button>
+                <button class="tab" data-tab="edit" onclick="switchTab('edit')">✏️ Edit CPU</button>
+                <button class="tab" data-tab="delete" onclick="switchTab('delete')">🗑️ Delete CPU</button>
+                <button class="tab" data-tab="import" onclick="switchTab('import')">📥 Import CSV</button>
+            </div>
+
+            <div id="message" class="message"></div>
+
+            <div id="browseTab" class="tab-content">
+                <h2>Browse & Edit CPUs</h2>
+                <p class="browse-description">Search and click Edit to change any CPU. No need to look up IDs.</p>
+                <div class="form-group browse-search-group">
+                    <label for="browseSearch">Search</label>
+                    <input type="text" id="browseSearch" placeholder="Search by name, family, codename...">
+                </div>
+                <div id="browseTableContainer" class="overflow-x-auto">
+                    <table class="browse-table" id="browseTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>CPU Model Name</th>
+                                <th>Codename</th>
+                                <th>Cores</th>
+                                <th>Threads</th>
+                                <th>L3 (MB)</th>
+                                <th>TDP (W)</th>
+                                <th>Year</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="browseTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="browseLoading" class="browse-status-text hidden">Loading CPUs...</div>
+                <div id="browseEmpty" class="browse-status-text hidden">No CPUs match your search.</div>
+            </div>
+
+            <div id="createTab" class="tab-content active">
+                <h2>Create New CPU</h2>
+                <form id="createForm" onsubmit="createCPU(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="create_model_name">CPU Model Name *</label>
+                            <input type="text" id="create_model_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="create_family">Family</label>
+                            <input type="text" id="create_family">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_cpu_model">CPU Model</label>
+                            <input type="text" id="create_cpu_model">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_codename">Codename</label>
+                            <input type="text" id="create_codename">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_cores">Cores</label>
+                            <input type="number" id="create_cores">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_threads">Threads</label>
+                            <input type="number" id="create_threads">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_max_turbo">Max Turbo (GHz)</label>
+                            <input type="number" step="0.1" id="create_max_turbo">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_l3_cache">L3 Cache (MB)</label>
+                            <input type="number" step="0.1" id="create_l3_cache">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_tdp">TDP (W)</label>
+                            <input type="number" id="create_tdp">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_launch_year">Launch Year</label>
+                            <input type="number" id="create_launch_year">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_max_memory">Max Memory (TB)</label>
+                            <input type="number" step="0.1" id="create_max_memory">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit">Create CPU</button>
+                        <button type="button" class="btn-secondary" onclick="clearCreateForm()">Clear</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="editTab" class="tab-content">
+                <h2>Edit CPU</h2>
+                <div class="form-group">
+                    <label for="edit_cpu_id">CPU ID</label>
+                    <input type="number" id="edit_cpu_id" placeholder="Enter CPU ID to edit">
+                    <button onclick="loadCPUForEdit()" class="load-btn">Load CPU</button>
+                </div>
+                <form id="editForm" onsubmit="updateCPU(event)" class="hidden">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="edit_model_name">CPU Model Name</label>
+                            <input type="text" id="edit_model_name">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_family">Family</label>
+                            <input type="text" id="edit_family">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_cpu_model">CPU Model</label>
+                            <input type="text" id="edit_cpu_model">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_codename">Codename</label>
+                            <input type="text" id="edit_codename">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_cores">Cores</label>
+                            <input type="number" id="edit_cores">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_threads">Threads</label>
+                            <input type="number" id="edit_threads">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_max_turbo">Max Turbo (GHz)</label>
+                            <input type="number" step="0.1" id="edit_max_turbo">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_l3_cache">L3 Cache (MB)</label>
+                            <input type="number" step="0.1" id="edit_l3_cache">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_tdp">TDP (W)</label>
+                            <input type="number" id="edit_tdp">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_launch_year">Launch Year</label>
+                            <input type="number" id="edit_launch_year">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_max_memory">Max Memory (TB)</label>
+                            <input type="number" step="0.1" id="edit_max_memory">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit">Update CPU</button>
+                        <button type="button" class="btn-secondary" onclick="cancelEdit()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="deleteTab" class="tab-content">
+                <h2>Delete CPU</h2>
+                <div class="form-group">
+                    <label for="delete_cpu_id">CPU ID</label>
+                    <input type="number" id="delete_cpu_id" placeholder="Enter CPU ID to delete">
+                </div>
+                <div class="form-actions">
+                    <button class="btn-danger" onclick="deleteCPU()">Delete CPU</button>
+                </div>
+            </div>
+
+            <div id="importTab" class="tab-content">
+                <h2>Import from CSV</h2>
+                <p class="import-description">
+                    Import CPUs from a CSV file. You can either upload a file or import from the repository CSV.
+                </p>
+                
+                <div class="import-option">
+                    <h3>Option 1: Import from Repository CSV</h3>
+                    <p class="import-option-hint">
+                        Imports from <code>cpu_specifications.csv</code> in the repository. 
+                        Update the CSV in GitHub, then click below to import.
+                    </p>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="clearExistingRepo" class="checkbox-inline">
+                            Clear existing data before import
+                        </label>
+                    </div>
+                    <button onclick="importFromRepo()">Import from Repository CSV</button>
+                </div>
+
+                <div class="import-divider">
+                    <h3>Option 2: Upload CSV File</h3>
+                    <p class="import-option-hint">
+                        Upload a CSV file to import. File should be semicolon-delimited (;).
+                    </p>
+                    <div class="form-group">
+                        <label for="csvFile">CSV File</label>
+                        <input type="file" id="csvFile" accept=".csv">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="clearExistingFile" class="checkbox-inline">
+                            Clear existing data before import
+                        </label>
+                    </div>
+                    <button onclick="importFromFile()">Upload and Import CSV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let authToken = null;
+        let browseCpus = [];
+
+        async function loadBrowseDataIfNeeded() {
+            const container = document.getElementById('browseTableContainer');
+            const loadingEl = document.getElementById('browseLoading');
+            const emptyEl = document.getElementById('browseEmpty');
+            const tbody = document.getElementById('browseTableBody');
+            if (browseCpus.length === 0) {
+                loadingEl.classList.remove('hidden');
+                container.classList.add('hidden');
+                emptyEl.classList.add('hidden');
+                try {
+                    const response = await fetch('/api/cpus?limit=1000');
+                    if (!response.ok) throw new Error('Failed to load CPUs');
+                    browseCpus = await response.json();
+                    loadingEl.classList.add('hidden');
+                    container.classList.remove('hidden');
+                    renderBrowseTable(browseCpus);
+                } catch (err) {
+                    loadingEl.classList.add('hidden');
+                    emptyEl.textContent = 'Error loading CPUs: ' + err.message;
+                    emptyEl.classList.remove('hidden');
+                }
+            } else {
+                renderBrowseTable(browseCpus);
+            }
+        }
+
+        function renderBrowseTable(cpus) {
+            const searchText = (document.getElementById('browseSearch').value || '').trim().toLowerCase();
+            const filtered = searchText
+                ? cpus.filter(c => {
+                    const name = (c.cpu_model_name || '').toLowerCase();
+                    const family = (c.family || '').toLowerCase();
+                    const codename = (c.codename || '').toLowerCase();
+                    const model = (c.cpu_model || '').toLowerCase();
+                    return name.includes(searchText) || family.includes(searchText) || codename.includes(searchText) || model.includes(searchText);
+                })
+                : cpus;
+            const tbody = document.getElementById('browseTableBody');
+            const container = document.getElementById('browseTableContainer');
+            const emptyEl = document.getElementById('browseEmpty');
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                container.classList.add('hidden');
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
+            filtered.forEach(cpu => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${cpu.id}</td>
+                    <td><strong>${escapeHtml(cpu.cpu_model_name || '-')}</strong></td>
+                    <td>${escapeHtml(cpu.codename || '-')}</td>
+                    <td>${cpu.cores ?? '-'}</td>
+                    <td>${cpu.threads ?? '-'}</td>
+                    <td>${cpu.l3_cache_mb ?? '-'}</td>
+                    <td>${cpu.tdp_watts ?? '-'}</td>
+                    <td>${cpu.launch_year ?? '-'}</td>
+                    <td><button type="button" class="edit-btn" onclick="startEditFromBrowse(${cpu.id})">Edit</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function startEditFromBrowse(cpuId) {
+            const cpu = browseCpus.find(c => c.id === cpuId);
+            if (!cpu) return;
+            document.getElementById('edit_cpu_id').value = cpu.id;
+            document.getElementById('edit_model_name').value = cpu.cpu_model_name || '';
+            document.getElementById('edit_family').value = cpu.family || '';
+            document.getElementById('edit_cpu_model').value = cpu.cpu_model || '';
+            document.getElementById('edit_codename').value = cpu.codename || '';
+            document.getElementById('edit_cores').value = cpu.cores ?? '';
+            document.getElementById('edit_threads').value = cpu.threads ?? '';
+            document.getElementById('edit_max_turbo').value = cpu.max_turbo_frequency_ghz ?? '';
+            document.getElementById('edit_l3_cache').value = cpu.l3_cache_mb ?? '';
+            document.getElementById('edit_tdp').value = cpu.tdp_watts ?? '';
+            document.getElementById('edit_launch_year').value = cpu.launch_year ?? '';
+            document.getElementById('edit_max_memory').value = cpu.max_memory_tb ?? '';
+            document.getElementById('editForm').classList.remove('hidden');
+            switchTab('edit');
+        }
+
+        async function authenticate() {
+            const password = document.getElementById('passwordInput').value;
+            if (!password) {
+                showMessage('Please enter a password', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: password })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Invalid password');
+                }
+
+                const data = await response.json();
+                authToken = data.access_token;
+                
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('adminPanel').classList.add('active');
+                showMessage('Login successful!', 'success');
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+                authToken = null;
+            }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            const tabBtn = document.querySelector(`.tab[data-tab="${tabName}"]`);
+            if (tabBtn) tabBtn.classList.add('active');
+            const content = document.getElementById(tabName + 'Tab');
+            if (content) content.classList.add('active');
+            if (tabName === 'browse') loadBrowseDataIfNeeded();
+        }
+
+        function showMessage(message, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.textContent = message;
+            msgDiv.className = `message ${type}`;
+            msgDiv.style.display = 'block';
+            setTimeout(() => { msgDiv.style.display = 'none'; msgDiv.className = 'message'; }, 5000);
+        }
+
+        function getAuthHeaders() {
+            return {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        function createCPU(event) {
+            event.preventDefault();
+            
+            const data = {
+                cpu_model_name: document.getElementById('create_model_name').value,
+                family: document.getElementById('create_family').value || null,
+                cpu_model: document.getElementById('create_cpu_model').value || null,
+                codename: document.getElementById('create_codename').value.trim() || null,
+                cores: parseInt(document.getElementById('create_cores').value) || null,
+                threads: parseInt(document.getElementById('create_threads').value) || null,
+                max_turbo_frequency_ghz: parseFloat(document.getElementById('create_max_turbo').value) || null,
+                l3_cache_mb: parseFloat(document.getElementById('create_l3_cache').value) || null,
+                tdp_watts: parseInt(document.getElementById('create_tdp').value) || null,
+                launch_year: parseInt(document.getElementById('create_launch_year').value) || null,
+                max_memory_tb: parseFloat(document.getElementById('create_max_memory').value) || null
+            };
+
+            fetch('/api/cpus', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                showMessage('CPU created successfully!', 'success');
+                clearCreateForm();
+            })
+            .catch(error => {
+                showMessage('Error creating CPU: ' + error.message, 'error');
+            });
+        }
+
+        function clearCreateForm() {
+            document.getElementById('createForm').reset();
+        }
+
+        function loadCPUForEdit() {
+            const cpuId = document.getElementById('edit_cpu_id').value;
+            if (!cpuId) {
+                showMessage('Please enter a CPU ID', 'error');
+                return;
+            }
+
+            fetch(`/api/cpus/${cpuId}`)
+            .then(response => {
+                if (!response.ok) throw new Error('CPU not found');
+                return response.json();
+            })
+            .then(cpu => {
+                document.getElementById('edit_model_name').value = cpu.cpu_model_name || '';
+                document.getElementById('edit_family').value = cpu.family || '';
+                document.getElementById('edit_cpu_model').value = cpu.cpu_model || '';
+                document.getElementById('edit_codename').value = cpu.codename || '';
+                document.getElementById('edit_cores').value = cpu.cores || '';
+                document.getElementById('edit_threads').value = cpu.threads || '';
+                document.getElementById('edit_max_turbo').value = cpu.max_turbo_frequency_ghz || '';
+                document.getElementById('edit_l3_cache').value = cpu.l3_cache_mb || '';
+                document.getElementById('edit_tdp').value = cpu.tdp_watts || '';
+                document.getElementById('edit_launch_year').value = cpu.launch_year || '';
+                document.getElementById('edit_max_memory').value = cpu.max_memory_tb || '';
+                document.getElementById('editForm').classList.remove('hidden');
+            })
+            .catch(error => {
+                showMessage('Error loading CPU: ' + error.message, 'error');
+            });
+        }
+
+        function updateCPU(event) {
+            event.preventDefault();
+            
+            const cpuId = document.getElementById('edit_cpu_id').value;
+            const data = {};
+            
+            const fields = ['model_name', 'family', 'cpu_model', 'codename', 'cores', 'threads', 
+                          'max_turbo', 'l3_cache', 'tdp', 'launch_year', 'max_memory'];
+            
+            fields.forEach(field => {
+                const value = document.getElementById(`edit_${field}`).value;
+                if (value !== undefined && value !== null) {
+                    const key = field === 'model_name' ? 'cpu_model_name' :
+                               field === 'max_turbo' ? 'max_turbo_frequency_ghz' :
+                               field === 'l3_cache' ? 'l3_cache_mb' :
+                               field === 'max_memory' ? 'max_memory_tb' : field;
+                    if (field === 'codename') {
+                        data[key] = value.trim() || null;
+                    } else if (value !== '') {
+                        if (['cores', 'threads', 'tdp', 'launch_year'].includes(field)) {
+                            data[key] = parseInt(value);
+                        } else if (['max_turbo', 'l3_cache', 'max_memory'].includes(field)) {
+                            data[key] = parseFloat(value);
+                        } else {
+                            data[key] = value;
+                        }
+                    }
+                }
+            });
+
+            fetch(`/api/cpus/${cpuId}`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(updated => {
+                showMessage('CPU updated successfully!', 'success');
+                const idx = browseCpus.findIndex(c => c.id === updated.id);
+                if (idx >= 0) browseCpus[idx] = updated;
+                if (document.getElementById('browseTab').classList.contains('active')) renderBrowseTable(browseCpus);
+            })
+            .catch(error => {
+                showMessage('Error updating CPU: ' + error.message, 'error');
+            });
+        }
+
+        function cancelEdit() {
+            document.getElementById('editForm').classList.add('hidden');
+            document.getElementById('edit_cpu_id').value = '';
+        }
+
+        function deleteCPU() {
+            const cpuId = document.getElementById('delete_cpu_id').value;
+            if (!cpuId) {
+                showMessage('Please enter a CPU ID', 'error');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete CPU #${cpuId}? This action cannot be undone.`)) {
+                return;
+            }
+
+            fetch(`/api/cpus/${cpuId}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            })
+            .then(response => {
+                if (response.ok) {
+                    showMessage('CPU deleted successfully!', 'success');
+                    document.getElementById('delete_cpu_id').value = '';
+                } else {
+                    throw new Error('Failed to delete CPU');
+                }
+            })
+            .catch(error => {
+                showMessage('Error deleting CPU: ' + error.message, 'error');
+            });
+        }
+
+        document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') authenticate();
+        });
+
+        document.getElementById('browseSearch').addEventListener('input', () => {
+            if (browseCpus.length) renderBrowseTable(browseCpus);
+        });
+
+        function importFromRepo() {
+            const clearExisting = document.getElementById('clearExistingRepo').checked;
+            
+            if (!confirm(`This will import CPUs from the repository CSV file.${clearExisting ? '\n\n⚠️ WARNING: This will DELETE all existing CPUs first!' : ''}\n\nContinue?`)) {
+                return;
+            }
+
+            const url = `/api/import/csv-repo?clear_existing=${clearExisting}`;
+            
+            fetch(url, {
+                method: 'POST',
+                headers: getAuthHeaders()
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.errors && data.total_errors > 0) {
+                    showMessage(`Imported ${data.imported} CPUs. ${data.total_errors} errors occurred.`, 'error');
+                } else {
+                    showMessage(`Successfully imported ${data.imported} CPUs from repository!`, 'success');
+                }
+            })
+            .catch(error => {
+                showMessage('Error importing: ' + error.message, 'error');
+            });
+        }
+
+        function importFromFile() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showMessage('Please select a CSV file', 'error');
+                return;
+            }
+
+            const clearExisting = document.getElementById('clearExistingFile').checked;
+            
+            if (!confirm(`This will import CPUs from the uploaded file.${clearExisting ? '\n\n⚠️ WARNING: This will DELETE all existing CPUs first!' : ''}\n\nContinue?`)) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch(`/api/import/csv-file?clear_existing=${clearExisting}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.errors && data.total_errors > 0) {
+                    showMessage(`Imported ${data.imported} CPUs. ${data.total_errors} errors occurred.`, 'error');
+                } else {
+                    showMessage(`Successfully imported ${data.imported} CPUs!`, 'success');
+                }
+                fileInput.value = ''; // Clear file input
+            })
+            .catch(error => {
+                showMessage('Error importing: ' + error.message, 'error');
+            });
+        }
+    </script>
+
+    <footer class="site-footer">
+        <div class="site-footer-inner">
+            <div class="site-footer-top">
+                <span class="site-footer-brand">Compute Specs DB</span>
+                <nav class="site-footer-links">
+                    <a href="/">Data Table</a>
+                    <a href="/visualizations">Visualizations</a>
+                    <a href="/docs" target="_blank">API Docs</a>
+                    <a href="https://github.com/elokwentnie/compute-specs-db" target="_blank" rel="noopener">GitHub</a>
+                </nav>
+            </div>
+            <hr class="site-footer-divider">
+            <div class="site-footer-bottom">
+                <span class="site-footer-disclaimer">Intel, Xeon, and Core are trademarks of Intel Corporation. AMD, EPYC, Ryzen, and Threadripper are trademarks of Advanced Micro Devices, Inc. All other trademarks are the property of their respective owners. Data is provided "as-is" for informational purposes only, without warranty of any kind.</span>
+                <span>&copy; 2026 Compute Specs DB &middot; Open Source</span>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
+

@@ -1,0 +1,96 @@
+name: Request New CPU Entry
+description: Suggest a CPU to be added to the database
+title: "[New CPU] "
+labels: ["new-entry"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing! Please fill in as many fields as you can.
+        A source URL is required so we can verify the data.
+
+  - type: input
+    id: cpu_model_name
+    attributes:
+      label: CPU Model Name
+      description: Full name including manufacturer prefix
+      placeholder: e.g. Intel Xeon w9-3595X
+    validations:
+      required: true
+
+  - type: input
+    id: family
+    attributes:
+      label: Family
+    validations:
+      required: true
+
+  - type: input
+    id: cpu_model
+    attributes:
+      label: CPU Model (short identifier)
+      placeholder: e.g. w9-3595X, 9754, 7763
+
+  - type: input
+    id: codename
+    attributes:
+      label: Codename
+      placeholder: e.g. Granite Rapids, Bergamo, Genoa, Sapphire Rapids
+
+  - type: input
+    id: cores
+    attributes:
+      label: Cores
+      placeholder: e.g. 128
+
+  - type: input
+    id: threads
+    attributes:
+      label: Threads
+      placeholder: e.g. 256
+
+  - type: input
+    id: max_turbo_frequency
+    attributes:
+      label: Max Turbo Frequency (GHz)
+      placeholder: e.g. 4.2
+
+  - type: input
+    id: l3_cache
+    attributes:
+      label: L3 Cache (MB)
+      placeholder: e.g. 256
+
+  - type: input
+    id: tdp
+    attributes:
+      label: TDP (Watts)
+      placeholder: e.g. 350
+
+  - type: input
+    id: launch_year
+    attributes:
+      label: Launch Year
+      placeholder: e.g. 2024
+
+  - type: input
+    id: max_memory
+    attributes:
+      label: Max Memory (TB)
+      placeholder: e.g. 6
+
+  - type: input
+    id: source_url
+    attributes:
+      label: Source URL
+      description: Link to official spec page or trusted hardware database
+      placeholder: e.g. https://www.intel.com/content/www/us/en/products/sku/...
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_notes
+    attributes:
+      label: Additional Notes
+      description: Any other relevant information
+      placeholder: e.g. This is a new Granite Rapids refresh model launched at CES 2025
