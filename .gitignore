@@ -35,6 +35,3 @@ cpu_export_*.xlsx
 ~$*.xlsx
 *.xlsx
 
-# Documentation (non-essential)
-docs/
-
