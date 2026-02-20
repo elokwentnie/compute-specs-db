@@ -20,7 +20,7 @@ import pandas as pd
 import io
 from datetime import datetime
 
-from database import get_db, CPUSpec, init_db, SessionLocal
+from database import get_db, CPUSpec, GPUSpec, init_db, SessionLocal
 from auth import (
     get_current_user,
     create_access_token
@@ -39,19 +39,30 @@ init_db()
 
 # Auto-import CSV data on first run if database is empty
 def auto_import_if_empty():
-    """Automatically import CSV data if database is empty"""
+    """Automatically import CSV data if database tables are empty"""
     db = SessionLocal()
     try:
-        count = db.query(CPUSpec).count()
-        if count == 0:
+        cpu_count = db.query(CPUSpec).count()
+        if cpu_count == 0:
             csv_file_path = "cpu_spec_validated.csv"
             if os.path.exists(csv_file_path):
                 try:
                     from import_data import import_csv_to_db
                     import_csv_to_db(csv_file_path)
-                    print(f"✅ Auto-imported data from {csv_file_path}")
+                    print(f"✅ Auto-imported CPU data from {csv_file_path}")
                 except Exception as e:
-                    print(f"⚠️  Auto-import failed: {e}")
+                    print(f"⚠️  CPU auto-import failed: {e}")
+
+        gpu_count = db.query(GPUSpec).count()
+        if gpu_count == 0:
+            gpu_csv_path = "gpu_spec_validated.csv"
+            if os.path.exists(gpu_csv_path):
+                try:
+                    from import_data import import_gpu_csv_to_db
+                    import_gpu_csv_to_db(gpu_csv_path)
+                    print(f"✅ Auto-imported GPU data from {gpu_csv_path}")
+                except Exception as e:
+                    print(f"⚠️  GPU auto-import failed: {e}")
     finally:
         db.close()
 
@@ -137,6 +148,21 @@ class CPUSpecResponse(BaseModel):
         from_attributes = True
 
 
+class GPUSpecResponse(BaseModel):
+    """Response model for GPU specifications"""
+    id: int
+    gpu_model_name: str
+    vendor: Optional[str] = None
+    gpu_model: Optional[str] = None
+    form_factor: Optional[str] = None
+    memory_gb: Optional[int] = None
+    memory_type: Optional[str] = None
+    tdp_watts: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """Serve the public web interface"""
@@ -170,8 +196,11 @@ async def api_info():
         "version": "1.0.0",
         "endpoints": {
             "all_cpus": "/api/cpus",
-            "search": "/api/cpus/search?q=EPYC",
-            "by_id": "/api/cpus/{id}",
+            "search_cpus": "/api/cpus/search?q=EPYC",
+            "cpu_by_id": "/api/cpus/{id}",
+            "all_gpus": "/api/gpus",
+            "search_gpus": "/api/gpus/search?q=H100",
+            "gpu_by_id": "/api/gpus/{id}",
             "stats": "/api/stats",
             "docs": "/docs"
         }
@@ -241,14 +270,68 @@ async def get_stats(db: Session = Depends(get_db)):
     year_values = [y[0] for y in years if y[0]]
     year_range = f"{min(year_values)}–{max(year_values)}" if year_values else None
 
+    total_gpus = db.query(GPUSpec).count()
+    gpu_vendors = db.query(GPUSpec.vendor).distinct().all()
+    unique_gpu_vendors = len([v[0] for v in gpu_vendors if v[0]])
+
+    gpu_memory_rows = db.query(GPUSpec.memory_gb).filter(GPUSpec.memory_gb.isnot(None)).all()
+    max_gpu_memory = max([m[0] for m in gpu_memory_rows]) if gpu_memory_rows else None
+
+    gpu_memory_types = db.query(GPUSpec.memory_type).distinct().all()
+    unique_memory_types = len([m[0] for m in gpu_memory_types if m[0]])
+
     return {
         "total_cpus": total,
         "unique_families": unique_families,
         "unique_codenames": unique_codenames,
         "average_cores": round(avg_cores_value, 2) if avg_cores_value else None,
         "max_cores": max_cores,
-        "year_range": year_range
+        "year_range": year_range,
+        "total_gpus": total_gpus,
+        "unique_gpu_vendors": unique_gpu_vendors,
+        "max_gpu_memory_gb": max_gpu_memory,
+        "unique_memory_types": unique_memory_types
     }
+
+
+@app.get("/api/gpus", response_model=List[GPUSpecResponse])
+async def get_all_gpus(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
+    db: Session = Depends(get_db)
+):
+    """Get all GPUs with pagination"""
+    gpus = db.query(GPUSpec).offset(skip).limit(limit).all()
+    return gpus
+
+
+@app.get("/api/gpus/search", response_model=List[GPUSpecResponse])
+async def search_gpus(
+    q: str = Query(..., description="Search query (searches in model name, vendor, GPU model, form factor, and memory type)"),
+    db: Session = Depends(get_db)
+):
+    """Search GPUs by name, vendor, model, form factor, or memory type"""
+    search_filter = or_(
+        GPUSpec.gpu_model_name.ilike(f"%{q}%"),
+        GPUSpec.vendor.ilike(f"%{q}%"),
+        GPUSpec.gpu_model.ilike(f"%{q}%"),
+        GPUSpec.form_factor.ilike(f"%{q}%"),
+        GPUSpec.memory_type.ilike(f"%{q}%")
+    )
+    gpus = db.query(GPUSpec).filter(search_filter).all()
+    return gpus
+
+
+@app.get("/api/gpus/{gpu_id}", response_model=GPUSpecResponse)
+async def get_gpu_by_id(gpu_id: int, db: Session = Depends(get_db)):
+    """Get a specific GPU by ID"""
+    gpu = db.query(GPUSpec).filter(GPUSpec.id == gpu_id).first()
+    if gpu is None:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": f"GPU with ID {gpu_id} not found"}
+        )
+    return gpu
 
 
 class LoginRequest(BaseModel):
@@ -325,6 +408,28 @@ class CPUSpecUpdate(BaseModel):
     tdp_watts: Optional[int] = None
     launch_year: Optional[int] = None
     max_memory_tb: Optional[float] = None
+
+
+class GPUSpecCreate(BaseModel):
+    """Request model for creating a new GPU"""
+    gpu_model_name: str
+    vendor: Optional[str] = None
+    gpu_model: Optional[str] = None
+    form_factor: Optional[str] = None
+    memory_gb: Optional[int] = None
+    memory_type: Optional[str] = None
+    tdp_watts: Optional[int] = None
+
+
+class GPUSpecUpdate(BaseModel):
+    """Request model for updating a GPU"""
+    gpu_model_name: Optional[str] = None
+    vendor: Optional[str] = None
+    gpu_model: Optional[str] = None
+    form_factor: Optional[str] = None
+    memory_gb: Optional[int] = None
+    memory_type: Optional[str] = None
+    tdp_watts: Optional[int] = None
 
 
 @limiter.limit("30/minute")
@@ -407,6 +512,71 @@ async def delete_cpu(
     return None
 
 
+@limiter.limit("30/minute")
+@app.post("/api/gpus", response_model=GPUSpecResponse, status_code=201)
+async def create_gpu(
+    request: Request,
+    gpu: GPUSpecCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new GPU specification (requires authentication)"""
+    db_gpu = GPUSpec(
+        gpu_model_name=gpu.gpu_model_name,
+        vendor=gpu.vendor,
+        gpu_model=gpu.gpu_model,
+        form_factor=gpu.form_factor,
+        memory_gb=gpu.memory_gb,
+        memory_type=gpu.memory_type,
+        tdp_watts=gpu.tdp_watts,
+    )
+    db.add(db_gpu)
+    db.commit()
+    db.refresh(db_gpu)
+    return db_gpu
+
+
+@limiter.limit("30/minute")
+@app.put("/api/gpus/{gpu_id}", response_model=GPUSpecResponse)
+async def update_gpu(
+    request: Request,
+    gpu_id: int,
+    gpu: GPUSpecUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update an existing GPU specification (requires authentication)"""
+    db_gpu = db.query(GPUSpec).filter(GPUSpec.id == gpu_id).first()
+    if db_gpu is None:
+        raise HTTPException(status_code=404, detail=f"GPU with ID {gpu_id} not found")
+
+    update_data = gpu.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_gpu, field, value)
+
+    db.commit()
+    db.refresh(db_gpu)
+    return db_gpu
+
+
+@limiter.limit("30/minute")
+@app.delete("/api/gpus/{gpu_id}", status_code=204)
+async def delete_gpu(
+    request: Request,
+    gpu_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a GPU specification (requires authentication)"""
+    db_gpu = db.query(GPUSpec).filter(GPUSpec.id == gpu_id).first()
+    if db_gpu is None:
+        raise HTTPException(status_code=404, detail=f"GPU with ID {gpu_id} not found")
+
+    db.delete(db_gpu)
+    db.commit()
+    return None
+
+
 @app.get("/api/export/csv")
 async def export_csv(db: Session = Depends(get_db)):
     """Export all CPUs as CSV file"""
@@ -471,6 +641,66 @@ async def export_excel(db: Session = Depends(get_db)):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
             "Content-Disposition": f"attachment; filename=cpu_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        }
+    )
+
+
+@app.get("/api/export/gpus/csv")
+async def export_gpus_csv(db: Session = Depends(get_db)):
+    """Export all GPUs as CSV file"""
+    gpus = db.query(GPUSpec).all()
+
+    df = pd.DataFrame([{
+        "ID": gpu.id,
+        "GPU Model Name": gpu.gpu_model_name,
+        "Vendor": gpu.vendor or "",
+        "GPU Model": gpu.gpu_model or "",
+        "Form Factor": gpu.form_factor or "",
+        "Memory (GB)": gpu.memory_gb or "",
+        "Memory Type": gpu.memory_type or "",
+        "TDP (W)": gpu.tdp_watts or "",
+    } for gpu in gpus])
+
+    stream = io.StringIO()
+    df.to_csv(stream, index=False, sep=';')
+    csv_data = stream.getvalue()
+
+    return StreamingResponse(
+        io.BytesIO(csv_data.encode('utf-8')),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=gpu_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        }
+    )
+
+
+@app.get("/api/export/gpus/excel")
+async def export_gpus_excel(db: Session = Depends(get_db)):
+    """Export all GPUs as Excel file"""
+    gpus = db.query(GPUSpec).all()
+
+    df = pd.DataFrame([{
+        "ID": gpu.id,
+        "GPU Model Name": gpu.gpu_model_name,
+        "Vendor": gpu.vendor or "",
+        "GPU Model": gpu.gpu_model or "",
+        "Form Factor": gpu.form_factor or "",
+        "Memory (GB)": gpu.memory_gb or "",
+        "Memory Type": gpu.memory_type or "",
+        "TDP (W)": gpu.tdp_watts or "",
+    } for gpu in gpus])
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='GPU Specifications')
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename=gpu_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         }
     )
 
@@ -690,6 +920,167 @@ async def import_csv_from_repo(
 
     return {
         "message": f"Imported {imported} CPUs successfully from repository CSV",
+        "imported": imported,
+        "errors": errors[:10],
+        "total_errors": len(errors),
+        "source": csv_file_path
+    }
+
+
+REQUIRED_GPU_CSV_COLUMNS = [
+    "GPU Model Name",
+    "Vendor",
+    "GPU Model",
+    "Form Factor",
+    "Memory (GB)",
+    "Memory Type",
+    "TDP (W)"
+]
+
+
+def validate_gpu_csv_columns(df: pd.DataFrame) -> None:
+    """Ensure required GPU CSV columns exist after BOM cleanup."""
+    missing = [col for col in REQUIRED_GPU_CSV_COLUMNS if col not in df.columns]
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Missing required GPU columns: {', '.join(missing)}"
+        )
+
+
+@limiter.limit("10/minute")
+@app.post("/api/import/gpu-csv-file")
+async def import_gpu_csv_file(
+    request: Request,
+    file: UploadFile = File(...),
+    clear_existing: bool = Query(False, description="Clear existing GPU data before import"),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Import GPUs from uploaded CSV file (requires authentication)"""
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="File must be a CSV file")
+
+    if clear_existing:
+        db.query(GPUSpec).delete()
+        db.commit()
+
+    contents = await file.read()
+    if len(contents) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"CSV file too large. Max size is {MAX_UPLOAD_BYTES} bytes."
+        )
+
+    if contents.startswith(b'\xef\xbb\xbf'):
+        contents = contents[3:]
+
+    try:
+        df = pd.read_csv(io.BytesIO(contents), delimiter=';', encoding='utf-8')
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error reading CSV: {str(e)}")
+
+    imported = 0
+    errors = []
+
+    df.columns = df.columns.str.replace('\ufeff', '')
+    validate_gpu_csv_columns(df)
+
+    for idx, row in df.iterrows():
+        try:
+            gpu_model_name = str(row.get('GPU Model Name', '')).strip()
+            if not gpu_model_name:
+                errors.append(f"Row {idx + 2}: Missing GPU Model Name")
+                continue
+
+            db_gpu = GPUSpec(
+                gpu_model_name=gpu_model_name,
+                vendor=str(row.get('Vendor', '')).strip() or None,
+                gpu_model=str(row.get('GPU Model', '')).strip() or None,
+                form_factor=str(row.get('Form Factor', '')).strip() or None,
+                memory_gb=clean_number(row.get('Memory (GB)')),
+                memory_type=str(row.get('Memory Type', '')).strip() or None,
+                tdp_watts=clean_number(row.get('TDP (W)')),
+            )
+            db.add(db_gpu)
+            imported += 1
+
+        except Exception as e:
+            errors.append(f"Row {idx + 2}: {str(e)}")
+
+    db.commit()
+
+    return {
+        "message": f"Imported {imported} GPUs successfully",
+        "imported": imported,
+        "errors": errors[:10],
+        "total_errors": len(errors)
+    }
+
+
+@limiter.limit("10/minute")
+@app.post("/api/import/gpu-csv-repo")
+async def import_gpu_csv_from_repo(
+    request: Request,
+    clear_existing: bool = Query(False, description="Clear existing GPU data before import"),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Import GPUs from CSV file in repository (requires authentication)"""
+    csv_file_path = "gpu_spec_validated.csv"
+
+    if not os.path.exists(csv_file_path):
+        raise HTTPException(
+            status_code=404,
+            detail=f"CSV file '{csv_file_path}' not found in repository"
+        )
+    if os.path.getsize(csv_file_path) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"CSV file too large. Max size is {MAX_UPLOAD_BYTES} bytes."
+        )
+
+    if clear_existing:
+        db.query(GPUSpec).delete()
+        db.commit()
+
+    try:
+        df = pd.read_csv(csv_file_path, delimiter=';', encoding='utf-8')
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error reading CSV: {str(e)}")
+
+    imported = 0
+    errors = []
+
+    df.columns = df.columns.str.replace('\ufeff', '')
+    validate_gpu_csv_columns(df)
+
+    for idx, row in df.iterrows():
+        try:
+            gpu_model_name = str(row.get('GPU Model Name', '')).strip()
+            if not gpu_model_name:
+                errors.append(f"Row {idx + 2}: Missing GPU Model Name")
+                continue
+
+            db_gpu = GPUSpec(
+                gpu_model_name=gpu_model_name,
+                vendor=str(row.get('Vendor', '')).strip() or None,
+                gpu_model=str(row.get('GPU Model', '')).strip() or None,
+                form_factor=str(row.get('Form Factor', '')).strip() or None,
+                memory_gb=clean_number(row.get('Memory (GB)')),
+                memory_type=str(row.get('Memory Type', '')).strip() or None,
+                tdp_watts=clean_number(row.get('TDP (W)')),
+            )
+            db.add(db_gpu)
+            imported += 1
+
+        except Exception as e:
+            errors.append(f"Row {idx + 2}: {str(e)}")
+
+    db.commit()
+
+    return {
+        "message": f"Imported {imported} GPUs successfully from repository CSV",
         "imported": imported,
         "errors": errors[:10],
         "total_errors": len(errors),

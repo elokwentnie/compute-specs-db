@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizations — Compute Specs DB</title>
-    <meta name="description" content="Interactive charts and comparisons of server CPU performance metrics. Compare Intel Xeon vs AMD EPYC by cores, frequency, TDP, and more.">
+    <meta name="description" content="Interactive charts and comparisons of server CPU and GPU performance metrics. Compare Intel Xeon vs AMD EPYC, NVIDIA vs AMD GPUs by cores, frequency, TDP, memory, and more.">
     <link rel="canonical" href="https://computespecsdb.com/visualizations">
     <link rel="icon" type="image/png" href="/static/images/server-logo.png">
 
@@ -28,7 +28,7 @@
 <body>
     <div class="header">
         <h1>📊 Compute Specs DB Visualizations</h1>
-        <p>Interactive charts and analysis of CPU performance metrics</p>
+        <p>Interactive charts and analysis of CPU and GPU performance metrics</p>
     </div>
 
     <nav class="nav">
@@ -38,22 +38,34 @@
     </nav>
 
     <main class="container">
+        <div class="controls" style="margin-bottom:1.5rem;">
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label for="dataSource">Data Source</label>
+                    <select id="dataSource">
+                        <option value="cpu">CPUs</option>
+                        <option value="gpu">GPUs</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
         <div class="stats" id="stats">
-            <div class="stat-card">
-                <div class="stat-value" id="totalCpus">-</div>
-                <div class="stat-label">Total CPUs</div>
+            <div class="stat-card" id="statTotal">
+                <div class="stat-value" id="totalItems">-</div>
+                <div class="stat-label" id="totalLabel">Total CPUs</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="avgTdp">-</div>
                 <div class="stat-label">Avg TDP (W)</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="avgCores">-</div>
-                <div class="stat-label">Avg Cores</div>
+            <div class="stat-card" id="statCores">
+                <div class="stat-value" id="stat3">-</div>
+                <div class="stat-label" id="stat3Label">Avg Cores</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="avgFreq">-</div>
-                <div class="stat-label">Avg Frequency (GHz)</div>
+            <div class="stat-card" id="statFreq">
+                <div class="stat-value" id="stat4">-</div>
+                <div class="stat-label" id="stat4Label">Avg Frequency (GHz)</div>
             </div>
         </div>
 
@@ -62,26 +74,12 @@
                 <div class="control-group">
                     <label for="xAxis">X-Axis Parameter</label>
                     <select id="xAxis">
-                        <option value="tdp_watts">TDP (W)</option>
-                        <option value="max_turbo_frequency_ghz">Max Turbo Frequency (GHz)</option>
-                        <option value="cores">Cores</option>
-                        <option value="threads">Threads</option>
-                        <option value="l3_cache_mb">L3 Cache (MB)</option>
-                        <option value="max_memory_tb">Max Memory (TB)</option>
-                        <option value="launch_year">Launch Year</option>
                     </select>
                 </div>
 
                 <div class="control-group">
                     <label for="yAxis">Y-Axis Parameter</label>
                     <select id="yAxis">
-                        <option value="max_turbo_frequency_ghz">Max Turbo Frequency (GHz)</option>
-                        <option value="tdp_watts">TDP (W)</option>
-                        <option value="cores">Cores</option>
-                        <option value="threads">Threads</option>
-                        <option value="l3_cache_mb">L3 Cache (MB)</option>
-                        <option value="max_memory_tb">Max Memory (TB)</option>
-                        <option value="launch_year">Launch Year</option>
                     </select>
                 </div>
 
@@ -100,22 +98,22 @@
 
         <div class="filters-section">
             <h3>📊 Filters</h3>
-            <div class="filter-group">
-                <label>Filter by Family:</label>
+            <div class="filter-group" id="familyFilterGroup">
+                <label id="filterGroupLabel1">Filter by Family:</label>
                 <div class="filter-actions">
                     <button class="filter-action-btn" onclick="selectAllFilters('family')">Select All</button>
                 </div>
                 <div class="filter-checkbox-group" id="familyFilters">
-                    <div class="loading">Loading families...</div>
+                    <div class="loading">Loading...</div>
                 </div>
             </div>
-            <div class="filter-group">
-                <label>Filter by Codename:</label>
+            <div class="filter-group" id="codenameFilterGroup">
+                <label id="filterGroupLabel2">Filter by Codename:</label>
                 <div class="filter-actions">
                     <button class="filter-action-btn" onclick="selectAllFilters('codename')">Select All</button>
                 </div>
                 <div class="filter-checkbox-group" id="codenameFilters">
-                    <div class="loading">Loading codenames...</div>
+                    <div class="loading">Loading...</div>
                 </div>
             </div>
         </div>
@@ -138,25 +136,25 @@
         </div>
 
         <div class="chart-container">
-            <div class="chart-title text-center">CPU Comparison Tool</div>
+            <div class="chart-title text-center" id="comparisonTitle">CPU Comparison Tool</div>
             <div class="comparison-controls">
                 <div class="comparison-selectors">
                     <div class="comparison-selector">
-                        <label for="cpu1Select">CPU 1</label>
+                        <label for="cpu1Select" id="compare1Label">CPU 1</label>
                         <select id="cpu1Select">
-                            <option value="">Select CPU...</option>
+                            <option value="">Select...</option>
                         </select>
                     </div>
                     <div class="comparison-selector">
-                        <label for="cpu2Select">CPU 2</label>
+                        <label for="cpu2Select" id="compare2Label">CPU 2</label>
                         <select id="cpu2Select">
-                            <option value="">Select CPU...</option>
+                            <option value="">Select...</option>
                         </select>
                     </div>
                 </div>
                 <div class="compare-btn-container">
                     <button id="compareButton" class="compare-btn" disabled>
-                        Compare CPUs
+                        Compare
                     </button>
                 </div>
             </div>
@@ -211,807 +209,559 @@
             </div>
             <hr class="site-footer-divider">
             <div class="site-footer-bottom">
-                <span class="site-footer-disclaimer">Intel, Xeon, and Core are trademarks of Intel Corporation. AMD, EPYC, Ryzen, and Threadripper are trademarks of Advanced Micro Devices, Inc. All other trademarks are the property of their respective owners. Data is provided "as-is" for informational purposes only, without warranty of any kind.</span>
+                <span class="site-footer-disclaimer">Intel, Xeon, and Core are trademarks of Intel Corporation. AMD, EPYC, Ryzen, and Instinct are trademarks of Advanced Micro Devices, Inc. NVIDIA, H100, H200, B100, B200, L4, L40, L40S, and T4 are trademarks of NVIDIA Corporation. All other trademarks are the property of their respective owners. Data is provided "as-is" for informational purposes only, without warranty of any kind.</span>
                 <span>&copy; 2026 Compute Specs DB &middot; Open Source</span>
             </div>
         </div>
     </footer>
 
     <script>
-        let allCpus = [];
-        let filteredCpus = [];
-        let activeFamilies = new Set();
-        let activeCodenames = new Set();
+        let allData = [];
+        let filteredData = [];
+        let activeFilter1 = new Set();
+        let activeFilter2 = new Set();
+        let dataSource = 'cpu';
 
-        // Fetch all CPU data
+        const cpuAxisOptions = [
+            { value: 'tdp_watts', label: 'TDP (W)' },
+            { value: 'max_turbo_frequency_ghz', label: 'Max Turbo Frequency (GHz)' },
+            { value: 'cores', label: 'Cores' },
+            { value: 'threads', label: 'Threads' },
+            { value: 'l3_cache_mb', label: 'L3 Cache (MB)' },
+            { value: 'max_memory_tb', label: 'Max Memory (TB)' },
+            { value: 'launch_year', label: 'Launch Year' }
+        ];
+
+        const gpuAxisOptions = [
+            { value: 'tdp_watts', label: 'TDP (W)' },
+            { value: 'memory_gb', label: 'Memory (GB)' }
+        ];
+
+        function populateAxisSelectors() {
+            const xSelect = document.getElementById('xAxis');
+            const ySelect = document.getElementById('yAxis');
+            const options = dataSource === 'cpu' ? cpuAxisOptions : gpuAxisOptions;
+
+            xSelect.innerHTML = '';
+            ySelect.innerHTML = '';
+            options.forEach(opt => {
+                xSelect.innerHTML += `<option value="${opt.value}">${opt.label}</option>`;
+                ySelect.innerHTML += `<option value="${opt.value}">${opt.label}</option>`;
+            });
+
+            if (dataSource === 'cpu') {
+                xSelect.value = 'tdp_watts';
+                ySelect.value = 'max_turbo_frequency_ghz';
+            } else {
+                xSelect.value = 'memory_gb';
+                ySelect.value = 'tdp_watts';
+            }
+        }
+
+        function getGroupKey() { return dataSource === 'cpu' ? 'family' : 'vendor'; }
+        function getSecondaryKey() { return dataSource === 'cpu' ? 'codename' : 'memory_type'; }
+        function getNameKey() { return dataSource === 'cpu' ? 'cpu_model_name' : 'gpu_model_name'; }
+
         async function loadData() {
             try {
-                const response = await fetch('/api/cpus?limit=1000');
-                allCpus = await response.json();
-                filteredCpus = allCpus;
-                
+                const endpoint = dataSource === 'cpu' ? '/api/cpus?limit=1000' : '/api/gpus?limit=1000';
+                const response = await fetch(endpoint);
+                allData = await response.json();
+                filteredData = allData;
+
                 updateStats();
                 setupFilters();
                 updateChart();
                 populateComparisonDropdowns();
             } catch (error) {
-                document.getElementById('chart').innerHTML = 
+                document.getElementById('chart').innerHTML =
                     '<div class="error">Error loading data: ' + error.message + '</div>';
             }
         }
 
-        // Update statistics
         function updateStats() {
-            const validCpus = filteredCpus.filter(cpu => cpu.tdp_watts && cpu.cores && cpu.max_turbo_frequency_ghz);
-            
-            document.getElementById('totalCpus').textContent = filteredCpus.length;
-            
-            const avgTdp = validCpus.length > 0 
-                ? (validCpus.reduce((sum, c) => sum + (c.tdp_watts || 0), 0) / validCpus.length).toFixed(1)
+            const nameKey = getNameKey();
+            const isCpu = dataSource === 'cpu';
+
+            document.getElementById('totalLabel').textContent = isCpu ? 'Total CPUs' : 'Total GPUs';
+            document.getElementById('totalItems').textContent = filteredData.length;
+
+            const withTdp = filteredData.filter(d => d.tdp_watts);
+            const avgTdp = withTdp.length > 0
+                ? (withTdp.reduce((s, d) => s + d.tdp_watts, 0) / withTdp.length).toFixed(1)
                 : '-';
             document.getElementById('avgTdp').textContent = avgTdp;
-            
-            const avgCores = validCpus.length > 0
-                ? (validCpus.reduce((sum, c) => sum + (c.cores || 0), 0) / validCpus.length).toFixed(1)
-                : '-';
-            document.getElementById('avgCores').textContent = avgCores;
-            
-            const avgFreq = validCpus.length > 0
-                ? (validCpus.reduce((sum, c) => sum + (c.max_turbo_frequency_ghz || 0), 0) / validCpus.length).toFixed(2)
-                : '-';
-            document.getElementById('avgFreq').textContent = avgFreq;
-        }
 
-        // Setup filter checkboxes
-        function setupFilters() {
-            const families = [...new Set(allCpus.map(cpu => cpu.family).filter(f => f))].sort();
-            const codenames = [...new Set(allCpus.map(cpu => cpu.codename).filter(c => c))].sort();
+            if (isCpu) {
+                document.getElementById('stat3Label').textContent = 'Avg Cores';
+                const withCores = filteredData.filter(d => d.cores);
+                document.getElementById('stat3').textContent = withCores.length > 0
+                    ? (withCores.reduce((s, d) => s + d.cores, 0) / withCores.length).toFixed(1)
+                    : '-';
 
-            const familyContainer = document.getElementById('familyFilters');
-            familyContainer.innerHTML = '';
-            families.forEach(family => {
-                const item = document.createElement('div');
-                item.className = 'filter-checkbox-item';
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = `family-${family.replace(/\s+/g, '-')}`;
-                checkbox.checked = true;
-                checkbox.dataset.type = 'family';
-                checkbox.dataset.value = family;
-                checkbox.addEventListener('change', (e) => {
-                    toggleFilter('family', family, e.target.checked);
-                });
-                const label = document.createElement('label');
-                label.htmlFor = checkbox.id;
-                label.textContent = family;
-                item.appendChild(checkbox);
-                item.appendChild(label);
-                familyContainer.appendChild(item);
-                activeFamilies.add(family);
-            });
-
-            const codenameContainer = document.getElementById('codenameFilters');
-            codenameContainer.innerHTML = '';
-            codenames.forEach(codename => {
-                const item = document.createElement('div');
-                item.className = 'filter-checkbox-item';
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = `codename-${codename.replace(/\s+/g, '-')}`;
-                checkbox.checked = true;
-                checkbox.dataset.type = 'codename';
-                checkbox.dataset.value = codename;
-                checkbox.addEventListener('change', (e) => {
-                    toggleFilter('codename', codename, e.target.checked);
-                });
-                const label = document.createElement('label');
-                label.htmlFor = checkbox.id;
-                label.textContent = codename;
-                item.appendChild(checkbox);
-                item.appendChild(label);
-                codenameContainer.appendChild(item);
-                activeCodenames.add(codename);
-            });
-        }
-
-        // Toggle filter
-        function toggleFilter(type, value, checked) {
-            if (type === 'family') {
-                if (checked) {
-                    activeFamilies.add(value);
-                } else {
-                    activeFamilies.delete(value);
-                }
+                document.getElementById('stat4Label').textContent = 'Avg Frequency (GHz)';
+                const withFreq = filteredData.filter(d => d.max_turbo_frequency_ghz);
+                document.getElementById('stat4').textContent = withFreq.length > 0
+                    ? (withFreq.reduce((s, d) => s + d.max_turbo_frequency_ghz, 0) / withFreq.length).toFixed(2)
+                    : '-';
             } else {
-                if (checked) {
-                    activeCodenames.add(value);
-                } else {
-                    activeCodenames.delete(value);
-                }
+                document.getElementById('stat3Label').textContent = 'Avg Memory (GB)';
+                const withMem = filteredData.filter(d => d.memory_gb);
+                document.getElementById('stat3').textContent = withMem.length > 0
+                    ? (withMem.reduce((s, d) => s + d.memory_gb, 0) / withMem.length).toFixed(0)
+                    : '-';
+
+                document.getElementById('stat4Label').textContent = 'GPU Vendors';
+                const vendors = new Set(filteredData.map(d => d.vendor).filter(Boolean));
+                document.getElementById('stat4').textContent = vendors.size || '-';
             }
+        }
+
+        function setupFilters() {
+            const groupKey = getGroupKey();
+            const secondaryKey = getSecondaryKey();
+
+            const groups = [...new Set(allData.map(d => d[groupKey]).filter(Boolean))].sort();
+            const secondaries = [...new Set(allData.map(d => d[secondaryKey]).filter(Boolean))].sort();
+
+            document.getElementById('filterGroupLabel1').textContent =
+                dataSource === 'cpu' ? 'Filter by Family:' : 'Filter by Vendor:';
+            document.getElementById('filterGroupLabel2').textContent =
+                dataSource === 'cpu' ? 'Filter by Codename:' : 'Filter by Memory Type:';
+
+            activeFilter1.clear();
+            activeFilter2.clear();
+
+            const container1 = document.getElementById('familyFilters');
+            container1.innerHTML = '';
+            groups.forEach(val => {
+                const item = document.createElement('div');
+                item.className = 'filter-checkbox-item';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.id = `filter1-${val.replace(/\s+/g, '-')}`;
+                cb.checked = true;
+                cb.dataset.type = 'family';
+                cb.dataset.value = val;
+                cb.addEventListener('change', e => toggleFilter('family', val, e.target.checked));
+                const lbl = document.createElement('label');
+                lbl.htmlFor = cb.id;
+                lbl.textContent = val;
+                item.appendChild(cb);
+                item.appendChild(lbl);
+                container1.appendChild(item);
+                activeFilter1.add(val);
+            });
+
+            const container2 = document.getElementById('codenameFilters');
+            container2.innerHTML = '';
+            secondaries.forEach(val => {
+                const item = document.createElement('div');
+                item.className = 'filter-checkbox-item';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.id = `filter2-${val.replace(/\s+/g, '-')}`;
+                cb.checked = true;
+                cb.dataset.type = 'codename';
+                cb.dataset.value = val;
+                cb.addEventListener('change', e => toggleFilter('codename', val, e.target.checked));
+                const lbl = document.createElement('label');
+                lbl.htmlFor = cb.id;
+                lbl.textContent = val;
+                item.appendChild(cb);
+                item.appendChild(lbl);
+                container2.appendChild(item);
+                activeFilter2.add(val);
+            });
+        }
+
+        function toggleFilter(type, value, checked) {
+            const set = type === 'family' ? activeFilter1 : activeFilter2;
+            checked ? set.add(value) : set.delete(value);
             applyFilters();
         }
 
-        // Select all filters of a type
         window.selectAllFilters = function(type) {
-            const container = type === 'family' 
+            const container = type === 'family'
                 ? document.getElementById('familyFilters')
                 : document.getElementById('codenameFilters');
-            
             if (!container) return;
-            
-            const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = true;
-                const value = checkbox.dataset.value;
-                if (type === 'family') {
-                    activeFamilies.add(value);
-                } else {
-                    activeCodenames.add(value);
-                }
+            const set = type === 'family' ? activeFilter1 : activeFilter2;
+            container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+                set.add(cb.dataset.value);
             });
             applyFilters();
         };
 
-        // Select none filters of a type
         window.selectNoneFilters = function(type) {
-            const container = type === 'family' 
+            const container = type === 'family'
                 ? document.getElementById('familyFilters')
                 : document.getElementById('codenameFilters');
-            
             if (!container) return;
-            
-            const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = false;
-                const value = checkbox.dataset.value;
-                if (type === 'family') {
-                    activeFamilies.delete(value);
-                } else {
-                    activeCodenames.delete(value);
-                }
+            const set = type === 'family' ? activeFilter1 : activeFilter2;
+            container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+                set.delete(cb.dataset.value);
             });
             applyFilters();
         };
 
-        // Apply filters
         function applyFilters() {
-            filteredCpus = allCpus.filter(cpu => {
-                const familyMatch = activeFamilies.size === 0 || !cpu.family || activeFamilies.has(cpu.family);
-                const codenameMatch = activeCodenames.size === 0 || !cpu.codename || activeCodenames.has(cpu.codename);
-                return familyMatch && codenameMatch;
+            const groupKey = getGroupKey();
+            const secKey = getSecondaryKey();
+            filteredData = allData.filter(d => {
+                const g = activeFilter1.size === 0 || !d[groupKey] || activeFilter1.has(d[groupKey]);
+                const s = activeFilter2.size === 0 || !d[secKey] || activeFilter2.has(d[secKey]);
+                return g && s;
             });
             updateStats();
             updateChart();
         }
 
-        // Update chart
+        const colorPalette = [
+            '#0072B2', '#E69F00', '#009E73', '#D55E00',
+            '#CC79A7', '#56B4E9', '#F0E442', '#000000'
+        ];
+
         function updateChart() {
             const xAxis = document.getElementById('xAxis').value;
             const yAxis = document.getElementById('yAxis').value;
             const chartType = document.getElementById('chartType').value;
-
             const xLabel = document.getElementById('xAxis').options[document.getElementById('xAxis').selectedIndex].text;
             const yLabel = document.getElementById('yAxis').options[document.getElementById('yAxis').selectedIndex].text;
+            const nameKey = getNameKey();
+            const groupKey = getGroupKey();
+            const isCpu = dataSource === 'cpu';
+            const itemLabel = isCpu ? 'CPU' : 'GPU';
 
             document.getElementById('chartTitle').textContent = `${yLabel} vs ${xLabel}`;
 
-            // Filter out CPUs with missing data
-            const validCpus = filteredCpus.filter(cpu => 
-                cpu[xAxis] != null && cpu[yAxis] != null
-            );
+            const validItems = filteredData.filter(d => d[xAxis] != null && d[yAxis] != null);
 
-            if (validCpus.length === 0) {
-                document.getElementById('chart').innerHTML = 
+            if (validItems.length === 0) {
+                document.getElementById('chart').innerHTML =
                     '<div class="error">No data available for selected parameters</div>';
                 document.getElementById('downloadChart').classList.add('hidden');
                 return;
             }
-            
-            // Show download button when we have valid data
-            const downloadBtn = document.getElementById('downloadChart');
-            if (downloadBtn) {
-                downloadBtn.classList.remove('hidden');
-            }
+
+            document.getElementById('downloadChart').classList.remove('hidden');
 
             let traces = [];
             let layout = {};
+            const isMobile = window.innerWidth <= 768;
 
             if (chartType === 'scatter') {
-                // Colorblind-friendly color palette (Okabe-Ito inspired)
-                const colorPalette = [
-                    '#0072B2', // Blue
-                    '#E69F00', // Orange
-                    '#009E73', // Bluish Green
-                    '#D55E00', // Vermillion
-                    '#CC79A7', // Reddish Purple
-                    '#56B4E9', // Sky Blue
-                    '#F0E442', // Yellow
-                    '#000000'  // Black
-                ];
-                
-                // Group by family for color coding
-                const families = [...new Set(validCpus.map(cpu => cpu.family || 'Unknown'))];
-                families.forEach((family, index) => {
-                    const familyCpus = validCpus.filter(cpu => (cpu.family || 'Unknown') === family);
+                const groups = [...new Set(validItems.map(d => d[groupKey] || 'Unknown'))];
+                groups.forEach((group, index) => {
+                    const items = validItems.filter(d => (d[groupKey] || 'Unknown') === group);
                     traces.push({
-                        x: familyCpus.map(cpu => cpu[xAxis]),
-                        y: familyCpus.map(cpu => cpu[yAxis]),
+                        x: items.map(d => d[xAxis]),
+                        y: items.map(d => d[yAxis]),
                         mode: 'markers',
                         type: 'scatter',
-                        name: family,
-                        text: familyCpus.map(cpu => cpu.cpu_model_name),
-                        hovertemplate: '<b>%{text}</b><br>' + 
-                                      xLabel + ': %{x}<br>' + 
-                                      yLabel + ': %{y}<extra></extra>',
-                        marker: {
-                            size: 14,
-                            opacity: 0.8,
-                            color: colorPalette[index % colorPalette.length],
-                            line: {
-                                width: 1.5,
-                                color: '#ffffff'
-                            }
-                        }
+                        name: group,
+                        text: items.map(d => d[nameKey]),
+                        hovertemplate: '<b>%{text}</b><br>' + xLabel + ': %{x}<br>' + yLabel + ': %{y}<extra></extra>',
+                        marker: { size: 14, opacity: 0.8, color: colorPalette[index % colorPalette.length], line: { width: 1.5, color: '#ffffff' } }
                     });
                 });
-
-                // Detect mobile screen size
-                const isMobile = window.innerWidth <= 768;
-                
                 layout = {
-                    title: {
-                        text: `${yLabel} vs ${xLabel}`,
-                        font: { size: isMobile ? 14 : 18 }
-                    },
-                    xaxis: { 
-                        title: xLabel,
-                        titlefont: { size: isMobile ? 12 : 14 }
-                    },
-                    yaxis: { 
-                        title: yLabel,
-                        titlefont: { size: isMobile ? 12 : 14 }
-                    },
+                    title: { text: `${yLabel} vs ${xLabel}`, font: { size: isMobile ? 14 : 18 } },
+                    xaxis: { title: xLabel, titlefont: { size: isMobile ? 12 : 14 } },
+                    yaxis: { title: yLabel, titlefont: { size: isMobile ? 12 : 14 } },
                     hovermode: 'closest',
-                    margin: isMobile 
-                        ? { l: 50, r: 10, t: 50, b: 100 }
-                        : { l: 60, r: 20, t: 60, b: 60 },
+                    margin: isMobile ? { l: 50, r: 10, t: 50, b: 100 } : { l: 60, r: 20, t: 60, b: 60 },
                     showlegend: true,
-                    legend: isMobile ? {
-                        x: 0.5,
-                        y: -0.25,
-                        xanchor: 'center',
-                        yanchor: 'top',
-                        orientation: 'h',
-                        bgcolor: 'rgba(255, 255, 255, 0.9)',
-                        bordercolor: '#e2e8f0',
-                        borderwidth: 1,
-                        font: { size: 10 },
-                        itemwidth: 20
-                    } : {
-                        x: 1.02,
-                        y: 1,
-                        xanchor: 'left',
-                        yanchor: 'top',
-                        bgcolor: 'rgba(255, 255, 255, 0.8)',
-                        bordercolor: '#e2e8f0',
-                        borderwidth: 1
-                    }
+                    legend: isMobile
+                        ? { x: 0.5, y: -0.25, xanchor: 'center', yanchor: 'top', orientation: 'h', bgcolor: 'rgba(255,255,255,0.9)', bordercolor: '#e2e8f0', borderwidth: 1, font: { size: 10 }, itemwidth: 20 }
+                        : { x: 1.02, y: 1, xanchor: 'left', yanchor: 'top', bgcolor: 'rgba(255,255,255,0.8)', bordercolor: '#e2e8f0', borderwidth: 1 }
                 };
             } else if (chartType === 'bar') {
-                // Get limit from input (default 25)
                 const barLimit = parseInt(document.getElementById('barLimit').value) || 25;
-                
-                // Sort by y-axis value and take top N for readability
-                const sorted = [...validCpus].sort((a, b) => (b[yAxis] || 0) - (a[yAxis] || 0)).slice(0, barLimit);
-                
-                // Calculate dynamic height based on number of CPUs
-                // Base height: 600px for up to 25 CPUs
-                // For 25-50: 30px per CPU
-                // For 50+: 25px per CPU (more compact but still readable)
-                let chartHeight;
-                const numCpus = sorted.length;
-                if (numCpus <= 25) {
-                    chartHeight = 600;
-                } else if (numCpus <= 50) {
-                    chartHeight = 600 + (numCpus - 25) * 30;
-                } else {
-                    chartHeight = 600 + 25 * 30 + (numCpus - 50) * 25;
-                }
-                
-                // Set chart container height dynamically
-                const chartElement = document.getElementById('chart');
-                chartElement.style.height = chartHeight + 'px';
-                chartElement.style.minHeight = chartHeight + 'px';
-                
-                // Group by family for legend
-                const families = [...new Set(sorted.map(cpu => {
-                    if (!cpu.family) return 'Unknown';
-                    if (cpu.family.includes('EPYC')) return 'AMD EPYC';
-                    if (cpu.family.includes('Xeon')) return 'Intel Xeon';
-                    return cpu.family;
-                }))];
-                
-                // Colorblind-friendly color mapping
-                const familyColors = {
-                    'AMD EPYC': '#0072B2',  // Blue
-                    'Intel Xeon': '#E69F00', // Orange
-                    'Unknown': '#7f7f7f'     // Gray
-                };
-                
-                const getColorForFamily = (family) => {
-                    if (!family) return familyColors['Unknown'];
-                    if (family.includes('EPYC')) return familyColors['AMD EPYC'];
-                    if (family.includes('Xeon')) return familyColors['Intel Xeon'];
-                    return '#009E73'; // Green for others
-                };
-                
-                // Create separate traces for each family to enable legend
-                families.forEach(family => {
-                    const familyCpus = sorted.filter(cpu => {
-                        if (family === 'Unknown') return !cpu.family;
-                        if (family === 'AMD EPYC') return cpu.family && cpu.family.includes('EPYC');
-                        if (family === 'Intel Xeon') return cpu.family && cpu.family.includes('Xeon');
-                        return cpu.family === family;
-                    });
-                    
-                    if (familyCpus.length > 0) {
+                const sorted = [...validItems].sort((a, b) => (b[yAxis] || 0) - (a[yAxis] || 0)).slice(0, barLimit);
+                const numItems = sorted.length;
+                let chartHeight = numItems <= 25 ? 600 : numItems <= 50 ? 600 + (numItems - 25) * 30 : 600 + 25 * 30 + (numItems - 50) * 25;
+
+                const chartEl = document.getElementById('chart');
+                chartEl.style.height = chartHeight + 'px';
+                chartEl.style.minHeight = chartHeight + 'px';
+
+                const groups = [...new Set(sorted.map(d => d[groupKey] || 'Unknown'))];
+                groups.forEach((group, index) => {
+                    const items = sorted.filter(d => (d[groupKey] || 'Unknown') === group);
+                    if (items.length > 0) {
                         traces.push({
-                            x: familyCpus.map(cpu => cpu[yAxis]),
-                            y: familyCpus.map(cpu => cpu.cpu_model_name),
+                            x: items.map(d => d[yAxis]),
+                            y: items.map(d => d[nameKey]),
                             type: 'bar',
                             orientation: 'h',
-                            name: family,
-                            marker: {
-                                color: familyColors[family] || getColorForFamily(familyCpus[0].family),
-                                line: {
-                                    width: 1,
-                                    color: '#ffffff'
-                                }
-                            },
-                            text: familyCpus.map(cpu => `${xLabel}: ${cpu[xAxis]}`),
-                            hovertemplate: '<b>%{y}</b><br>' + 
-                                          yLabel + ': %{x}<br>' + 
-                                          '%{text}<extra></extra>'
+                            name: group,
+                            marker: { color: colorPalette[index % colorPalette.length], line: { width: 1, color: '#ffffff' } },
+                            text: items.map(d => `${xLabel}: ${d[xAxis]}`),
+                            hovertemplate: '<b>%{y}</b><br>' + yLabel + ': %{x}<br>%{text}<extra></extra>'
                         });
                     }
                 });
-
-                // Detect mobile screen size
-                const isMobile = window.innerWidth <= 768;
-                
                 layout = {
-                    title: {
-                        text: `Top ${sorted.length} CPUs by ${yLabel}`,
-                        font: { size: isMobile ? 14 : 18 }
-                    },
-                    xaxis: { 
-                        title: yLabel,
-                        titlefont: { size: isMobile ? 12 : 14 }
-                    },
-                    yaxis: { 
-                        title: 'CPU Model',
-                        automargin: true,
-                        tickmode: 'linear',
-                        tickangle: 0,
-                        titlefont: { size: isMobile ? 12 : 14 }
-                    },
-                    margin: isMobile 
-                        ? { l: 180, r: 20, t: 50, b: 100 }
-                        : { l: 250, r: 150, t: 60, b: 60 },
+                    title: { text: `Top ${sorted.length} ${itemLabel}s by ${yLabel}`, font: { size: isMobile ? 14 : 18 } },
+                    xaxis: { title: yLabel, titlefont: { size: isMobile ? 12 : 14 } },
+                    yaxis: { title: `${itemLabel} Model`, automargin: true, tickmode: 'linear', tickangle: 0, titlefont: { size: isMobile ? 12 : 14 } },
+                    margin: isMobile ? { l: 180, r: 20, t: 50, b: 100 } : { l: 250, r: 150, t: 60, b: 60 },
                     showlegend: true,
-                    legend: isMobile ? {
-                        x: 0.5,
-                        y: -0.25,
-                        xanchor: 'center',
-                        yanchor: 'top',
-                        orientation: 'h',
-                        bgcolor: 'rgba(255, 255, 255, 0.9)',
-                        bordercolor: '#e2e8f0',
-                        borderwidth: 1,
-                        font: { size: 10 },
-                        itemwidth: 20
-                    } : {
-                        x: 1.02,
-                        y: 1,
-                        xanchor: 'left',
-                        yanchor: 'top',
-                        bgcolor: 'rgba(255, 255, 255, 0.8)',
-                        bordercolor: '#e2e8f0',
-                        borderwidth: 1
-                    },
+                    legend: isMobile
+                        ? { x: 0.5, y: -0.25, xanchor: 'center', yanchor: 'top', orientation: 'h', bgcolor: 'rgba(255,255,255,0.9)', bordercolor: '#e2e8f0', borderwidth: 1, font: { size: 10 }, itemwidth: 20 }
+                        : { x: 1.02, y: 1, xanchor: 'left', yanchor: 'top', bgcolor: 'rgba(255,255,255,0.8)', bordercolor: '#e2e8f0', borderwidth: 1 },
                     height: chartHeight
                 };
             } else if (chartType === 'box') {
-                // Colorblind-friendly color palette (more vibrant, less pastel)
-                const colorPalette = [
-                    '#0072B2', // Blue
-                    '#E69F00', // Orange
-                    '#009E73', // Bluish Green
-                    '#D55E00', // Vermillion
-                    '#CC79A7', // Reddish Purple
-                    '#56B4E9', // Sky Blue
-                    '#F0E442', // Yellow
-                    '#000000'  // Black
-                ];
-                
-                // Group by family for box plots
-                const families = [...new Set(validCpus.map(cpu => cpu.family || 'Unknown'))];
-                families.forEach((family, index) => {
-                    const familyCpus = validCpus.filter(cpu => (cpu.family || 'Unknown') === family);
+                const groups = [...new Set(validItems.map(d => d[groupKey] || 'Unknown'))];
+                groups.forEach((group, index) => {
+                    const items = validItems.filter(d => (d[groupKey] || 'Unknown') === group);
                     const color = colorPalette[index % colorPalette.length];
                     traces.push({
-                        y: familyCpus.map(cpu => cpu[yAxis]),
+                        y: items.map(d => d[yAxis]),
                         type: 'box',
-                        name: family,
+                        name: group,
                         boxpoints: 'all',
                         jitter: 0.3,
                         pointpos: -1.8,
-                        text: familyCpus.map(cpu => cpu.cpu_model_name || 'Unknown CPU'),
-                        hovertemplate: '<b>%{text}</b><br>' +
-                                      'Family: ' + family + '<br>' +
-                                      yLabel + ': %{y}<br>' +
-                                      '<extra></extra>',
-                        marker: {
-                            size: 8,
-                            opacity: 0.8,
-                            color: color,
-                            line: {
-                                width: 1,
-                                color: '#ffffff'
-                            }
-                        },
-                        line: {
-                            color: color,
-                            width: 2.5
-                        },
+                        text: items.map(d => d[nameKey] || 'Unknown'),
+                        hovertemplate: '<b>%{text}</b><br>' + yLabel + ': %{y}<extra></extra>',
+                        marker: { size: 8, opacity: 0.8, color: color, line: { width: 1, color: '#ffffff' } },
+                        line: { color: color, width: 2.5 },
                         fillcolor: color,
                         opacity: 0.6
                     });
                 });
-
-                // Detect mobile screen size
-                const isMobile = window.innerWidth <= 768;
-                
                 layout = {
-                    title: {
-                        text: `Distribution of ${yLabel} by Family`,
-                        font: { size: isMobile ? 14 : 18 }
-                    },
-                    yaxis: { 
-                        title: yLabel,
-                        titlefont: { size: isMobile ? 12 : 14 }
-                    },
-                    xaxis: { 
-                        title: 'Family',
-                        tickangle: 0,
-                        titlefont: { size: isMobile ? 12 : 14 }
-                    },
-                    margin: isMobile 
-                        ? { l: 50, r: 10, t: 50, b: 150 }
-                        : { l: 60, r: 20, t: 60, b: 100 },
+                    title: { text: `Distribution of ${yLabel} by ${isCpu ? 'Family' : 'Vendor'}`, font: { size: isMobile ? 14 : 18 } },
+                    yaxis: { title: yLabel, titlefont: { size: isMobile ? 12 : 14 } },
+                    xaxis: { title: isCpu ? 'Family' : 'Vendor', tickangle: 0, titlefont: { size: isMobile ? 12 : 14 } },
+                    margin: isMobile ? { l: 50, r: 10, t: 50, b: 150 } : { l: 60, r: 20, t: 60, b: 100 },
                     showlegend: true,
-                    legend: isMobile ? {
-                        x: 0.5,
-                        y: -0.25,
-                        xanchor: 'center',
-                        yanchor: 'top',
-                        orientation: 'h',
-                        bgcolor: 'rgba(255, 255, 255, 0.9)',
-                        bordercolor: '#e2e8f0',
-                        borderwidth: 1,
-                        font: { size: 10 },
-                        itemwidth: 20
-                    } : {
-                        x: 1.02,
-                        y: 1,
-                        xanchor: 'left',
-                        yanchor: 'top',
-                        bgcolor: 'rgba(255, 255, 255, 0.8)',
-                        bordercolor: '#e2e8f0',
-                        borderwidth: 1
-                    }
+                    legend: isMobile
+                        ? { x: 0.5, y: -0.25, xanchor: 'center', yanchor: 'top', orientation: 'h', bgcolor: 'rgba(255,255,255,0.9)', bordercolor: '#e2e8f0', borderwidth: 1, font: { size: 10 }, itemwidth: 20 }
+                        : { x: 1.02, y: 1, xanchor: 'left', yanchor: 'top', bgcolor: 'rgba(255,255,255,0.8)', bordercolor: '#e2e8f0', borderwidth: 1 }
                 };
             }
 
-            // No need for updateLayoutForMobile - layout is already set correctly above
-            // Detect mobile for modebar
-            const isMobile = window.innerWidth <= 768;
-            
-            Plotly.newPlot('chart', traces, layout, { 
+            Plotly.newPlot('chart', traces, layout, {
                 responsive: true,
-                displayModeBar: !isMobile, // Hide modebar on mobile
+                displayModeBar: !isMobile,
                 modeBarButtonsToRemove: ['lasso2d', 'select2d'],
                 displaylogo: false
             });
-            
-            // Update chart on window resize for mobile
-            let resizeTimeout;
-            let resizeHandler = () => {
-                clearTimeout(resizeTimeout);
-                resizeTimeout = setTimeout(() => {
-                    const chartElement = document.getElementById('chart');
-                    if (chartElement && chartElement.children.length > 0) {
-                        Plotly.Plots.resize('chart');
-                    }
-                }, 250);
-            };
-            
-            // Only add resize listener once
+
             if (!window.chartResizeHandlerAdded) {
-                window.addEventListener('resize', resizeHandler);
+                let resizeTimeout;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(() => {
+                        const el = document.getElementById('chart');
+                        if (el && el.children.length > 0) Plotly.Plots.resize('chart');
+                    }, 250);
+                });
                 window.chartResizeHandlerAdded = true;
             }
         }
 
-        // Download chart function
         function downloadChart() {
-            const xAxis = document.getElementById('xAxis').value;
-            const yAxis = document.getElementById('yAxis').value;
-            const chartType = document.getElementById('chartType').value;
-            
             const xLabel = document.getElementById('xAxis').options[document.getElementById('xAxis').selectedIndex].text;
             const yLabel = document.getElementById('yAxis').options[document.getElementById('yAxis').selectedIndex].text;
-            
-            // Create descriptive filename
-            const chartTypeName = chartType === 'bar' ? 'Bar' : chartType === 'scatter' ? 'Scatter' : 'Box';
-            const filename = `CPU_${chartTypeName}_${yLabel.replace(/[^a-zA-Z0-9]/g, '_')}_vs_${xLabel.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.png`;
-            
-            // Download the chart
-            Plotly.downloadImage('chart', {
-                format: 'png',
-                width: 1200,
-                height: 800,
-                filename: filename
-            });
+            const chartType = document.getElementById('chartType').value;
+            const typeName = chartType === 'bar' ? 'Bar' : chartType === 'scatter' ? 'Scatter' : 'Box';
+            const prefix = dataSource === 'cpu' ? 'CPU' : 'GPU';
+            const filename = `${prefix}_${typeName}_${yLabel.replace(/[^a-zA-Z0-9]/g, '_')}_vs_${xLabel.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.png`;
+            Plotly.downloadImage('chart', { format: 'png', width: 1200, height: 800, filename });
         }
 
-        // Download button event listeners
         document.getElementById('downloadChart').addEventListener('click', downloadChart);
         document.getElementById('downloadComparison').addEventListener('click', downloadComparisonTable);
 
-        // CPU Comparison Functions
         function populateComparisonDropdowns() {
-            const cpu1Select = document.getElementById('cpu1Select');
-            const cpu2Select = document.getElementById('cpu2Select');
-            
-            // Clear existing options (except first)
-            cpu1Select.innerHTML = '<option value="">Select CPU...</option>';
-            cpu2Select.innerHTML = '<option value="">Select CPU...</option>';
-            
-            // Sort CPUs by name for easier selection
-            const sortedCpus = [...allCpus].sort((a, b) => 
-                (a.cpu_model_name || '').localeCompare(b.cpu_model_name || '')
-            );
-            
-            sortedCpus.forEach(cpu => {
-                const option1 = document.createElement('option');
-                option1.value = cpu.id;
-                option1.textContent = `${cpu.cpu_model_name}${cpu.codename ? ' (' + cpu.codename + ')' : ''}`;
-                cpu1Select.appendChild(option1);
-                
-                const option2 = document.createElement('option');
-                option2.value = cpu.id;
-                option2.textContent = `${cpu.cpu_model_name}${cpu.codename ? ' (' + cpu.codename + ')' : ''}`;
-                cpu2Select.appendChild(option2);
+            const s1 = document.getElementById('cpu1Select');
+            const s2 = document.getElementById('cpu2Select');
+            const nameKey = getNameKey();
+            const isCpu = dataSource === 'cpu';
+            const label = isCpu ? 'CPU' : 'GPU';
+
+            document.getElementById('comparisonTitle').textContent = `${label} Comparison Tool`;
+            document.getElementById('compare1Label').textContent = `${label} 1`;
+            document.getElementById('compare2Label').textContent = `${label} 2`;
+
+            s1.innerHTML = `<option value="">Select ${label}...</option>`;
+            s2.innerHTML = `<option value="">Select ${label}...</option>`;
+
+            const sorted = [...allData].sort((a, b) => (a[nameKey] || '').localeCompare(b[nameKey] || ''));
+            sorted.forEach(item => {
+                const extra = isCpu && item.codename ? ` (${item.codename})` : (!isCpu && item.vendor ? ` (${item.vendor})` : '');
+                const text = `${item[nameKey]}${extra}`;
+                s1.innerHTML += `<option value="${item.id}">${text}</option>`;
+                s2.innerHTML += `<option value="${item.id}">${text}</option>`;
             });
         }
 
-        function compareCPUs() {
-            const cpu1Id = parseInt(document.getElementById('cpu1Select').value);
-            const cpu2Id = parseInt(document.getElementById('cpu2Select').value);
-            
-            if (!cpu1Id || !cpu2Id) {
-                alert('Please select both CPUs to compare');
-                return;
-            }
-            
-            if (cpu1Id === cpu2Id) {
-                alert('Please select two different CPUs to compare');
-                return;
-            }
-            
-            const cpu1 = allCpus.find(c => c.id === cpu1Id);
-            const cpu2 = allCpus.find(c => c.id === cpu2Id);
-            
-            if (!cpu1 || !cpu2) {
-                alert('CPU not found');
-                return;
-            }
-            
-            displayComparison(cpu1, cpu2);
+        function compareItems() {
+            const id1 = parseInt(document.getElementById('cpu1Select').value);
+            const id2 = parseInt(document.getElementById('cpu2Select').value);
+            if (!id1 || !id2) { alert('Please select both items to compare'); return; }
+            if (id1 === id2) { alert('Please select two different items to compare'); return; }
+            const item1 = allData.find(d => d.id === id1);
+            const item2 = allData.find(d => d.id === id2);
+            if (!item1 || !item2) { alert('Item not found'); return; }
+            displayComparison(item1, item2);
         }
 
-        function displayComparison(cpu1, cpu2) {
-            const cpu1Name = cpu1.cpu_model_name || 'CPU 1';
-            const cpu2Name = cpu2.cpu_model_name || 'CPU 2';
-            
-            document.getElementById('cpu1NameHeader').textContent = cpu1Name;
-            document.getElementById('cpu2NameHeader').textContent = cpu2Name;
-            
-            const comparisonBody = document.getElementById('comparisonBody');
-            comparisonBody.innerHTML = '';
-            
-            const parameters = [
-                { key: 'cpu_model_name', label: 'CPU Model Name', type: 'text' },
-                { key: 'codename', label: 'Codename', type: 'text' },
-                { key: 'family', label: 'Family', type: 'text' },
-                { key: 'cpu_model', label: 'CPU Model', type: 'text' },
-                { key: 'cores', label: 'Cores', type: 'number', higher: 'better', format: (v) => v != null ? v : '-' },
-                { key: 'threads', label: 'Threads', type: 'number', higher: 'better', format: (v) => v != null ? v : '-' },
-                { key: 'max_turbo_frequency_ghz', label: 'Max Turbo Frequency', type: 'number', higher: 'better', unit: 'GHz', format: (v) => v ? v.toFixed(2) : '-' },
-                { key: 'l3_cache_mb', label: 'L3 Cache', type: 'number', higher: 'better', unit: 'MB', format: (v) => v ? v.toFixed(1) : '-' },
-                { key: 'tdp_watts', label: 'TDP', type: 'number', higher: 'worse', unit: 'W', format: (v) => v || '-' },
-                { key: 'launch_year', label: 'Launch Year', type: 'number', higher: 'better', format: (v) => v || '-' },
-                { key: 'max_memory_tb', label: 'Max Memory', type: 'number', higher: 'better', unit: 'TB', format: (v) => v ? v.toFixed(2) : '-' }
-            ];
-            
+        function getComparisonParams() {
+            if (dataSource === 'cpu') {
+                return [
+                    { key: 'cpu_model_name', label: 'CPU Model Name', type: 'text' },
+                    { key: 'codename', label: 'Codename', type: 'text' },
+                    { key: 'family', label: 'Family', type: 'text' },
+                    { key: 'cpu_model', label: 'CPU Model', type: 'text' },
+                    { key: 'cores', label: 'Cores', type: 'number', higher: 'better', format: v => v != null ? v : '-' },
+                    { key: 'threads', label: 'Threads', type: 'number', higher: 'better', format: v => v != null ? v : '-' },
+                    { key: 'max_turbo_frequency_ghz', label: 'Max Turbo Frequency', type: 'number', higher: 'better', unit: 'GHz', format: v => v ? v.toFixed(2) : '-' },
+                    { key: 'l3_cache_mb', label: 'L3 Cache', type: 'number', higher: 'better', unit: 'MB', format: v => v ? v.toFixed(1) : '-' },
+                    { key: 'tdp_watts', label: 'TDP', type: 'number', higher: 'worse', unit: 'W', format: v => v || '-' },
+                    { key: 'launch_year', label: 'Launch Year', type: 'number', higher: 'better', format: v => v || '-' },
+                    { key: 'max_memory_tb', label: 'Max Memory', type: 'number', higher: 'better', unit: 'TB', format: v => v ? v.toFixed(2) : '-' }
+                ];
+            } else {
+                return [
+                    { key: 'gpu_model_name', label: 'GPU Model Name', type: 'text' },
+                    { key: 'vendor', label: 'Vendor', type: 'text' },
+                    { key: 'gpu_model', label: 'GPU Model', type: 'text' },
+                    { key: 'form_factor', label: 'Form Factor', type: 'text' },
+                    { key: 'memory_gb', label: 'Memory', type: 'number', higher: 'better', unit: 'GB', format: v => v != null ? v : '-' },
+                    { key: 'memory_type', label: 'Memory Type', type: 'text' },
+                    { key: 'tdp_watts', label: 'TDP', type: 'number', higher: 'worse', unit: 'W', format: v => v || '-' }
+                ];
+            }
+        }
+
+        function displayComparison(item1, item2) {
+            const nameKey = getNameKey();
+            const name1 = item1[nameKey] || 'Item 1';
+            const name2 = item2[nameKey] || 'Item 2';
+
+            document.getElementById('cpu1NameHeader').textContent = name1;
+            document.getElementById('cpu2NameHeader').textContent = name2;
+
+            const body = document.getElementById('comparisonBody');
+            body.innerHTML = '';
+            const parameters = getComparisonParams();
+
             parameters.forEach((param, index) => {
                 const row = document.createElement('tr');
-                const val1 = cpu1[param.key];
-                const val2 = cpu2[param.key];
-                
+                const val1 = item1[param.key];
+                const val2 = item2[param.key];
                 const rowClass = index % 2 === 0 ? 'row-odd' : 'row-even';
-                
-                let diffHtml = '';
-                let cell1Highlight = '';
-                let cell2Highlight = '';
-                
+                let diffHtml = '', cell1H = '', cell2H = '';
+
                 if (param.type === 'number' && val1 != null && val2 != null && param.higher) {
                     const diff = val2 - val1;
-                    const percentDiff = val1 !== 0 ? ((diff / val1) * 100).toFixed(1) : 0;
-                    // Round diff to 2 decimal places to avoid floating point precision issues
-                    const diffRounded = Math.abs(diff).toFixed(2);
-                    // Remove trailing zeros for cleaner display
-                    const diffFormatted = parseFloat(diffRounded).toString();
-                    
+                    const pct = val1 !== 0 ? ((diff / val1) * 100).toFixed(1) : 0;
+                    const fmt = parseFloat(Math.abs(diff).toFixed(2)).toString();
                     if (diff > 0) {
-                        const badgeClass = param.higher === 'better' ? 'diff-better' : 'diff-worse';
-                        cell2Highlight = param.higher === 'better' ? 'highlight-better' : 'highlight-worse';
-                        diffHtml = `<span class="comparison-diff-badge ${badgeClass}">+${diffFormatted}${param.unit ? ' ' + param.unit : ''} (+${Math.abs(percentDiff)}%)</span>`;
+                        const cls = param.higher === 'better' ? 'diff-better' : 'diff-worse';
+                        cell2H = param.higher === 'better' ? 'highlight-better' : 'highlight-worse';
+                        diffHtml = `<span class="comparison-diff-badge ${cls}">+${fmt}${param.unit ? ' ' + param.unit : ''} (+${Math.abs(pct)}%)</span>`;
                     } else if (diff < 0) {
-                        const badgeClass = param.higher === 'better' ? 'diff-worse' : 'diff-better';
-                        cell1Highlight = param.higher === 'better' ? 'highlight-worse' : 'highlight-better';
-                        diffHtml = `<span class="comparison-diff-badge ${badgeClass}">-${diffFormatted}${param.unit ? ' ' + param.unit : ''} (${percentDiff}%)</span>`;
+                        const cls = param.higher === 'better' ? 'diff-worse' : 'diff-better';
+                        cell1H = param.higher === 'better' ? 'highlight-worse' : 'highlight-better';
+                        diffHtml = `<span class="comparison-diff-badge ${cls}">-${fmt}${param.unit ? ' ' + param.unit : ''} (${pct}%)</span>`;
                     } else {
                         diffHtml = '<span class="comparison-diff-badge diff-same">Same</span>';
                     }
-                } else if (param.type === 'text') {
-                    diffHtml = val1 === val2
-                        ? '<span class="comparison-diff-badge diff-same">Same</span>'
-                        : '<span class="comparison-diff-badge diff-different">Different</span>';
                 } else {
                     diffHtml = val1 === val2
                         ? '<span class="comparison-diff-badge diff-same">Same</span>'
                         : '<span class="comparison-diff-badge diff-different">Different</span>';
                 }
-                
-                const formatValue = param.format || ((v) => v != null ? v : '-');
-                const display1 = formatValue(val1);
-                const display2 = formatValue(val2);
-                const unit1 = (param.unit && display1 !== '-') ? ` ${param.unit}` : '';
-                const unit2 = (param.unit && display2 !== '-') ? ` ${param.unit}` : '';
-                
+
+                const fmt = param.format || (v => v != null ? v : '-');
+                const d1 = fmt(val1), d2 = fmt(val2);
+                const u1 = (param.unit && d1 !== '-') ? ` ${param.unit}` : '';
+                const u2 = (param.unit && d2 !== '-') ? ` ${param.unit}` : '';
+
                 row.innerHTML = `
                     <td class="comparison-label-cell ${rowClass}">${param.label}</td>
-                    <td class="comparison-value-cell ${cell1Highlight} ${rowClass}"><span class="comparison-value">${display1}${unit1}</span></td>
-                    <td class="comparison-value-cell ${cell2Highlight} ${rowClass}"><span class="comparison-value">${display2}${unit2}</span></td>
+                    <td class="comparison-value-cell ${cell1H} ${rowClass}"><span class="comparison-value">${d1}${u1}</span></td>
+                    <td class="comparison-value-cell ${cell2H} ${rowClass}"><span class="comparison-value">${d2}${u2}</span></td>
                     <td class="comparison-value-cell ${rowClass}">${diffHtml}</td>
                 `;
-                comparisonBody.appendChild(row);
+                body.appendChild(row);
             });
-            
-            // Store CPU data for download
-            window.currentComparison = { cpu1, cpu2, parameters };
-            
+
+            window.currentComparison = { item1, item2, parameters, nameKey };
             document.getElementById('comparisonResult').classList.remove('hidden');
         }
 
-        // Download comparison table as CSV
         function downloadComparisonTable() {
             if (!window.currentComparison) return;
-            
-            const { cpu1, cpu2, parameters } = window.currentComparison;
-            const cpu1Name = cpu1.cpu_model_name || 'CPU 1';
-            const cpu2Name = cpu2.cpu_model_name || 'CPU 2';
-            
-            // Escape function for CSV values
-            const escapeCSV = (str) => {
-                if (str === null || str === undefined) return '';
-                const s = String(str);
-                // Always wrap in quotes and escape internal quotes for proper CSV format
-                return '"' + s.replace(/"/g, '""') + '"';
-            };
-            
-            // Create CSV content with properly escaped header
-            let csv = escapeCSV('Specification') + ',' + 
-                      escapeCSV(cpu1Name) + ',' + 
-                      escapeCSV(cpu2Name) + ',' + 
-                      escapeCSV('Difference') + '\n';
-            
+            const { item1, item2, parameters, nameKey } = window.currentComparison;
+            const n1 = item1[nameKey] || 'Item 1';
+            const n2 = item2[nameKey] || 'Item 2';
+            const esc = s => '"' + String(s ?? '').replace(/"/g, '""') + '"';
+
+            let csv = [esc('Specification'), esc(n1), esc(n2), esc('Difference')].join(',') + '\n';
             parameters.forEach(param => {
-                const val1 = cpu1[param.key];
-                const val2 = cpu2[param.key];
-                
-                const formatValue = param.format || ((v) => v != null ? v : '-');
-                const display1 = formatValue(val1);
-                const display2 = formatValue(val2);
-                const unit1 = (param.unit && display1 !== '-') ? ` ${param.unit}` : '';
-                const unit2 = (param.unit && display2 !== '-') ? ` ${param.unit}` : '';
-                
-                let diff = '';
-                if (param.type === 'number' && val1 != null && val2 != null && param.higher) {
-                    const diffValue = val2 - val1;
-                    const percentDiff = val1 !== 0 ? ((diffValue / val1) * 100).toFixed(1) : 0;
-                    const diffRounded = Math.abs(diffValue).toFixed(2);
-                    const diffFormatted = parseFloat(diffRounded).toString();
-                    
-                    if (diffValue > 0) {
-                        diff = `+${diffFormatted}${param.unit ? ' ' + param.unit : ''} (+${Math.abs(percentDiff)}%)`;
-                    } else if (diffValue < 0) {
-                        diff = `-${diffFormatted}${param.unit ? ' ' + param.unit : ''} (${percentDiff}%)`;
-                    } else {
-                        diff = 'Same';
-                    }
-                } else if (param.type === 'text') {
-                    diff = val1 === val2 ? 'Same' : 'Different';
+                const v1 = item1[param.key], v2 = item2[param.key];
+                const fmt = param.format || (v => v != null ? v : '-');
+                const d1 = fmt(v1), d2 = fmt(v2);
+                const u1 = (param.unit && d1 !== '-') ? ` ${param.unit}` : '';
+                const u2 = (param.unit && d2 !== '-') ? ` ${param.unit}` : '';
+                let diff = 'Different';
+                if (param.type === 'number' && v1 != null && v2 != null && param.higher) {
+                    const dv = v2 - v1;
+                    const pct = v1 !== 0 ? ((dv / v1) * 100).toFixed(1) : 0;
+                    const f = parseFloat(Math.abs(dv).toFixed(2)).toString();
+                    diff = dv > 0 ? `+${f}${param.unit ? ' ' + param.unit : ''} (+${Math.abs(pct)}%)` : dv < 0 ? `-${f}${param.unit ? ' ' + param.unit : ''} (${pct}%)` : 'Same';
                 } else {
-                    diff = val1 === val2 ? 'Same' : 'Different';
+                    diff = v1 === v2 ? 'Same' : 'Different';
                 }
-                
-                csv += escapeCSV(param.label) + ',' + 
-                       escapeCSV(display1 + unit1) + ',' + 
-                       escapeCSV(display2 + unit2) + ',' + 
-                       escapeCSV(diff) + '\n';
+                csv += [esc(param.label), esc(d1 + u1), esc(d2 + u2), esc(diff)].join(',') + '\n';
             });
-            
-            // Create download link
+
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            
-            // Create filename with CPU names and date
-            const dateStr = new Date().toISOString().split('T')[0];
-            const filename = `CPU_Comparison_${cpu1Name.replace(/[^a-zA-Z0-9]/g, '_')}_vs_${cpu2Name.replace(/[^a-zA-Z0-9]/g, '_')}_${dateStr}.csv`;
-            link.setAttribute('download', filename);
-            
+            link.href = URL.createObjectURL(blob);
+            const prefix = dataSource === 'cpu' ? 'CPU' : 'GPU';
+            link.download = `${prefix}_Comparison_${n1.replace(/[^a-zA-Z0-9]/g, '_')}_vs_${n2.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
 
-        // Event listeners
         document.getElementById('xAxis').addEventListener('change', updateChart);
         document.getElementById('yAxis').addEventListener('change', updateChart);
         document.getElementById('chartType').addEventListener('change', function() {
-            const barLimitGroup = document.getElementById('barLimitGroup');
-            if (this.value === 'bar') {
-                barLimitGroup.classList.remove('hidden');
-            } else {
-                barLimitGroup.classList.add('hidden');
-            }
+            document.getElementById('barLimitGroup').classList.toggle('hidden', this.value !== 'bar');
             updateChart();
         });
         document.getElementById('barLimit').addEventListener('change', updateChart);
         document.getElementById('barLimit').addEventListener('input', updateChart);
-        
+
         document.getElementById('cpu1Select').addEventListener('change', function() {
-            const cpu1 = this.value;
-            const cpu2 = document.getElementById('cpu2Select').value;
-            document.getElementById('compareButton').disabled = !cpu1 || !cpu2;
+            document.getElementById('compareButton').disabled = !this.value || !document.getElementById('cpu2Select').value;
         });
-
         document.getElementById('cpu2Select').addEventListener('change', function() {
-            const cpu1 = document.getElementById('cpu1Select').value;
-            const cpu2 = this.value;
-            document.getElementById('compareButton').disabled = !cpu1 || !cpu2;
+            document.getElementById('compareButton').disabled = !document.getElementById('cpu1Select').value || !this.value;
         });
-        
-        document.getElementById('compareButton').addEventListener('click', compareCPUs);
+        document.getElementById('compareButton').addEventListener('click', compareItems);
 
-        // Initialize
+        document.getElementById('dataSource').addEventListener('change', function() {
+            dataSource = this.value;
+            populateAxisSelectors();
+            document.getElementById('comparisonResult').classList.add('hidden');
+            loadData();
+        });
+
+        populateAxisSelectors();
         loadData();
     </script>
 </body>

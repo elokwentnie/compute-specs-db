@@ -37,6 +37,20 @@ class CPUSpec(Base):
     max_memory_tb = Column(Float)
 
 
+class GPUSpec(Base):
+    """GPU specification database model"""
+    __tablename__ = "gpu_specs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    gpu_model_name = Column(String, index=True)
+    vendor = Column(String, index=True)
+    gpu_model = Column(String)
+    form_factor = Column(String)
+    memory_gb = Column(Integer)
+    memory_type = Column(String)
+    tdp_watts = Column(Integer)
+
+
 def init_db():
     """Initialize database tables"""
     Base.metadata.create_all(bind=engine)
