@@ -3,7 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compute Specs DB</title>
+    <title>Compute Specs DB — HPC and Datacenter CPU Specifications</title>
+    <meta name="description" content="Search, compare, and export server-class CPU specifications. Covers Intel Xeon, AMD EPYC, Opteron, and more. Free public API and downloadable data.">
+    <link rel="canonical" href="https://computespecsdb.com/">
+    <link rel="icon" type="image/png" href="/static/images/server-logo.png">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Compute Specs DB">
+    <meta property="og:title" content="Compute Specs DB — HPC and Datacenter CPU Specifications">
+    <meta property="og:description" content="Search, compare, and export server-class CPU specifications. Covers Intel Xeon, AMD EPYC, Opteron, and more.">
+    <meta property="og:url" content="https://computespecsdb.com/">
+    <meta property="og:image" content="https://computespecsdb.com/static/images/server-logo.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Compute Specs DB — HPC and Datacenter CPU Specifications">
+    <meta name="twitter:description" content="Search, compare, and export server-class CPU specifications. Free public API and downloadable data.">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Compute Specs DB",
+        "url": "https://computespecsdb.com/",
+        "description": "A public, searchable catalog of HPC and datacenter CPU specifications.",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://computespecsdb.com/?search={search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        "name": "HPC and Datacenter CPU Specifications",
+        "description": "Manually validated specifications for server-class CPUs including Intel Xeon, AMD EPYC, and AMD Opteron processors.",
+        "url": "https://computespecsdb.com/",
+        "license": "https://opensource.org/licenses/MIT",
+        "creator": {
+            "@type": "Organization",
+            "name": "Compute Specs DB"
+        },
+        "distribution": [
+            {
+                "@type": "DataDownload",
+                "encodingFormat": "application/json",
+                "contentUrl": "https://computespecsdb.com/api/cpus"
+            },
+            {
+                "@type": "DataDownload",
+                "encodingFormat": "text/csv",
+                "contentUrl": "https://computespecsdb.com/api/export/csv"
+            }
+        ]
+    }
+    </script>
+
     <link rel="stylesheet" href="/static/css/common.css">
     <link rel="stylesheet" href="/static/css/index.css">
 </head>
@@ -14,6 +73,7 @@
             <p>HPC and Datacenter Compute Specifications</p>
         </header>
 
+        <main>
         <div class="search-section">
             <div class="search-container">
                 <input type="text" id="searchInput" placeholder="Search by model, family, codename, or CPU model (e.g., Milan, EPYC, Xeon)...">
@@ -125,6 +185,7 @@
                 </div>
             </div>
         </div>
+        </main>
 
         <footer class="data-footer">
             <p class="data-footer-title">Data Validation</p>

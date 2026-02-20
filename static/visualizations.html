@@ -3,8 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compute Specs DB - Visualizations</title>
+    <title>Visualizations — Compute Specs DB</title>
+    <meta name="description" content="Interactive charts and comparisons of server CPU performance metrics. Compare Intel Xeon vs AMD EPYC by cores, frequency, TDP, and more.">
+    <link rel="canonical" href="https://computespecsdb.com/visualizations">
     <link rel="icon" type="image/png" href="/static/images/server-logo.png">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Compute Specs DB">
+    <meta property="og:title" content="CPU Visualizations — Compute Specs DB">
+    <meta property="og:description" content="Interactive charts and comparisons of server CPU performance metrics. Compare Intel Xeon vs AMD EPYC by cores, frequency, TDP, and more.">
+    <meta property="og:url" content="https://computespecsdb.com/visualizations">
+    <meta property="og:image" content="https://computespecsdb.com/static/images/server-logo.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="CPU Visualizations — Compute Specs DB">
+    <meta name="twitter:description" content="Interactive charts and comparisons of server CPU performance metrics.">
+
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link rel="stylesheet" href="/static/css/common.css">
     <link rel="stylesheet" href="/static/css/visualizations.css">
@@ -15,13 +31,13 @@
         <p>Interactive charts and analysis of CPU performance metrics</p>
     </div>
 
-    <div class="nav">
+    <nav class="nav">
         <a href="/">📋 Table View</a>
         <a href="/visualizations">📊 Visualizations</a>
         <a href="/docs">📚 API Docs</a>
-    </div>
+    </nav>
 
-    <div class="container">
+    <main class="container">
         <div class="stats" id="stats">
             <div class="stat-card">
                 <div class="stat-value" id="totalCpus">-</div>
@@ -167,18 +183,19 @@
                 </div>
             </div>
         </div>
-        <footer class="data-footer">
-            <p class="data-footer-title">Data Validation</p>
-            <p>All specifications have been manually validated against official manufacturer sources:</p>
-            <div class="data-footer-sources">
-                <a href="https://www.intel.com/content/www/us/en/products/overview.html" target="_blank" rel="noopener">Intel</a>
-                <a href="https://www.amd.com/en/products/specifications/processors.html" target="_blank" rel="noopener">AMD</a>
-                <a href="https://www.techpowerup.com/" target="_blank" rel="noopener">TechPowerUp</a>
-                <a href="https://www.cpubenchmark.net/" target="_blank" rel="noopener">PassMark</a>
-            </div>
-            <p>Found an error? <a href="https://github.com/elokwentnie/compute-specs-db/issues/new?template=report-data-error.yml" target="_blank" rel="noopener">Report it on GitHub</a> | <a href="https://github.com/elokwentnie/compute-specs-db/issues/new?template=new-cpu-request.yml" target="_blank" rel="noopener">Suggest a new CPU</a></p>
-        </footer>
-    </div>
+    </main>
+
+    <footer class="data-footer">
+        <p class="data-footer-title">Data Validation</p>
+        <p>All specifications have been manually validated against official manufacturer sources:</p>
+        <div class="data-footer-sources">
+            <a href="https://www.intel.com/content/www/us/en/products/overview.html" target="_blank" rel="noopener">Intel</a>
+            <a href="https://www.amd.com/en/products/specifications/processors.html" target="_blank" rel="noopener">AMD</a>
+            <a href="https://www.techpowerup.com/" target="_blank" rel="noopener">TechPowerUp</a>
+            <a href="https://www.cpubenchmark.net/" target="_blank" rel="noopener">PassMark</a>
+        </div>
+        <p>Found an error? <a href="https://github.com/elokwentnie/compute-specs-db/issues/new?template=report-data-error.yml" target="_blank" rel="noopener">Report it on GitHub</a> | <a href="https://github.com/elokwentnie/compute-specs-db/issues/new?template=new-cpu-request.yml" target="_blank" rel="noopener">Suggest a new CPU</a></p>
+    </footer>
 
     <footer class="site-footer">
         <div class="site-footer-inner">
