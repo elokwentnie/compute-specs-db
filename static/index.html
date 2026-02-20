@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compute Specs DB — HPC and Datacenter CPU Specifications</title>
-    <meta name="description" content="Search, compare, and export server-class CPU specifications. Covers Intel Xeon, AMD EPYC, Opteron, and more. Free public API and downloadable data.">
+    <title>Compute Specs DB — HPC and Datacenter Hardware Specifications</title>
+    <meta name="description" content="Search, compare, and export server-class CPU and GPU specifications. Covers Intel Xeon, AMD EPYC, NVIDIA, AMD Instinct, and more. Free public API and downloadable data.">
     <link rel="canonical" href="https://computespecsdb.com/">
     <link rel="icon" type="image/png" href="/static/images/server-logo.png">
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Compute Specs DB">
-    <meta property="og:title" content="Compute Specs DB — HPC and Datacenter CPU Specifications">
-    <meta property="og:description" content="Search, compare, and export server-class CPU specifications. Covers Intel Xeon, AMD EPYC, Opteron, and more.">
+    <meta property="og:title" content="Compute Specs DB — HPC and Datacenter Hardware Specifications">
+    <meta property="og:description" content="Search, compare, and export server-class CPU and GPU specifications. Covers Intel Xeon, AMD EPYC, NVIDIA, AMD Instinct, and more.">
     <meta property="og:url" content="https://computespecsdb.com/">
     <meta property="og:image" content="https://computespecsdb.com/static/images/server-logo.png">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Compute Specs DB — HPC and Datacenter CPU Specifications">
-    <meta name="twitter:description" content="Search, compare, and export server-class CPU specifications. Free public API and downloadable data.">
+    <meta name="twitter:title" content="Compute Specs DB — HPC and Datacenter Hardware Specifications">
+    <meta name="twitter:description" content="Search, compare, and export server-class CPU and GPU specifications. Free public API and downloadable data.">
 
     <!-- Structured Data -->
     <script type="application/ld+json">
@@ -70,13 +70,13 @@
     <div class="container">
         <header>
             <h1>🔧 Compute Specs DB</h1>
-            <p>HPC and Datacenter Compute Specifications</p>
+            <p>HPC and Datacenter Hardware Specifications</p>
         </header>
 
         <main>
         <div class="search-section">
             <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search by model, family, codename, or CPU model (e.g., Milan, EPYC, Xeon)...">
+                <input type="text" id="searchInput" placeholder="Search by model, family, codename...">
                 <button id="searchButton">Search</button>
             </div>
         </div>
@@ -87,6 +87,10 @@
                 <a href="/api/cpus" target="_blank" class="api-link">
                     <span>📋</span>
                     <span>All CPUs</span>
+                </a>
+                <a href="/api/gpus" target="_blank" class="api-link">
+                    <span>🎮</span>
+                    <span>All GPUs</span>
                 </a>
                 <a href="/visualizations" class="api-link">
                     <span>📊</span>
@@ -105,31 +109,36 @@
 
         <div class="stats" id="stats">
             <div class="stat-item">
-                <div class="stat-value" id="totalCpus">-</div>
-                <div class="stat-label">Total CPUs</div>
+                <div class="stat-value" id="stat1Value">-</div>
+                <div class="stat-label" id="stat1Label">Total CPUs</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value" id="uniqueFamilies">-</div>
-                <div class="stat-label">Families</div>
+                <div class="stat-value" id="stat2Value">-</div>
+                <div class="stat-label" id="stat2Label">Families</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value" id="uniqueCodenames">-</div>
-                <div class="stat-label">Codenames</div>
+                <div class="stat-value" id="stat3Value">-</div>
+                <div class="stat-label" id="stat3Label">Codenames</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value" id="maxCores">-</div>
-                <div class="stat-label">Max Cores</div>
+                <div class="stat-value" id="stat4Value">-</div>
+                <div class="stat-label" id="stat4Label">Max Cores</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value" id="yearRange">-</div>
-                <div class="stat-label">Year Range</div>
+                <div class="stat-value" id="stat5Value">-</div>
+                <div class="stat-label" id="stat5Label">Year Range</div>
             </div>
         </div>
 
-            <div class="table-section" id="tableSection">
+        <div class="data-tabs" style="display:flex;gap:0;margin-bottom:0;">
+            <button class="data-tab active" id="cpuTab" onclick="switchDataTab('cpu')" style="flex:1;padding:0.75rem 1.5rem;border:1px solid #e2e8f0;border-bottom:none;background:#fff;color:#1e293b;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0;font-size:0.95rem;">CPUs</button>
+            <button class="data-tab" id="gpuTab" onclick="switchDataTab('gpu')" style="flex:1;padding:0.75rem 1.5rem;border:1px solid #e2e8f0;border-bottom:none;background:#f1f5f9;color:#64748b;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0;font-size:0.95rem;">GPUs</button>
+        </div>
+
+            <div class="table-section" id="tableSection" style="border-radius:0 0 8px 8px;">
                 <div id="loading" class="loading">
                     <div class="spinner"></div>
-                    <p>Loading CPU data...</p>
+                    <p>Loading data...</p>
                 </div>
 
                 <div id="error" class="error hidden">
@@ -139,7 +148,7 @@
 
                 <div id="tableContainer" class="hidden">
                     <table id="cpuTable">
-                    <thead>
+                    <thead id="cpuTableHead">
                         <tr>
                             <th class="sortable" data-sort="id">ID</th>
                             <th class="sortable" data-sort="cpu_model_name">CPU Model Name</th>
@@ -155,12 +164,24 @@
                             <th class="sortable" data-sort="max_memory_tb">Mem TB</th>
                         </tr>
                     </thead>
+                    <thead id="gpuTableHead" class="hidden">
+                        <tr>
+                            <th class="sortable-gpu" data-sort="id">ID</th>
+                            <th class="sortable-gpu" data-sort="gpu_model_name">GPU Model Name</th>
+                            <th class="sortable-gpu" data-sort="vendor">Vendor</th>
+                            <th class="sortable-gpu" data-sort="gpu_model">GPU Model</th>
+                            <th class="sortable-gpu" data-sort="form_factor">Form Factor</th>
+                            <th class="sortable-gpu" data-sort="memory_gb">Memory (GB)</th>
+                            <th class="sortable-gpu" data-sort="memory_type">Memory Type</th>
+                            <th class="sortable-gpu" data-sort="tdp_watts">TDP (W)</th>
+                        </tr>
+                    </thead>
                     <tbody id="tableBody"></tbody>
                 </table>
             </div>
 
             <div id="emptyState" class="empty-state hidden">
-                <p>No CPUs found matching your search.</p>
+                <p>No results found matching your search.</p>
             </div>
 
             <div id="pagination" class="pagination-container hidden">
@@ -214,7 +235,7 @@
             </div>
             <hr class="site-footer-divider">
             <div class="site-footer-bottom">
-                <span class="site-footer-disclaimer">Intel, Xeon, and Core are trademarks of Intel Corporation. AMD, EPYC, Ryzen, and Threadripper are trademarks of Advanced Micro Devices, Inc. All other trademarks are the property of their respective owners. Data is provided "as-is" for informational purposes only, without warranty of any kind.</span>
+                <span class="site-footer-disclaimer">Intel, Xeon, and Core are trademarks of Intel Corporation. AMD, EPYC, Ryzen, and Instinct are trademarks of Advanced Micro Devices, Inc. NVIDIA, H100, H200, B100, B200, L4, L40, L40S, and T4 are trademarks of NVIDIA Corporation. All other trademarks are the property of their respective owners. Data is provided "as-is" for informational purposes only, without warranty of any kind.</span>
                 <span>&copy; 2026 Compute Specs DB &middot; Open Source</span>
             </div>
         </div>
@@ -222,13 +243,14 @@
 
     <script>
         const API_BASE = '';
-        let currentCPUs = [];
+        let currentData = [];
         let currentSortColumn = null;
         let currentSortDirection = 'asc';
         let currentPage = 1;
         let pageSize = 25;
         let totalPages = 1;
         let searchTimeout = null;
+        let activeTab = 'cpu';
 
         const searchInput = document.getElementById('searchInput');
         const searchButton = document.getElementById('searchButton');
@@ -237,6 +259,43 @@
         const errorDiv = document.getElementById('error');
         const tableContainer = document.getElementById('tableContainer');
         const emptyState = document.getElementById('emptyState');
+
+        function switchDataTab(tab) {
+            activeTab = tab;
+            currentData = [];
+            currentSortColumn = null;
+            currentSortDirection = 'asc';
+            currentPage = 1;
+            searchInput.value = '';
+
+            document.getElementById('cpuTab').classList.toggle('active', tab === 'cpu');
+            document.getElementById('gpuTab').classList.toggle('active', tab === 'gpu');
+            document.getElementById('cpuTab').style.background = tab === 'cpu' ? '#fff' : '#f1f5f9';
+            document.getElementById('cpuTab').style.color = tab === 'cpu' ? '#1e293b' : '#64748b';
+            document.getElementById('gpuTab').style.background = tab === 'gpu' ? '#fff' : '#f1f5f9';
+            document.getElementById('gpuTab').style.color = tab === 'gpu' ? '#1e293b' : '#64748b';
+
+            document.getElementById('cpuTableHead').classList.toggle('hidden', tab !== 'cpu');
+            document.getElementById('gpuTableHead').classList.toggle('hidden', tab !== 'gpu');
+
+            searchInput.placeholder = tab === 'cpu'
+                ? 'Search by model, family, codename, or CPU model (e.g., Milan, EPYC, Xeon)...'
+                : 'Search by model, vendor, form factor, or memory type (e.g., H100, NVIDIA, HBM3)...';
+
+            renderStats();
+            loadAllData();
+            bindSortHeaders();
+        }
+
+        function bindSortHeaders() {
+            const selector = activeTab === 'cpu' ? 'th.sortable' : 'th.sortable-gpu';
+            document.querySelectorAll(selector).forEach(header => {
+                header.onclick = () => {
+                    const column = header.getAttribute('data-sort');
+                    if (column) sortData(column, currentSortDirection);
+                };
+            });
+        }
 
         async function fetchData(url) {
             try {
@@ -258,29 +317,29 @@
             document.getElementById('errorMessage').textContent = message;
         }
 
-        function displayCPUs(cpus) {
-            if (!cpus || cpus.length === 0) {
+        function displayData(items) {
+            if (!items || items.length === 0) {
                 loadingDiv.classList.add('hidden');
                 tableContainer.classList.add('hidden');
                 errorDiv.classList.add('hidden');
                 emptyState.classList.remove('hidden');
-                currentCPUs = [];
+                currentData = [];
                 currentPage = 1;
                 updatePagination(0);
                 return;
             }
 
-            currentCPUs = [...cpus];
-            currentPage = 1; // Reset to first page when new data is loaded
+            currentData = [...items];
+            currentPage = 1;
             if (currentSortColumn) {
-                sortCPUs(currentSortColumn, currentSortDirection, false);
+                sortData(currentSortColumn, currentSortDirection, false);
             } else {
-                renderTable(currentCPUs);
+                renderTable(currentData);
             }
         }
 
-        function renderTable(cpus) {
-            if (!cpus || cpus.length === 0) {
+        function renderTable(items) {
+            if (!items || items.length === 0) {
                 tableBody.innerHTML = '';
                 updatePagination(0);
                 loadingDiv.classList.add('hidden');
@@ -290,60 +349,84 @@
                 return;
             }
 
-            // Calculate pagination
-            totalPages = Math.ceil(cpus.length / pageSize);
-            if (currentPage > totalPages && totalPages > 0) {
-                currentPage = totalPages;
-            }
+            totalPages = Math.ceil(items.length / pageSize);
+            if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
             if (currentPage < 1) currentPage = 1;
 
-            // Get current page data
             const startIndex = (currentPage - 1) * pageSize;
             const endIndex = startIndex + pageSize;
-            const pageData = cpus.slice(startIndex, endIndex);
+            const pageData = items.slice(startIndex, endIndex);
 
             tableBody.innerHTML = '';
-            pageData.forEach(cpu => {
-                const row = document.createElement('tr');
-                const codename = cpu.codename || '-';
-                const codenameBadge = codename !== '-' 
-                    ? `<span class="codename-badge" data-codename="${codename}" title="Click to filter by ${codename}">${codename}</span>`
-                    : '<span>-</span>';
-                row.innerHTML = `
-                    <td>${cpu.id}</td>
-                    <td><strong>${cpu.cpu_model_name || '-'}</strong></td>
-                    <td>${codenameBadge}</td>
-                    <td>${cpu.family || '-'}</td>
-                    <td>${cpu.cpu_model || '-'}</td>
-                    <td>${cpu.cores ?? '-'}</td>
-                    <td>${cpu.threads ?? '-'}</td>
-                    <td>${cpu.max_turbo_frequency_ghz ?? '-'}</td>
-                    <td>${cpu.l3_cache_mb ?? '-'}</td>
-                    <td>${cpu.tdp_watts ?? '-'}</td>
-                    <td>${cpu.launch_year ?? '-'}</td>
-                    <td>${cpu.max_memory_tb ?? '-'}</td>
-                `;
-                tableBody.appendChild(row);
-            });
-            
-            // Add click handlers to codename badges
-            document.querySelectorAll('.codename-badge').forEach(badge => {
-                badge.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const codename = badge.getAttribute('data-codename');
-                    filterByCodename(codename);
-                });
-                badge.addEventListener('mouseenter', function() {
-                    this.style.background = '#c7d2fe';
-                    this.style.transform = 'scale(1.05)';
-                });
-                badge.addEventListener('mouseleave', function() {
-                    this.style.background = '#e0e7ff';
-                    this.style.transform = 'scale(1)';
-                });
-            });
 
-            updatePagination(cpus.length);
+            if (activeTab === 'cpu') {
+                pageData.forEach(cpu => {
+                    const row = document.createElement('tr');
+                    const codename = cpu.codename || '-';
+                    const codenameBadge = codename !== '-' 
+                        ? `<span class="codename-badge" data-codename="${codename}" title="Click to filter by ${codename}">${codename}</span>`
+                        : '<span>-</span>';
+                    row.innerHTML = `
+                        <td>${cpu.id}</td>
+                        <td><strong>${cpu.cpu_model_name || '-'}</strong></td>
+                        <td>${codenameBadge}</td>
+                        <td>${cpu.family || '-'}</td>
+                        <td>${cpu.cpu_model || '-'}</td>
+                        <td>${cpu.cores ?? '-'}</td>
+                        <td>${cpu.threads ?? '-'}</td>
+                        <td>${cpu.max_turbo_frequency_ghz ?? '-'}</td>
+                        <td>${cpu.l3_cache_mb ?? '-'}</td>
+                        <td>${cpu.tdp_watts ?? '-'}</td>
+                        <td>${cpu.launch_year ?? '-'}</td>
+                        <td>${cpu.max_memory_tb ?? '-'}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+                document.querySelectorAll('.codename-badge').forEach(badge => {
+                    badge.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const codename = badge.getAttribute('data-codename');
+                        filterByValue(codename);
+                    });
+                    badge.addEventListener('mouseenter', function() {
+                        this.style.background = '#c7d2fe';
+                        this.style.transform = 'scale(1.05)';
+                    });
+                    badge.addEventListener('mouseleave', function() {
+                        this.style.background = '#e0e7ff';
+                        this.style.transform = 'scale(1)';
+                    });
+                });
+            } else {
+                pageData.forEach(gpu => {
+                    const row = document.createElement('tr');
+                    const vendor = gpu.vendor || '-';
+                    const vendorBadge = vendor !== '-'
+                        ? `<span class="codename-badge" data-codename="${vendor}" title="Click to filter by ${vendor}" style="background:${vendor === 'NVIDIA' ? '#76b900' : vendor === 'AMD' ? '#ed1c24' : '#e0e7ff'};color:${vendor === 'NVIDIA' || vendor === 'AMD' ? '#fff' : '#4338ca'}">${vendor}</span>`
+                        : '<span>-</span>';
+                    row.innerHTML = `
+                        <td>${gpu.id}</td>
+                        <td><strong>${gpu.gpu_model_name || '-'}</strong></td>
+                        <td>${vendorBadge}</td>
+                        <td>${gpu.gpu_model || '-'}</td>
+                        <td>${gpu.form_factor || '-'}</td>
+                        <td>${gpu.memory_gb ?? '-'}</td>
+                        <td>${gpu.memory_type || '-'}</td>
+                        <td>${gpu.tdp_watts ?? '-'}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+                document.querySelectorAll('.codename-badge').forEach(badge => {
+                    badge.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        filterByValue(badge.getAttribute('data-codename'));
+                    });
+                });
+            }
+
+            updatePagination(items.length);
             loadingDiv.classList.add('hidden');
             errorDiv.classList.add('hidden');
             emptyState.classList.add('hidden');
@@ -358,18 +441,13 @@
             }
 
             paginationDiv.classList.remove('hidden');
-            
-            // Update pagination info
             const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
             const endItem = Math.min(currentPage * pageSize, totalItems);
             document.getElementById('paginationInfo').textContent = 
                 `Showing ${startItem} to ${endItem} of ${totalItems} entries`;
-
-            // Update page info
             document.getElementById('pageInfo').textContent = 
                 `Page ${currentPage} of ${totalPages}`;
 
-            // Update button states
             document.getElementById('firstPage').disabled = currentPage === 1;
             document.getElementById('prevPage').disabled = currentPage === 1;
             document.getElementById('nextPage').disabled = currentPage === totalPages;
@@ -380,31 +458,31 @@
             if (page < 1 || page > totalPages) return;
             currentPage = page;
             if (currentSortColumn) {
-                sortCPUs(currentSortColumn, currentSortDirection, false);
+                sortData(currentSortColumn, currentSortDirection, false);
             } else {
-                renderTable(currentCPUs);
+                renderTable(currentData);
             }
         }
 
         function changePageSize(newSize) {
             pageSize = parseInt(newSize);
-            currentPage = 1; // Reset to first page
+            currentPage = 1;
             if (currentSortColumn) {
-                sortCPUs(currentSortColumn, currentSortDirection, false);
+                sortData(currentSortColumn, currentSortDirection, false);
             } else {
-                renderTable(currentCPUs);
+                renderTable(currentData);
             }
         }
 
-        function sortCPUs(column, direction, toggle = true) {
-            if (!currentCPUs || currentCPUs.length === 0) return;
+        function sortData(column, direction, toggle = true) {
+            if (!currentData || currentData.length === 0) return;
             if (toggle && currentSortColumn === column) {
                 direction = currentSortDirection === 'asc' ? 'desc' : 'asc';
             }
             currentSortColumn = column;
             currentSortDirection = direction;
 
-            const sorted = [...currentCPUs].sort((a, b) => {
+            const sorted = [...currentData].sort((a, b) => {
                 let aVal = a[column];
                 let bVal = b[column];
                 if (aVal === null || aVal === undefined) aVal = '';
@@ -422,23 +500,26 @@
         }
 
         function updateSortIndicators(column, direction) {
-            document.querySelectorAll('th.sortable').forEach(th => {
+            const selector = activeTab === 'cpu' ? 'th.sortable' : 'th.sortable-gpu';
+            document.querySelectorAll(selector).forEach(th => {
                 th.classList.remove('sort-asc', 'sort-desc');
             });
             if (column && direction) {
-                const header = document.querySelector(`th[data-sort="${column}"]`);
-                if (header) header.classList.add(`sort-${direction}`);
+                const allHeaders = document.querySelectorAll(selector);
+                allHeaders.forEach(h => {
+                    if (h.getAttribute('data-sort') === column) h.classList.add(`sort-${direction}`);
+                });
             }
         }
 
-        async function loadAllCPUs() {
+        async function loadAllData() {
             loadingDiv.classList.remove('hidden');
-            const cpus = await fetchData(`${API_BASE}/api/cpus?limit=1000`);
-            if (cpus) displayCPUs(cpus);
+            const endpoint = activeTab === 'cpu' ? '/api/cpus?limit=1000' : '/api/gpus?limit=1000';
+            const data = await fetchData(`${API_BASE}${endpoint}`);
+            if (data) displayData(data);
         }
 
-        async function searchCPUs(query) {
-            // Clear any pending search timeout
+        async function searchData(query) {
             if (searchTimeout) {
                 clearTimeout(searchTimeout);
                 searchTimeout = null;
@@ -448,86 +529,91 @@
                 currentSortColumn = null;
                 currentSortDirection = 'asc';
                 updateSortIndicators(null, null);
-                loadAllCPUs();
+                loadAllData();
                 return;
             }
             
             loadingDiv.classList.remove('hidden');
             const encodedQuery = encodeURIComponent(query.trim());
-            const cpus = await fetchData(`${API_BASE}/api/cpus/search?q=${encodedQuery}`);
-            if (cpus) displayCPUs(cpus);
+            const endpoint = activeTab === 'cpu' 
+                ? `/api/cpus/search?q=${encodedQuery}` 
+                : `/api/gpus/search?q=${encodedQuery}`;
+            const data = await fetchData(`${API_BASE}${endpoint}`);
+            if (data) displayData(data);
         }
 
-        // Debounced search for real-time filtering
         function debouncedSearch(query) {
-            // Clear existing timeout
-            if (searchTimeout) {
-                clearTimeout(searchTimeout);
-            }
-            
-            // Set new timeout to search after user stops typing
-            searchTimeout = setTimeout(() => {
-                searchCPUs(query);
-            }, 300); // Wait 300ms after user stops typing
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => searchData(query), 300);
         }
 
-        async function filterByCodename(codename) {
-            if (!codename || codename === '-') return;
-            
-            // Toggle behavior: if already filtering by this codename, reset to show all
-            if (searchInput.value === codename) {
+        async function filterByValue(value) {
+            if (!value || value === '-') return;
+            if (searchInput.value === value) {
                 searchInput.value = '';
-                await searchCPUs('');
+                await searchData('');
             } else {
-                searchInput.value = codename;
-                await searchCPUs(codename);
+                searchInput.value = value;
+                await searchData(value);
             }
         }
+
+        let cachedStats = null;
 
         async function loadStats() {
-            const stats = await fetchData(`${API_BASE}/api/stats`);
-            if (stats) {
-                document.getElementById('totalCpus').textContent = stats.total_cpus || '-';
-                document.getElementById('uniqueFamilies').textContent = stats.unique_families || '-';
-                document.getElementById('uniqueCodenames').textContent = stats.unique_codenames || '-';
-                document.getElementById('maxCores').textContent = stats.max_cores || '-';
-                document.getElementById('yearRange').textContent = stats.year_range || '-';
+            cachedStats = await fetchData(`${API_BASE}/api/stats`);
+            renderStats();
+        }
+
+        function renderStats() {
+            if (!cachedStats) return;
+            const s = cachedStats;
+            if (activeTab === 'cpu') {
+                document.getElementById('stat1Value').textContent = s.total_cpus || '-';
+                document.getElementById('stat1Label').textContent = 'Total CPUs';
+                document.getElementById('stat2Value').textContent = s.unique_families || '-';
+                document.getElementById('stat2Label').textContent = 'Families';
+                document.getElementById('stat3Value').textContent = s.unique_codenames || '-';
+                document.getElementById('stat3Label').textContent = 'Codenames';
+                document.getElementById('stat4Value').textContent = s.max_cores || '-';
+                document.getElementById('stat4Label').textContent = 'Max Cores';
+                document.getElementById('stat5Value').textContent = s.year_range || '-';
+                document.getElementById('stat5Label').textContent = 'Year Range';
+            } else {
+                document.getElementById('stat1Value').textContent = s.total_gpus || '-';
+                document.getElementById('stat1Label').textContent = 'Total GPUs';
+                document.getElementById('stat2Value').textContent = s.unique_gpu_vendors || '-';
+                document.getElementById('stat2Label').textContent = 'Vendors';
+                document.getElementById('stat3Value').textContent = s.unique_memory_types || '-';
+                document.getElementById('stat3Label').textContent = 'Memory Types';
+                document.getElementById('stat4Value').textContent = s.max_gpu_memory_gb ? s.max_gpu_memory_gb + ' GB' : '-';
+                document.getElementById('stat4Label').textContent = 'Max Memory';
+                document.getElementById('stat5Value').textContent = s.total_gpus || '-';
+                document.getElementById('stat5Label').textContent = 'Total Models';
             }
         }
 
-        // Real-time search as user types
-        searchInput.addEventListener('input', (e) => {
-            debouncedSearch(e.target.value);
-        });
+        searchInput.addEventListener('input', (e) => debouncedSearch(e.target.value));
 
-        // Search button click (immediate search)
         searchButton.addEventListener('click', () => {
-            if (searchTimeout) {
-                clearTimeout(searchTimeout);
-                searchTimeout = null;
-            }
-            searchCPUs(searchInput.value);
+            if (searchTimeout) { clearTimeout(searchTimeout); searchTimeout = null; }
+            searchData(searchInput.value);
         });
 
-        // Enter key (immediate search)
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                if (searchTimeout) {
-                    clearTimeout(searchTimeout);
-                    searchTimeout = null;
-                }
-                searchCPUs(searchInput.value);
+                if (searchTimeout) { clearTimeout(searchTimeout); searchTimeout = null; }
+                searchData(searchInput.value);
             }
         });
 
         document.querySelectorAll('th.sortable').forEach(header => {
             header.addEventListener('click', () => {
                 const column = header.getAttribute('data-sort');
-                if (column) sortCPUs(column, currentSortDirection);
+                if (column) sortData(column, currentSortDirection);
             });
         });
 
-        // Pagination event listeners
         document.getElementById('firstPage').addEventListener('click', () => goToPage(1));
         document.getElementById('prevPage').addEventListener('click', () => goToPage(currentPage - 1));
         document.getElementById('nextPage').addEventListener('click', () => goToPage(currentPage + 1));
@@ -535,8 +621,9 @@
         document.getElementById('pageSizeSelect').addEventListener('change', (e) => changePageSize(e.target.value));
 
         window.addEventListener('load', () => {
-            loadAllCPUs();
+            loadAllData();
             loadStats();
+            bindSortHeaders();
         });
     </script>
 </body>
