@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """
-Pull the live Compute Specs DB export into cpu_spec_validated.csv.
+Pull the live Compute Specs DB export into the repo CSVs.
 
-Used by .github/workflows/sync-cpu-csv.yml to open PRs when production
-data differs from the repo copy. GET /api/export/csv is public; no auth.
+Used by .github/workflows/sync-data-csv.yml to open PRs when production
+data differs from the repo copy. The relevant GET /api/export/* endpoints
+are public; no auth.
+
+Select which dataset to sync via the ``DATASET`` env var (``cpu`` or
+``gpu``). ``CSV_PATH`` controls the destination file; ``API_BASE`` the
+upstream host.
 """
 
 from __future__ import annotations
@@ -16,7 +21,6 @@ import pandas as pd
 import requests
 
 API_BASE = os.environ.get("API_BASE", "https://computespecsdb.com").rstrip("/")
-CSV_PATH = os.environ.get("CSV_PATH", "cpu_spec_validated.csv")
 
 # Cloudflare in front of Render blocks the default `python-requests/X.Y.Z` UA
 # (Bot Fight Mode flags it). Send a real-browser UA so the edge lets us through.
@@ -29,23 +33,53 @@ REQUEST_HEADERS = {
     "Accept": "text/csv,application/octet-stream;q=0.9,*/*;q=0.8",
 }
 
-REPO_COLUMNS = [
-    "CPU Model Name",
-    "Family",
-    "CPU Model",
-    "Codename",
-    "Cores",
-    "Threads",
-    "Max Turbo Frequency (GHz)",
-    "L3 Cache (MB)",
-    "TDP (W)",
-    "Launch Year",
-    "Max Memory (TB)",
-]
+DATASETS: dict[str, dict] = {
+    "cpu": {
+        "export_path": "/api/export/csv",
+        "default_csv_path": "cpu_spec_validated.csv",
+        "sort_column": "CPU Model Name",
+        "columns": [
+            "CPU Model Name",
+            "Family",
+            "CPU Model",
+            "Codename",
+            "Cores",
+            "Threads",
+            "Max Turbo Frequency (GHz)",
+            "L3 Cache (MB)",
+            "TDP (W)",
+            "Launch Year",
+            "Max Memory (TB)",
+        ],
+    },
+    "gpu": {
+        "export_path": "/api/export/gpus/csv",
+        "default_csv_path": "gpu_spec_validated.csv",
+        "sort_column": "GPU Model Name",
+        "columns": [
+            "GPU Model Name",
+            "Vendor",
+            "GPU Model",
+            "Form Factor",
+            "Memory (GB)",
+            "Memory Type",
+            "TDP (W)",
+        ],
+    },
+}
 
 
-def fetch_export() -> bytes:
-    url = f"{API_BASE}/api/export/csv"
+def get_dataset_config() -> dict:
+    name = os.environ.get("DATASET", "cpu").strip().lower()
+    if name not in DATASETS:
+        raise ValueError(
+            f"Unknown DATASET={name!r}; expected one of {sorted(DATASETS)}"
+        )
+    return {"name": name, **DATASETS[name]}
+
+
+def fetch_export(export_path: str) -> bytes:
+    url = f"{API_BASE}{export_path}"
     response = requests.get(url, headers=REQUEST_HEADERS, timeout=120)
     if not response.ok:
         # Cloudflare/edge errors return HTML — log a short preview so the
@@ -62,17 +96,17 @@ def fetch_export() -> bytes:
     return response.content
 
 
-def normalize_export(raw: bytes) -> pd.DataFrame:
+def normalize_export(raw: bytes, columns: list[str], sort_column: str) -> pd.DataFrame:
     df = pd.read_csv(BytesIO(raw), sep=";")
     if "ID" in df.columns:
         df = df.drop(columns=["ID"])
 
-    missing = [col for col in REPO_COLUMNS if col not in df.columns]
+    missing = [col for col in columns if col not in df.columns]
     if missing:
         raise ValueError(f"Export missing columns: {', '.join(missing)}")
 
-    df = df[REPO_COLUMNS]
-    df = df.sort_values("CPU Model Name", kind="mergesort").reset_index(drop=True)
+    df = df[columns]
+    df = df.sort_values(sort_column, kind="mergesort").reset_index(drop=True)
     return df
 
 
@@ -83,17 +117,28 @@ def write_repo_csv(df: pd.DataFrame, path: str) -> None:
 
 def main() -> int:
     try:
-        raw = fetch_export()
-        df = normalize_export(raw)
-        write_repo_csv(df, CSV_PATH)
+        cfg = get_dataset_config()
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    csv_path = os.environ.get("CSV_PATH", cfg["default_csv_path"])
+
+    try:
+        raw = fetch_export(cfg["export_path"])
+        df = normalize_export(raw, cfg["columns"], cfg["sort_column"])
+        write_repo_csv(df, csv_path)
     except requests.RequestException as exc:
-        print(f"Failed to fetch export from {API_BASE}: {exc}", file=sys.stderr)
+        print(
+            f"Failed to fetch {cfg['name']} export from {API_BASE}: {exc}",
+            file=sys.stderr,
+        )
         return 1
     except (ValueError, pd.errors.EmptyDataError) as exc:
-        print(f"Invalid export data: {exc}", file=sys.stderr)
+        print(f"Invalid {cfg['name']} export data: {exc}", file=sys.stderr)
         return 1
 
-    print(f"Wrote {len(df)} rows to {CSV_PATH}")
+    print(f"Wrote {len(df)} {cfg['name']} rows to {csv_path}")
     return 0
 
 
