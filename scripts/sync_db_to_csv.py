@@ -18,6 +18,17 @@ import requests
 API_BASE = os.environ.get("API_BASE", "https://computespecsdb.com").rstrip("/")
 CSV_PATH = os.environ.get("CSV_PATH", "cpu_spec_validated.csv")
 
+# Cloudflare in front of Render blocks the default `python-requests/X.Y.Z` UA
+# (Bot Fight Mode flags it). Send a real-browser UA so the edge lets us through.
+DEFAULT_UA = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+REQUEST_HEADERS = {
+    "User-Agent": os.environ.get("SYNC_USER_AGENT", DEFAULT_UA),
+    "Accept": "text/csv,application/octet-stream;q=0.9,*/*;q=0.8",
+}
+
 REPO_COLUMNS = [
     "CPU Model Name",
     "Family",
@@ -35,8 +46,19 @@ REPO_COLUMNS = [
 
 def fetch_export() -> bytes:
     url = f"{API_BASE}/api/export/csv"
-    response = requests.get(url, timeout=120)
-    response.raise_for_status()
+    response = requests.get(url, headers=REQUEST_HEADERS, timeout=120)
+    if not response.ok:
+        # Cloudflare/edge errors return HTML — log a short preview so the
+        # Actions log shows whether the block is Cloudflare or the origin.
+        body_preview = response.text[:500].replace("\n", " ")
+        cf_ray = response.headers.get("cf-ray", "n/a")
+        server = response.headers.get("server", "n/a")
+        print(
+            f"Upstream returned {response.status_code} "
+            f"(server={server}, cf-ray={cf_ray}): {body_preview}",
+            file=sys.stderr,
+        )
+        response.raise_for_status()
     return response.content
 
 
