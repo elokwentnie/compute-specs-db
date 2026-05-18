@@ -16,6 +16,7 @@ from sqlalchemy import or_
 from typing import List, Optional
 from pydantic import BaseModel
 import os
+import logging
 import pandas as pd
 import io
 from datetime import datetime
@@ -29,6 +30,7 @@ from utils import determine_cpu_generation
 
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "production")
 ENABLE_ADMIN_UI = os.environ.get("ENABLE_ADMIN_UI", "false").lower() == "true"
+logger = logging.getLogger(__name__)
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(5 * 1024 * 1024)))
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 
@@ -1076,7 +1078,8 @@ async def import_gpu_csv_from_repo(
             imported += 1
 
         except Exception as e:
-            errors.append(f"Row {idx + 2}: {str(e)}")
+            logger.exception("GPU CSV import failed for row %s", idx + 2)
+            errors.append(f"Row {idx + 2}: Invalid or unsupported row data")
 
     db.commit()
 
