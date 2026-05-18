@@ -1006,7 +1006,8 @@ async def import_gpu_csv_file(
             imported += 1
 
         except Exception as e:
-            errors.append(f"Row {idx + 2}: {str(e)}")
+            # Avoid exposing internal exception details to the client.
+            errors.append(f"Row {idx + 2}: Unable to import row due to invalid or missing data")
 
     db.commit()
 
