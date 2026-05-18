@@ -35,11 +35,15 @@
         </div>
 
         <div class="admin-panel" id="adminPanel">
-            <div class="tabs">
-                <button class="tab" data-tab="browse" onclick="switchTab('browse')">📋 Browse & Edit</button>
+            <div class="tabs" style="flex-wrap:wrap;">
+                <button class="tab" data-tab="browse" onclick="switchTab('browse')">📋 Browse CPUs</button>
                 <button class="tab active" data-tab="create" onclick="switchTab('create')">➕ Create CPU</button>
                 <button class="tab" data-tab="edit" onclick="switchTab('edit')">✏️ Edit CPU</button>
                 <button class="tab" data-tab="delete" onclick="switchTab('delete')">🗑️ Delete CPU</button>
+                <button class="tab" data-tab="browseGpu" onclick="switchTab('browseGpu')">🎮 Browse GPUs</button>
+                <button class="tab" data-tab="createGpu" onclick="switchTab('createGpu')">➕ Create GPU</button>
+                <button class="tab" data-tab="editGpu" onclick="switchTab('editGpu')">✏️ Edit GPU</button>
+                <button class="tab" data-tab="deleteGpu" onclick="switchTab('deleteGpu')">🗑️ Delete GPU</button>
                 <button class="tab" data-tab="import" onclick="switchTab('import')">📥 Import CSV</button>
             </div>
 
@@ -202,6 +206,130 @@
                 </div>
             </div>
 
+            <div id="browseGpuTab" class="tab-content">
+                <h2>Browse & Edit GPUs</h2>
+                <p class="browse-description">Search and click Edit to change any GPU.</p>
+                <div class="form-group browse-search-group">
+                    <label for="browseGpuSearch">Search</label>
+                    <input type="text" id="browseGpuSearch" placeholder="Search by name, vendor, memory type...">
+                </div>
+                <div id="browseGpuTableContainer" class="overflow-x-auto">
+                    <table class="browse-table" id="browseGpuTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>GPU Model Name</th>
+                                <th>Vendor</th>
+                                <th>Form Factor</th>
+                                <th>Memory (GB)</th>
+                                <th>Memory Type</th>
+                                <th>TDP (W)</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="browseGpuTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="browseGpuLoading" class="browse-status-text hidden">Loading GPUs...</div>
+                <div id="browseGpuEmpty" class="browse-status-text hidden">No GPUs match your search.</div>
+            </div>
+
+            <div id="createGpuTab" class="tab-content">
+                <h2>Create New GPU</h2>
+                <form id="createGpuForm" onsubmit="createGPU(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="create_gpu_model_name">GPU Model Name *</label>
+                            <input type="text" id="create_gpu_model_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="create_gpu_vendor">Vendor</label>
+                            <input type="text" id="create_gpu_vendor" placeholder="NVIDIA or AMD">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_gpu_model">GPU Model</label>
+                            <input type="text" id="create_gpu_model">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_gpu_form_factor">Form Factor</label>
+                            <input type="text" id="create_gpu_form_factor">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_gpu_memory">Memory (GB)</label>
+                            <input type="number" id="create_gpu_memory">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_gpu_memory_type">Memory Type</label>
+                            <input type="text" id="create_gpu_memory_type" placeholder="HBM3, HBM3E, GDDR6...">
+                        </div>
+                        <div class="form-group">
+                            <label for="create_gpu_tdp">TDP (W)</label>
+                            <input type="number" id="create_gpu_tdp">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit">Create GPU</button>
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('createGpuForm').reset()">Clear</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="editGpuTab" class="tab-content">
+                <h2>Edit GPU</h2>
+                <div class="form-group">
+                    <label for="edit_gpu_id">GPU ID</label>
+                    <input type="number" id="edit_gpu_id" placeholder="Enter GPU ID to edit">
+                    <button onclick="loadGPUForEdit()" class="load-btn">Load GPU</button>
+                </div>
+                <form id="editGpuForm" onsubmit="updateGPU(event)" class="hidden">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="edit_gpu_model_name">GPU Model Name</label>
+                            <input type="text" id="edit_gpu_model_name">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_gpu_vendor">Vendor</label>
+                            <input type="text" id="edit_gpu_vendor">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_gpu_model">GPU Model</label>
+                            <input type="text" id="edit_gpu_model">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_gpu_form_factor">Form Factor</label>
+                            <input type="text" id="edit_gpu_form_factor">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_gpu_memory">Memory (GB)</label>
+                            <input type="number" id="edit_gpu_memory">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_gpu_memory_type">Memory Type</label>
+                            <input type="text" id="edit_gpu_memory_type">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_gpu_tdp">TDP (W)</label>
+                            <input type="number" id="edit_gpu_tdp">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit">Update GPU</button>
+                        <button type="button" class="btn-secondary" onclick="cancelGpuEdit()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="deleteGpuTab" class="tab-content">
+                <h2>Delete GPU</h2>
+                <div class="form-group">
+                    <label for="delete_gpu_id">GPU ID</label>
+                    <input type="number" id="delete_gpu_id" placeholder="Enter GPU ID to delete">
+                </div>
+                <div class="form-actions">
+                    <button class="btn-danger" onclick="deleteGPU()">Delete GPU</button>
+                </div>
+            </div>
+
             <div id="importTab" class="tab-content">
                 <h2>Import from CSV</h2>
                 <p class="import-description">
@@ -224,7 +352,21 @@
                 </div>
 
                 <div class="import-divider">
-                    <h3>Option 2: Upload CSV File</h3>
+                    <h3>Option 2: Import GPUs from Repository CSV</h3>
+                    <p class="import-option-hint">
+                        Imports from <code>gpu_spec_validated.csv</code> in the repository.
+                    </p>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="clearExistingGpuRepo" class="checkbox-inline">
+                            Clear existing GPU data before import
+                        </label>
+                    </div>
+                    <button onclick="importGpuFromRepo()">Import GPUs from Repository CSV</button>
+                </div>
+
+                <div class="import-divider">
+                    <h3>Option 3: Upload CPU CSV File</h3>
                     <p class="import-option-hint">
                         Upload a CSV file to import. File should be semicolon-delimited (;).
                     </p>
@@ -378,6 +520,7 @@
             const content = document.getElementById(tabName + 'Tab');
             if (content) content.classList.add('active');
             if (tabName === 'browse') loadBrowseDataIfNeeded();
+            if (tabName === 'browseGpu') loadBrowseGpuDataIfNeeded();
         }
 
         function showMessage(message, type) {
@@ -576,6 +719,213 @@
             });
         }
 
+        // GPU functions
+        let browseGpus = [];
+
+        async function loadBrowseGpuDataIfNeeded() {
+            const container = document.getElementById('browseGpuTableContainer');
+            const loadingEl = document.getElementById('browseGpuLoading');
+            const emptyEl = document.getElementById('browseGpuEmpty');
+            if (browseGpus.length === 0) {
+                loadingEl.classList.remove('hidden');
+                container.classList.add('hidden');
+                emptyEl.classList.add('hidden');
+                try {
+                    const response = await fetch('/api/gpus?limit=1000');
+                    if (!response.ok) throw new Error('Failed to load GPUs');
+                    browseGpus = await response.json();
+                    loadingEl.classList.add('hidden');
+                    container.classList.remove('hidden');
+                    renderBrowseGpuTable(browseGpus);
+                } catch (err) {
+                    loadingEl.classList.add('hidden');
+                    emptyEl.textContent = 'Error loading GPUs: ' + err.message;
+                    emptyEl.classList.remove('hidden');
+                }
+            } else {
+                renderBrowseGpuTable(browseGpus);
+            }
+        }
+
+        function renderBrowseGpuTable(gpus) {
+            const searchText = (document.getElementById('browseGpuSearch').value || '').trim().toLowerCase();
+            const filtered = searchText
+                ? gpus.filter(g => {
+                    return (g.gpu_model_name || '').toLowerCase().includes(searchText)
+                        || (g.vendor || '').toLowerCase().includes(searchText)
+                        || (g.gpu_model || '').toLowerCase().includes(searchText)
+                        || (g.memory_type || '').toLowerCase().includes(searchText)
+                        || (g.form_factor || '').toLowerCase().includes(searchText);
+                })
+                : gpus;
+            const tbody = document.getElementById('browseGpuTableBody');
+            const container = document.getElementById('browseGpuTableContainer');
+            const emptyEl = document.getElementById('browseGpuEmpty');
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                container.classList.add('hidden');
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
+            filtered.forEach(gpu => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${gpu.id}</td>
+                    <td><strong>${escapeHtml(gpu.gpu_model_name || '-')}</strong></td>
+                    <td>${escapeHtml(gpu.vendor || '-')}</td>
+                    <td>${escapeHtml(gpu.form_factor || '-')}</td>
+                    <td>${gpu.memory_gb ?? '-'}</td>
+                    <td>${escapeHtml(gpu.memory_type || '-')}</td>
+                    <td>${gpu.tdp_watts ?? '-'}</td>
+                    <td><button type="button" class="edit-btn" onclick="startEditGpuFromBrowse(${gpu.id})">Edit</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('browseGpuSearch').addEventListener('input', () => {
+            if (browseGpus.length) renderBrowseGpuTable(browseGpus);
+        });
+
+        function startEditGpuFromBrowse(gpuId) {
+            const gpu = browseGpus.find(g => g.id === gpuId);
+            if (!gpu) return;
+            document.getElementById('edit_gpu_id').value = gpu.id;
+            document.getElementById('edit_gpu_model_name').value = gpu.gpu_model_name || '';
+            document.getElementById('edit_gpu_vendor').value = gpu.vendor || '';
+            document.getElementById('edit_gpu_model').value = gpu.gpu_model || '';
+            document.getElementById('edit_gpu_form_factor').value = gpu.form_factor || '';
+            document.getElementById('edit_gpu_memory').value = gpu.memory_gb ?? '';
+            document.getElementById('edit_gpu_memory_type').value = gpu.memory_type || '';
+            document.getElementById('edit_gpu_tdp').value = gpu.tdp_watts ?? '';
+            document.getElementById('editGpuForm').classList.remove('hidden');
+            switchTab('editGpu');
+        }
+
+        function createGPU(event) {
+            event.preventDefault();
+            const data = {
+                gpu_model_name: document.getElementById('create_gpu_model_name').value,
+                vendor: document.getElementById('create_gpu_vendor').value || null,
+                gpu_model: document.getElementById('create_gpu_model').value || null,
+                form_factor: document.getElementById('create_gpu_form_factor').value || null,
+                memory_gb: parseInt(document.getElementById('create_gpu_memory').value) || null,
+                memory_type: document.getElementById('create_gpu_memory_type').value || null,
+                tdp_watts: parseInt(document.getElementById('create_gpu_tdp').value) || null,
+            };
+            fetch('/api/gpus', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(() => {
+                showMessage('GPU created successfully!', 'success');
+                document.getElementById('createGpuForm').reset();
+                browseGpus = [];
+            })
+            .catch(err => showMessage('Error creating GPU: ' + err.message, 'error'));
+        }
+
+        function loadGPUForEdit() {
+            const gpuId = document.getElementById('edit_gpu_id').value;
+            if (!gpuId) { showMessage('Please enter a GPU ID', 'error'); return; }
+            fetch(`/api/gpus/${gpuId}`)
+            .then(r => { if (!r.ok) throw new Error('GPU not found'); return r.json(); })
+            .then(gpu => {
+                document.getElementById('edit_gpu_model_name').value = gpu.gpu_model_name || '';
+                document.getElementById('edit_gpu_vendor').value = gpu.vendor || '';
+                document.getElementById('edit_gpu_model').value = gpu.gpu_model || '';
+                document.getElementById('edit_gpu_form_factor').value = gpu.form_factor || '';
+                document.getElementById('edit_gpu_memory').value = gpu.memory_gb ?? '';
+                document.getElementById('edit_gpu_memory_type').value = gpu.memory_type || '';
+                document.getElementById('edit_gpu_tdp').value = gpu.tdp_watts ?? '';
+                document.getElementById('editGpuForm').classList.remove('hidden');
+            })
+            .catch(err => showMessage('Error loading GPU: ' + err.message, 'error'));
+        }
+
+        function updateGPU(event) {
+            event.preventDefault();
+            const gpuId = document.getElementById('edit_gpu_id').value;
+            const data = {};
+            const fields = {
+                'gpu_model_name': 'edit_gpu_model_name',
+                'vendor': 'edit_gpu_vendor',
+                'gpu_model': 'edit_gpu_model',
+                'form_factor': 'edit_gpu_form_factor',
+                'memory_gb': 'edit_gpu_memory',
+                'memory_type': 'edit_gpu_memory_type',
+                'tdp_watts': 'edit_gpu_tdp'
+            };
+            for (const [key, elId] of Object.entries(fields)) {
+                const val = document.getElementById(elId).value;
+                if (val !== '') {
+                    if (key === 'memory_gb' || key === 'tdp_watts') {
+                        data[key] = parseInt(val);
+                    } else {
+                        data[key] = val;
+                    }
+                }
+            }
+            fetch(`/api/gpus/${gpuId}`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(updated => {
+                showMessage('GPU updated successfully!', 'success');
+                const idx = browseGpus.findIndex(g => g.id === updated.id);
+                if (idx >= 0) browseGpus[idx] = updated;
+            })
+            .catch(err => showMessage('Error updating GPU: ' + err.message, 'error'));
+        }
+
+        function cancelGpuEdit() {
+            document.getElementById('editGpuForm').classList.add('hidden');
+            document.getElementById('edit_gpu_id').value = '';
+        }
+
+        function deleteGPU() {
+            const gpuId = document.getElementById('delete_gpu_id').value;
+            if (!gpuId) { showMessage('Please enter a GPU ID', 'error'); return; }
+            if (!confirm(`Are you sure you want to delete GPU #${gpuId}? This action cannot be undone.`)) return;
+            fetch(`/api/gpus/${gpuId}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            })
+            .then(r => {
+                if (r.ok) {
+                    showMessage('GPU deleted successfully!', 'success');
+                    document.getElementById('delete_gpu_id').value = '';
+                    browseGpus = [];
+                } else throw new Error('Failed to delete GPU');
+            })
+            .catch(err => showMessage('Error deleting GPU: ' + err.message, 'error'));
+        }
+
+        function importGpuFromRepo() {
+            const clearExisting = document.getElementById('clearExistingGpuRepo').checked;
+            if (!confirm(`This will import GPUs from the repository CSV file.${clearExisting ? '\n\n⚠️ WARNING: This will DELETE all existing GPUs first!' : ''}\n\nContinue?`)) return;
+            fetch(`/api/import/gpu-csv-repo?clear_existing=${clearExisting}`, {
+                method: 'POST',
+                headers: getAuthHeaders()
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.errors && data.total_errors > 0) {
+                    showMessage(`Imported ${data.imported} GPUs. ${data.total_errors} errors occurred.`, 'error');
+                } else {
+                    showMessage(`Successfully imported ${data.imported} GPUs from repository!`, 'success');
+                }
+                browseGpus = [];
+            })
+            .catch(err => showMessage('Error importing: ' + err.message, 'error'));
+        }
+
         function importFromFile() {
             const fileInput = document.getElementById('csvFile');
             const file = fileInput.files[0];
@@ -629,7 +979,7 @@
             </div>
             <hr class="site-footer-divider">
             <div class="site-footer-bottom">
-                <span class="site-footer-disclaimer">Intel, Xeon, and Core are trademarks of Intel Corporation. AMD, EPYC, Ryzen, and Threadripper are trademarks of Advanced Micro Devices, Inc. All other trademarks are the property of their respective owners. Data is provided "as-is" for informational purposes only, without warranty of any kind.</span>
+                <span class="site-footer-disclaimer">Intel, Xeon, and Core are trademarks of Intel Corporation. AMD, EPYC, Ryzen, and Instinct are trademarks of Advanced Micro Devices, Inc. NVIDIA, H100, H200, B100, B200, L4, L40, L40S, and T4 are trademarks of NVIDIA Corporation. All other trademarks are the property of their respective owners. Data is provided "as-is" for informational purposes only, without warranty of any kind.</span>
                 <span>&copy; 2026 Compute Specs DB &middot; Open Source</span>
             </div>
         </div>
