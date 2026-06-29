@@ -21,12 +21,28 @@
     <meta name="twitter:title" content="CPU Visualizations — Compute Specs DB">
     <meta name="twitter:description" content="Interactive charts and comparisons of server CPU performance metrics.">
 
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('compute-specs-theme');
+                if (t === 'light' || t === 'dark') {
+                    document.documentElement.setAttribute('data-theme', t);
+                } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (_) {}
+        })();
+    </script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="stylesheet" href="/static/css/theme.css">
     <link rel="stylesheet" href="/static/css/common.css">
     <link rel="stylesheet" href="/static/css/visualizations.css">
 </head>
 <body>
     <div class="header">
+        <button type="button" class="theme-toggle" aria-label="Toggle dark mode" title="Dark mode">
+            <span class="theme-toggle-icon">🌙</span>
+        </button>
         <h1>📊 Compute Specs DB Visualizations</h1>
         <p>Interactive charts and analysis of CPU and GPU performance metrics</p>
     </div>
@@ -221,6 +237,43 @@
         let activeFilter1 = new Set();
         let activeFilter2 = new Set();
         let dataSource = 'cpu';
+
+        function getChartTheme() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            return {
+                isDark,
+                paper: isDark ? '#121a26' : '#ffffff',
+                plot: isDark ? '#121a26' : '#ffffff',
+                font: isDark ? '#e8eef6' : '#1e293b',
+                grid: isDark ? '#243044' : '#c8d9ee',
+                legendBg: isDark ? 'rgba(18,26,38,0.96)' : 'rgba(255,255,255,0.92)',
+                legendBorder: isDark ? '#2f4060' : '#a8bfd9',
+                markerLine: isDark ? '#121a26' : '#ffffff'
+            };
+        }
+
+        function chartLegendConfig(isMobile) {
+            const theme = getChartTheme();
+            const base = {
+                bgcolor: theme.legendBg,
+                bordercolor: theme.legendBorder,
+                borderwidth: 1,
+                font: { color: theme.font, size: isMobile ? 10 : 12 }
+            };
+            return isMobile
+                ? { ...base, x: 0.5, y: -0.25, xanchor: 'center', yanchor: 'top', orientation: 'h', itemwidth: 20 }
+                : { ...base, x: 1.02, y: 1, xanchor: 'left', yanchor: 'top' };
+        }
+
+        function chartAxis(title, isMobile) {
+            const theme = getChartTheme();
+            return {
+                title,
+                titlefont: { size: isMobile ? 12 : 14, color: theme.font },
+                tickfont: { color: theme.font },
+                gridcolor: theme.grid
+            };
+        }
 
         const cpuAxisOptions = [
             { value: 'tdp_watts', label: 'TDP (W)' },
@@ -451,6 +504,7 @@
             let traces = [];
             let layout = {};
             const isMobile = window.innerWidth <= 768;
+            const theme = getChartTheme();
 
             if (chartType === 'scatter') {
                 const groups = [...new Set(validItems.map(d => d[groupKey] || 'Unknown'))];
@@ -464,19 +518,20 @@
                         name: group,
                         text: items.map(d => d[nameKey]),
                         hovertemplate: '<b>%{text}</b><br>' + xLabel + ': %{x}<br>' + yLabel + ': %{y}<extra></extra>',
-                        marker: { size: 14, opacity: 0.8, color: colorPalette[index % colorPalette.length], line: { width: 1.5, color: '#ffffff' } }
+                        marker: { size: 14, opacity: 0.8, color: colorPalette[index % colorPalette.length], line: { width: 1.5, color: theme.markerLine } }
                     });
                 });
                 layout = {
-                    title: { text: `${yLabel} vs ${xLabel}`, font: { size: isMobile ? 14 : 18 } },
-                    xaxis: { title: xLabel, titlefont: { size: isMobile ? 12 : 14 } },
-                    yaxis: { title: yLabel, titlefont: { size: isMobile ? 12 : 14 } },
+                    title: { text: `${yLabel} vs ${xLabel}`, font: { size: isMobile ? 14 : 18, color: theme.font } },
+                    xaxis: chartAxis(xLabel, isMobile),
+                    yaxis: chartAxis(yLabel, isMobile),
                     hovermode: 'closest',
                     margin: isMobile ? { l: 50, r: 10, t: 50, b: 100 } : { l: 60, r: 20, t: 60, b: 60 },
                     showlegend: true,
-                    legend: isMobile
-                        ? { x: 0.5, y: -0.25, xanchor: 'center', yanchor: 'top', orientation: 'h', bgcolor: 'rgba(255,255,255,0.9)', bordercolor: '#e2e8f0', borderwidth: 1, font: { size: 10 }, itemwidth: 20 }
-                        : { x: 1.02, y: 1, xanchor: 'left', yanchor: 'top', bgcolor: 'rgba(255,255,255,0.8)', bordercolor: '#e2e8f0', borderwidth: 1 }
+                    legend: chartLegendConfig(isMobile),
+                    paper_bgcolor: theme.paper,
+                    plot_bgcolor: theme.plot,
+                    font: { color: theme.font }
                 };
             } else if (chartType === 'bar') {
                 const barLimit = parseInt(document.getElementById('barLimit').value) || 25;
@@ -498,22 +553,23 @@
                             type: 'bar',
                             orientation: 'h',
                             name: group,
-                            marker: { color: colorPalette[index % colorPalette.length], line: { width: 1, color: '#ffffff' } },
+                            marker: { color: colorPalette[index % colorPalette.length], line: { width: 1, color: theme.markerLine } },
                             text: items.map(d => `${xLabel}: ${d[xAxis]}`),
                             hovertemplate: '<b>%{y}</b><br>' + yLabel + ': %{x}<br>%{text}<extra></extra>'
                         });
                     }
                 });
                 layout = {
-                    title: { text: `Top ${sorted.length} ${itemLabel}s by ${yLabel}`, font: { size: isMobile ? 14 : 18 } },
-                    xaxis: { title: yLabel, titlefont: { size: isMobile ? 12 : 14 } },
-                    yaxis: { title: `${itemLabel} Model`, automargin: true, tickmode: 'linear', tickangle: 0, titlefont: { size: isMobile ? 12 : 14 } },
+                    title: { text: `Top ${sorted.length} ${itemLabel}s by ${yLabel}`, font: { size: isMobile ? 14 : 18, color: theme.font } },
+                    xaxis: chartAxis(yLabel, isMobile),
+                    yaxis: { ...chartAxis(`${itemLabel} Model`, isMobile), automargin: true, tickmode: 'linear', tickangle: 0 },
                     margin: isMobile ? { l: 180, r: 20, t: 50, b: 100 } : { l: 250, r: 150, t: 60, b: 60 },
                     showlegend: true,
-                    legend: isMobile
-                        ? { x: 0.5, y: -0.25, xanchor: 'center', yanchor: 'top', orientation: 'h', bgcolor: 'rgba(255,255,255,0.9)', bordercolor: '#e2e8f0', borderwidth: 1, font: { size: 10 }, itemwidth: 20 }
-                        : { x: 1.02, y: 1, xanchor: 'left', yanchor: 'top', bgcolor: 'rgba(255,255,255,0.8)', bordercolor: '#e2e8f0', borderwidth: 1 },
-                    height: chartHeight
+                    legend: chartLegendConfig(isMobile),
+                    height: chartHeight,
+                    paper_bgcolor: theme.paper,
+                    plot_bgcolor: theme.plot,
+                    font: { color: theme.font }
                 };
             } else if (chartType === 'box') {
                 const groups = [...new Set(validItems.map(d => d[groupKey] || 'Unknown'))];
@@ -529,21 +585,22 @@
                         pointpos: -1.8,
                         text: items.map(d => d[nameKey] || 'Unknown'),
                         hovertemplate: '<b>%{text}</b><br>' + yLabel + ': %{y}<extra></extra>',
-                        marker: { size: 8, opacity: 0.8, color: color, line: { width: 1, color: '#ffffff' } },
+                        marker: { size: 8, opacity: 0.8, color: color, line: { width: 1, color: theme.markerLine } },
                         line: { color: color, width: 2.5 },
                         fillcolor: color,
                         opacity: 0.6
                     });
                 });
                 layout = {
-                    title: { text: `Distribution of ${yLabel} by ${isCpu ? 'Family' : 'Vendor'}`, font: { size: isMobile ? 14 : 18 } },
-                    yaxis: { title: yLabel, titlefont: { size: isMobile ? 12 : 14 } },
-                    xaxis: { title: isCpu ? 'Family' : 'Vendor', tickangle: 0, titlefont: { size: isMobile ? 12 : 14 } },
+                    title: { text: `Distribution of ${yLabel} by ${isCpu ? 'Family' : 'Vendor'}`, font: { size: isMobile ? 14 : 18, color: theme.font } },
+                    yaxis: chartAxis(yLabel, isMobile),
+                    xaxis: { ...chartAxis(isCpu ? 'Family' : 'Vendor', isMobile), tickangle: 0 },
                     margin: isMobile ? { l: 50, r: 10, t: 50, b: 150 } : { l: 60, r: 20, t: 60, b: 100 },
                     showlegend: true,
-                    legend: isMobile
-                        ? { x: 0.5, y: -0.25, xanchor: 'center', yanchor: 'top', orientation: 'h', bgcolor: 'rgba(255,255,255,0.9)', bordercolor: '#e2e8f0', borderwidth: 1, font: { size: 10 }, itemwidth: 20 }
-                        : { x: 1.02, y: 1, xanchor: 'left', yanchor: 'top', bgcolor: 'rgba(255,255,255,0.8)', bordercolor: '#e2e8f0', borderwidth: 1 }
+                    legend: chartLegendConfig(isMobile),
+                    paper_bgcolor: theme.paper,
+                    plot_bgcolor: theme.plot,
+                    font: { color: theme.font }
                 };
             }
 
@@ -763,7 +820,12 @@
 
         populateAxisSelectors();
         loadData();
+
+        window.addEventListener('themechange', () => {
+            if (document.getElementById('chart').children.length > 0) updateChart();
+        });
     </script>
+    <script src="/static/js/theme.js"></script>
 </body>
 </html>
 

@@ -63,12 +63,28 @@
     }
     </script>
 
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('compute-specs-theme');
+                if (t === 'light' || t === 'dark') {
+                    document.documentElement.setAttribute('data-theme', t);
+                } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (_) {}
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/theme.css">
     <link rel="stylesheet" href="/static/css/common.css">
     <link rel="stylesheet" href="/static/css/index.css">
 </head>
 <body>
     <div class="container">
         <header>
+            <button type="button" class="theme-toggle" aria-label="Toggle dark mode" title="Dark mode">
+                <span class="theme-toggle-icon">🌙</span>
+            </button>
             <h1>🔧 Compute Specs DB</h1>
             <p>HPC and Datacenter Hardware Specifications</p>
         </header>
@@ -130,12 +146,12 @@
             </div>
         </div>
 
-        <div class="data-tabs" style="display:flex;gap:0;margin-bottom:0;">
-            <button class="data-tab active" id="cpuTab" onclick="switchDataTab('cpu')" style="flex:1;padding:0.75rem 1.5rem;border:1px solid #e2e8f0;border-bottom:none;background:#fff;color:#1e293b;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0;font-size:0.95rem;">CPUs</button>
-            <button class="data-tab" id="gpuTab" onclick="switchDataTab('gpu')" style="flex:1;padding:0.75rem 1.5rem;border:1px solid #e2e8f0;border-bottom:none;background:#f1f5f9;color:#64748b;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0;font-size:0.95rem;">GPUs</button>
+        <div class="data-tabs">
+            <button type="button" class="data-tab active" id="cpuTab" onclick="switchDataTab('cpu')">CPUs</button>
+            <button type="button" class="data-tab" id="gpuTab" onclick="switchDataTab('gpu')">GPUs</button>
         </div>
 
-            <div class="table-section" id="tableSection" style="border-radius:0 0 8px 8px;">
+            <div class="table-section" id="tableSection">
                 <div id="loading" class="loading">
                     <div class="spinner"></div>
                     <p>Loading data...</p>
@@ -270,10 +286,6 @@
 
             document.getElementById('cpuTab').classList.toggle('active', tab === 'cpu');
             document.getElementById('gpuTab').classList.toggle('active', tab === 'gpu');
-            document.getElementById('cpuTab').style.background = tab === 'cpu' ? '#fff' : '#f1f5f9';
-            document.getElementById('cpuTab').style.color = tab === 'cpu' ? '#1e293b' : '#64748b';
-            document.getElementById('gpuTab').style.background = tab === 'gpu' ? '#fff' : '#f1f5f9';
-            document.getElementById('gpuTab').style.color = tab === 'gpu' ? '#1e293b' : '#64748b';
 
             document.getElementById('cpuTableHead').classList.toggle('hidden', tab !== 'cpu');
             document.getElementById('gpuTableHead').classList.toggle('hidden', tab !== 'gpu');
@@ -386,24 +398,17 @@
                 document.querySelectorAll('.codename-badge').forEach(badge => {
                     badge.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        const codename = badge.getAttribute('data-codename');
-                        filterByValue(codename);
-                    });
-                    badge.addEventListener('mouseenter', function() {
-                        this.style.background = '#c7d2fe';
-                        this.style.transform = 'scale(1.05)';
-                    });
-                    badge.addEventListener('mouseleave', function() {
-                        this.style.background = '#e0e7ff';
-                        this.style.transform = 'scale(1)';
+                        filterByValue(badge.getAttribute('data-codename'));
                     });
                 });
             } else {
                 pageData.forEach(gpu => {
                     const row = document.createElement('tr');
                     const vendor = gpu.vendor || '-';
+                    const vendorClass = vendor === 'NVIDIA' ? 'vendor-badge-nvidia'
+                        : vendor === 'AMD' ? 'vendor-badge-amd' : '';
                     const vendorBadge = vendor !== '-'
-                        ? `<span class="codename-badge" data-codename="${vendor}" title="Click to filter by ${vendor}" style="background:${vendor === 'NVIDIA' ? '#76b900' : vendor === 'AMD' ? '#ed1c24' : '#e0e7ff'};color:${vendor === 'NVIDIA' || vendor === 'AMD' ? '#fff' : '#4338ca'}">${vendor}</span>`
+                        ? `<span class="codename-badge ${vendorClass}" data-codename="${vendor}" title="Click to filter by ${vendor}">${vendor}</span>`
                         : '<span>-</span>';
                     row.innerHTML = `
                         <td>${gpu.id}</td>
@@ -626,6 +631,7 @@
             bindSortHeaders();
         });
     </script>
+    <script src="/static/js/theme.js"></script>
 </body>
 </html>
 
