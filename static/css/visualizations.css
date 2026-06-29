@@ -37,7 +37,12 @@
 }
 
 .nav a:hover {
-    color: var(--accent-hover);
+    color: var(--text-link-hover);
+}
+
+[data-theme="dark"] .nav a:hover {
+    color: var(--text-primary);
+    opacity: 0.9;
 }
 
 /* ---------- Layout ---------- */
@@ -681,7 +686,7 @@
 
 [data-theme="dark"] .diff-same {
     background: var(--bg-surface-muted);
-    color: var(--text-secondary);
+    color: var(--text-primary);
 }
 
 [data-theme="dark"] .diff-different {

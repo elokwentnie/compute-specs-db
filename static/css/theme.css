@@ -66,16 +66,16 @@
     --bg-table-row: #121a26;
     --bg-table-row-alt: #161f2e;
     --bg-table-row-hover: #1e2a3d;
-    --text-primary: #e8eef6;
-    --text-secondary: #8ba3c0;
-    --text-muted: #5c7290;
+    --text-primary: #ffffff;
+    --text-secondary: #e8e8ec;
+    --text-muted: #c8c8d0;
     --text-header: #ffffff;
-    --text-header-subtle: rgba(255, 255, 255, 0.82);
+    --text-header-subtle: rgba(255, 255, 255, 0.88);
     --text-on-accent: #ffffff;
-    --text-accent: #7eb3e8;
-    --text-table-head: #a8c4e8;
-    --text-link: #7eb3e8;
-    --text-link-hover: #a8cdef;
+    --text-accent: #ffffff;
+    --text-table-head: #ffffff;
+    --text-link: #ffffff;
+    --text-link-hover: #ffffff;
     --border: #243044;
     --border-strong: #2f4060;
     --accent: #4a7ab8;
@@ -83,7 +83,7 @@
     --accent-muted: #1e2d42;
     --accent-subtle: rgba(74, 122, 184, 0.18);
     --bg-disabled: #243044;
-    --text-disabled: #5c7290;
+    --text-disabled: rgba(255, 255, 255, 0.45);
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.55);
@@ -91,13 +91,13 @@
     --error-text: #fca5a5;
     --error-border: #7f1d1d;
     --badge-codename-bg: #1e2d42;
-    --badge-codename-text: #a8c4e8;
+    --badge-codename-text: #f0f0f2;
     --badge-codename-hover: #2a4060;
     --scrollbar-track: #1e2838;
     --scrollbar-thumb: #4a7ab8;
     --focus-ring: rgba(126, 179, 232, 0.2);
     --table-sticky-shadow: 0 1px 0 var(--border-strong), 0 4px 12px rgba(0, 0, 0, 0.35);
-    --sort-active: #7eb3e8;
+    --sort-active: #ffffff;
 }
 
 /* ---------- Light mode component polish ---------- */
@@ -199,28 +199,30 @@ header p,
     color: #ffffff;
 }
 
+[data-theme="dark"] .data-tab {
+    background: var(--bg-surface-muted);
+    border-color: var(--border);
+    color: var(--text-secondary);
+}
+
 [data-theme="dark"] .data-tab.active {
     background: var(--bg-surface);
     border-color: var(--border-strong);
     border-top: 3px solid var(--accent);
-    color: var(--text-accent);
+    color: var(--text-primary);
 }
 
 [data-theme="dark"] .stat-value {
-    color: var(--text-accent);
+    color: var(--text-primary);
 }
 
-[data-theme="dark"] .stats {
-    background: linear-gradient(180deg, var(--accent-muted) 0%, var(--bg-surface-raised) 100%);
-}
-
-[data-theme="dark"] .api-links {
-    background: var(--accent-muted);
+[data-theme="dark"] .stat-label {
+    color: var(--text-secondary);
 }
 
 [data-theme="dark"] .api-link {
     background: var(--bg-surface-raised);
-    color: var(--text-accent);
+    color: var(--text-primary);
 }
 
 [data-theme="dark"] .api-link:hover {
@@ -260,9 +262,68 @@ header p,
     border-color: var(--border-strong);
 }
 
-[data-theme="dark"] .data-tab {
-    background: var(--bg-surface-muted);
-    border-color: var(--border);
+[data-theme="dark"] .stats {
+    background: linear-gradient(180deg, var(--accent-muted) 0%, var(--bg-surface-raised) 100%);
+}
+
+[data-theme="dark"] .api-links {
+    background: var(--accent-muted);
+}
+
+[data-theme="dark"] .api-links-title {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .data-footer,
+[data-theme="dark"] .data-footer-title,
+[data-theme="dark"] .data-footer a,
+[data-theme="dark"] .data-footer-sources a {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .data-footer a:hover,
+[data-theme="dark"] .data-footer-sources a:hover {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .nav a {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .nav a:hover {
+    color: var(--text-primary);
+    opacity: 0.85;
+}
+
+[data-theme="dark"] .tab {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .tab.active {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] td:first-child {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .page-info,
+[data-theme="dark"] .pagination-info,
+[data-theme="dark"] #paginationInfo {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .filter-checkbox-item label,
+[data-theme="dark"] .filter-group-title,
+[data-theme="dark"] .bar-limit-group label,
+[data-theme="dark"] .comparison-selector label,
+[data-theme="dark"] .browse-description,
+[data-theme="dark"] .browse-status-text,
+[data-theme="dark"] .auth-description,
+[data-theme="dark"] .auth-note,
+[data-theme="dark"] .import-description,
+[data-theme="dark"] .import-option-hint {
+    color: var(--text-secondary);
 }
 
 [data-theme="dark"] input:focus,
