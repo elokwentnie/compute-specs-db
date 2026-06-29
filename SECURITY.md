@@ -22,3 +22,7 @@ Instead, please email the maintainer directly or use [GitHub's private vulnerabi
 ## Scope
 
 This policy covers the Compute Specs DB application code and its deployment configuration. It does not cover third-party dependencies, though we appreciate reports about vulnerable dependencies as well.
+
+## Third-party services (Ask feature)
+
+When `ENABLE_ASK_FEATURE=true` and a `GROQ_API_KEY` is configured, user questions submitted through the Ask chat panel are sent to [Groq](https://groq.com/) for processing. Do not submit sensitive or personal information through the chat. API keys must be stored only in server environment variables, never in client-side code or committed files.

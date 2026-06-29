@@ -1,0 +1,224 @@
+/* ==========================================================================
+   Ask chat panel — floating widget on the main page
+   ========================================================================== */
+
+.ask-toggle {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.1rem;
+    border: none;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.ask-toggle:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.ask-panel {
+    position: fixed;
+    bottom: 5rem;
+    right: 1.5rem;
+    z-index: 1000;
+    width: min(400px, calc(100vw - 2rem));
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+}
+
+.ask-panel.hidden {
+    display: none;
+}
+
+.ask-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1rem;
+    background: var(--bg-surface-raised);
+    border-bottom: 1px solid var(--border);
+}
+
+.ask-header h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.ask-close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--radius-sm);
+}
+
+.ask-close:hover {
+    color: var(--text-primary);
+    background: var(--accent-subtle);
+}
+
+.ask-disclaimer {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--bg-surface-muted);
+    border-bottom: 1px solid var(--border);
+}
+
+.ask-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 200px;
+    max-height: 45vh;
+}
+
+.ask-message {
+    max-width: 90%;
+    padding: 0.65rem 0.85rem;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.ask-message-user {
+    align-self: flex-end;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-bottom-right-radius: 4px;
+}
+
+.ask-message-assistant {
+    align-self: flex-start;
+    background: var(--bg-surface-muted);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+}
+
+.ask-message-error {
+    align-self: flex-start;
+    background: var(--error-bg);
+    color: var(--error-text);
+    border: 1px solid var(--error-border);
+}
+
+.ask-typing {
+    align-self: flex-start;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.ask-examples {
+    padding: 0 1rem 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.ask-example-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ask-example-btn:hover {
+    background: var(--accent-subtle);
+    border-color: var(--accent);
+    color: var(--text-primary);
+}
+
+.ask-input-area {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg-surface-raised);
+}
+
+.ask-input {
+    flex: 1;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: inherit;
+    resize: none;
+    min-height: 2.5rem;
+    max-height: 6rem;
+}
+
+.ask-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.ask-send {
+    align-self: flex-end;
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.ask-send:hover:not(:disabled) {
+    background: var(--accent-hover);
+}
+
+.ask-send:disabled {
+    background: var(--bg-disabled);
+    color: var(--text-disabled);
+    cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+    .ask-panel {
+        right: 1rem;
+        bottom: 4.5rem;
+        width: calc(100vw - 2rem);
+    }
+
+    .ask-toggle {
+        right: 1rem;
+        bottom: 1rem;
+    }
+}

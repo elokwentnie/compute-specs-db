@@ -21,15 +21,23 @@ import pandas as pd
 import io
 from datetime import datetime
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from database import get_db, CPUSpec, GPUSpec, init_db, SessionLocal
 from auth import (
     get_current_user,
     create_access_token
 )
 from utils import determine_cpu_generation
+from llm import ask_question, LLMError, LLMRateLimitError, LLMTimeoutError
 
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "production")
 ENABLE_ADMIN_UI = os.environ.get("ENABLE_ADMIN_UI", "false").lower() == "true"
+ENABLE_ASK_FEATURE = os.environ.get("ENABLE_ASK_FEATURE", "false").lower() == "true"
 logger = logging.getLogger(__name__)
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(5 * 1024 * 1024)))
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
@@ -204,6 +212,7 @@ async def api_info():
             "search_gpus": "/api/gpus/search?q=H100",
             "gpu_by_id": "/api/gpus/{id}",
             "stats": "/api/stats",
+            "ask": "POST /api/ask",
             "docs": "/docs"
         }
     }
@@ -294,6 +303,62 @@ async def get_stats(db: Session = Depends(get_db)):
         "max_gpu_memory_gb": max_gpu_memory,
         "unique_memory_types": unique_memory_types
     }
+
+
+class AskRequest(BaseModel):
+    """Request model for the Ask feature"""
+    question: str
+
+
+class AskResponse(BaseModel):
+    """Response model for the Ask feature"""
+    answer: str
+    sources: List[dict] = []
+
+
+@limiter.limit("10/minute")
+@app.post("/api/ask", response_model=AskResponse)
+async def ask(
+    request: Request,
+    payload: AskRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Ask a natural-language question about CPU/GPU specs in the database.
+
+    Answers are grounded in database queries via Groq tool calling.
+    Requires GROQ_API_KEY and ENABLE_ASK_FEATURE=true.
+    """
+    if not ENABLE_ASK_FEATURE:
+        raise HTTPException(status_code=503, detail="Ask feature is disabled")
+    if not os.environ.get("GROQ_API_KEY"):
+        raise HTTPException(status_code=503, detail="LLM not configured")
+
+    question = payload.question.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Question cannot be empty")
+    if len(question) > 500:
+        raise HTTPException(status_code=400, detail="Question is too long (max 500 characters)")
+
+    logger.info("Ask request (length=%d)", len(question))
+
+    try:
+        result = ask_question(question, db)
+    except LLMRateLimitError:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many requests to the language model. Please try again in a minute.",
+        )
+    except LLMTimeoutError:
+        raise HTTPException(
+            status_code=504,
+            detail="The request timed out. Please try a simpler question.",
+        )
+    except LLMError as exc:
+        logger.exception("Ask feature error")
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    return AskResponse(answer=result["answer"], sources=result.get("sources", []))
 
 
 @app.get("/api/gpus", response_model=List[GPUSpecResponse])

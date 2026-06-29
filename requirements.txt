@@ -8,4 +8,5 @@ python-jose>=3.4.0
 passlib[bcrypt]==1.7.4
 aiofiles==23.2.1
 slowapi>=0.1.8
-
+groq>=0.9.0
+python-dotenv>=1.0.0

@@ -78,6 +78,7 @@
     <link rel="stylesheet" href="/static/css/theme.css">
     <link rel="stylesheet" href="/static/css/common.css">
     <link rel="stylesheet" href="/static/css/index.css">
+    <link rel="stylesheet" href="/static/css/ask.css">
 </head>
 <body>
     <div class="container">
@@ -256,6 +257,25 @@
             </div>
         </div>
     </footer>
+
+    <button type="button" id="askToggle" class="ask-toggle" aria-label="Ask about the database" title="Ask about specs">
+        <span>💬</span>
+        <span>Ask</span>
+    </button>
+
+    <div id="askPanel" class="ask-panel hidden" role="dialog" aria-label="Ask about the database">
+        <div class="ask-header">
+            <h2>Ask about specs</h2>
+            <button type="button" id="askClose" class="ask-close" aria-label="Close chat">&times;</button>
+        </div>
+        <p class="ask-disclaimer">Answers are based on database records only — not prices or live web data.</p>
+        <div id="askMessages" class="ask-messages"></div>
+        <div id="askExamples" class="ask-examples"></div>
+        <div class="ask-input-area">
+            <textarea id="askInput" class="ask-input" rows="1" placeholder="Ask a question..." maxlength="500"></textarea>
+            <button type="button" id="askSend" class="ask-send">Send</button>
+        </div>
+    </div>
 
     <script>
         const API_BASE = '';
@@ -632,6 +652,7 @@
         });
     </script>
     <script src="/static/js/theme.js"></script>
+    <script src="/static/js/ask.js"></script>
 </body>
 </html>
 
