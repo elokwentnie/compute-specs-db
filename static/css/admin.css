@@ -246,6 +246,228 @@ header h1 {
     margin-right: 8px;
 }
 
+/* ---------- GitHub sync banner ---------- */
+.sync-banner {
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    margin-bottom: 20px;
+    font-size: 0.92em;
+    border: 1px solid var(--border);
+    background: var(--bg-surface-raised);
+    color: var(--text-secondary);
+}
+
+.sync-banner.off {
+    background: var(--error-bg);
+    color: var(--error-text);
+    border-color: var(--error-border);
+}
+
+.sync-banner code {
+    font-weight: 600;
+}
+
+/* ---------- Validated switch ---------- */
+.switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.switch input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.switch-track {
+    position: relative;
+    flex: none;
+    width: 40px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--border-strong);
+    transition: background 0.15s;
+}
+
+.switch-track::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.15s;
+}
+
+.switch input:checked + .switch-track {
+    background: #16a34a;
+}
+
+.switch input:checked + .switch-track::after {
+    transform: translateX(18px);
+}
+
+.switch input:focus-visible + .switch-track {
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.switch input:disabled + .switch-track {
+    opacity: 0.5;
+    cursor: progress;
+}
+
+.switch-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    min-width: 72px;
+}
+
+.form-group.switch-group {
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 10px;
+}
+
+/* ---------- Proposals ---------- */
+.proposals-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.proposal-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface-raised);
+    padding: 20px;
+    margin-bottom: 18px;
+}
+
+.proposal-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.proposal-head h3 {
+    font-size: 1.1em;
+    margin: 0;
+}
+
+.kind-badge {
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    background: var(--accent-muted);
+    color: var(--text-accent);
+}
+
+.proposal-meta {
+    font-size: 0.88em;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.proposal-meta a,
+.proposal-source a {
+    color: var(--text-link);
+    word-break: break-all;
+}
+
+.proposal-source {
+    font-size: 0.92em;
+    margin-bottom: 8px;
+}
+
+.proposal-notes {
+    white-space: pre-wrap;
+    font-size: 0.92em;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 14px;
+}
+
+.proposal-warning {
+    background: var(--error-bg);
+    color: var(--error-text);
+    border: 1px solid var(--error-border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-size: 0.9em;
+    margin-bottom: 12px;
+}
+
+.proposal-card .form-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px 16px;
+    margin-bottom: 12px;
+}
+
+.proposal-card label {
+    font-size: 0.85em;
+    margin-bottom: 4px;
+}
+
+.proposal-card input[type="text"],
+.proposal-card input[type="number"] {
+    padding: 8px 10px;
+    font-size: 15px;
+}
+
+.proposal-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.reject-box {
+    margin-top: 12px;
+}
+
+.reject-box textarea {
+    width: 100%;
+    min-height: 70px;
+    padding: 10px;
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    font: inherit;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.tab-count {
+    display: inline-block;
+    min-width: 20px;
+    padding: 0 6px;
+    margin-left: 4px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-size: 12px;
+    text-align: center;
+}
+
 /* ---------- Edit tab helpers ---------- */
 .load-btn {
     margin-top: 10px;

@@ -41,7 +41,7 @@
         "@context": "https://schema.org",
         "@type": "Dataset",
         "name": "HPC and Datacenter CPU Specifications",
-        "description": "Manually validated specifications for server-class CPUs including Intel Xeon, AMD EPYC, and AMD Opteron processors.",
+        "description": "Specifications for server-class CPUs including Intel Xeon, AMD EPYC, and AMD Opteron processors. Each entry is marked as manually validated or not yet verified.",
         "url": "https://computespecsdb.com/",
         "license": "https://opensource.org/licenses/MIT",
         "creator": {
@@ -117,6 +117,10 @@
                     <span>ℹ️</span>
                     <span>API Info</span>
                 </a>
+                <a href="/propose" class="api-link">
+                    <span>💡</span>
+                    <span>Suggest a CPU/GPU</span>
+                </a>
                 <a href="/docs" target="_blank" class="api-link">
                     <span>📚</span>
                     <span>API Docs</span>
@@ -153,6 +157,14 @@
         </div>
 
             <div class="table-section" id="tableSection">
+                <div class="table-toolbar">
+                    <label class="validated-filter" for="validatedOnly">
+                        <input type="checkbox" id="validatedOnly">
+                        Validated only
+                    </label>
+                    <span id="validatedSummary"></span>
+                </div>
+
                 <div id="loading" class="loading">
                     <div class="spinner"></div>
                     <p>Loading data...</p>
@@ -169,6 +181,7 @@
                         <tr>
                             <th class="sortable" data-sort="id">ID</th>
                             <th class="sortable" data-sort="cpu_model_name">CPU Model Name</th>
+                            <th class="sortable" data-sort="validated">Validated</th>
                             <th class="sortable" data-sort="codename">Codename</th>
                             <th class="sortable" data-sort="family">Family</th>
                             <th class="sortable" data-sort="cpu_model">CPU Model</th>
@@ -185,6 +198,7 @@
                         <tr>
                             <th class="sortable-gpu" data-sort="id">ID</th>
                             <th class="sortable-gpu" data-sort="gpu_model_name">GPU Model Name</th>
+                            <th class="sortable-gpu" data-sort="validated">Validated</th>
                             <th class="sortable-gpu" data-sort="vendor">Vendor</th>
                             <th class="sortable-gpu" data-sort="gpu_model">GPU Model</th>
                             <th class="sortable-gpu" data-sort="form_factor">Form Factor</th>
@@ -227,14 +241,14 @@
 
         <footer class="data-footer">
             <p class="data-footer-title">Data Validation</p>
-            <p>All specifications have been manually validated against official manufacturer sources:</p>
+            <p>Entries marked <strong>Validated</strong> have been manually checked against official manufacturer sources. Entries marked <strong>Unverified</strong> have not been checked yet.</p>
             <div class="data-footer-sources">
                 <a href="https://www.intel.com/content/www/us/en/products/overview.html" target="_blank" rel="noopener">Intel</a>
                 <a href="https://www.amd.com/en/products/specifications/processors.html" target="_blank" rel="noopener">AMD</a>
                 <a href="https://www.techpowerup.com/" target="_blank" rel="noopener">TechPowerUp</a>
                 <a href="https://www.cpubenchmark.net/" target="_blank" rel="noopener">PassMark</a>
             </div>
-            <p>Found an error? <a href="https://github.com/elokwentnie/compute-specs-db/issues/new?template=report-data-error.yml" target="_blank" rel="noopener">Report it on GitHub</a> | <a href="https://github.com/elokwentnie/compute-specs-db/issues/new?template=new-cpu-request.yml" target="_blank" rel="noopener">Suggest a new CPU</a></p>
+            <p>Found an error? <a href="https://github.com/elokwentnie/compute-specs-db/issues/new?template=report-data-error.yml" target="_blank" rel="noopener">Report it on GitHub</a> | <a href="/propose">Suggest a new CPU or GPU</a></p>
         </footer>
     </div>
 
@@ -287,6 +301,28 @@
         let totalPages = 1;
         let searchTimeout = null;
         let activeTab = 'cpu';
+        let fetchedItems = [];
+        const validatedOnly = document.getElementById('validatedOnly');
+
+        function esc(value) {
+            return String(value)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function validatedPill(validated) {
+            return validated
+                ? '<span class="validated-pill is-validated" title="Checked against official sources">✓ Validated</span>'
+                : '<span class="validated-pill is-unverified" title="Not yet checked against official sources">Unverified</span>';
+        }
+
+        function updateValidatedSummary() {
+            const total = fetchedItems.length;
+            const validated = fetchedItems.filter(item => item.validated).length;
+            document.getElementById('validatedSummary').textContent = total
+                ? `${validated} of ${total} ${activeTab === 'cpu' ? 'CPUs' : 'GPUs'} validated`
+                : '';
+        }
 
         const searchInput = document.getElementById('searchInput');
         const searchButton = document.getElementById('searchButton');
@@ -350,6 +386,11 @@
         }
 
         function displayData(items) {
+            fetchedItems = items ? [...items] : [];
+            updateValidatedSummary();
+            if (items && validatedOnly.checked) {
+                items = items.filter(item => item.validated);
+            }
             if (!items || items.length === 0) {
                 loadingDiv.classList.add('hidden');
                 tableContainer.classList.add('hidden');
@@ -396,14 +437,15 @@
                     const row = document.createElement('tr');
                     const codename = cpu.codename || '-';
                     const codenameBadge = codename !== '-' 
-                        ? `<span class="codename-badge" data-codename="${codename}" title="Click to filter by ${codename}">${codename}</span>`
+                        ? `<span class="codename-badge" data-codename="${esc(codename)}" title="Click to filter by ${esc(codename)}">${esc(codename)}</span>`
                         : '<span>-</span>';
                     row.innerHTML = `
                         <td>${cpu.id}</td>
-                        <td><strong>${cpu.cpu_model_name || '-'}</strong></td>
+                        <td><strong>${esc(cpu.cpu_model_name || '-')}</strong></td>
+                        <td>${validatedPill(cpu.validated)}</td>
                         <td>${codenameBadge}</td>
-                        <td>${cpu.family || '-'}</td>
-                        <td>${cpu.cpu_model || '-'}</td>
+                        <td>${esc(cpu.family || '-')}</td>
+                        <td>${esc(cpu.cpu_model || '-')}</td>
                         <td>${cpu.cores ?? '-'}</td>
                         <td>${cpu.threads ?? '-'}</td>
                         <td>${cpu.max_turbo_frequency_ghz ?? '-'}</td>
@@ -428,16 +470,17 @@
                     const vendorClass = vendor === 'NVIDIA' ? 'vendor-badge-nvidia'
                         : vendor === 'AMD' ? 'vendor-badge-amd' : '';
                     const vendorBadge = vendor !== '-'
-                        ? `<span class="codename-badge ${vendorClass}" data-codename="${vendor}" title="Click to filter by ${vendor}">${vendor}</span>`
+                        ? `<span class="codename-badge ${vendorClass}" data-codename="${esc(vendor)}" title="Click to filter by ${esc(vendor)}">${esc(vendor)}</span>`
                         : '<span>-</span>';
                     row.innerHTML = `
                         <td>${gpu.id}</td>
-                        <td><strong>${gpu.gpu_model_name || '-'}</strong></td>
+                        <td><strong>${esc(gpu.gpu_model_name || '-')}</strong></td>
+                        <td>${validatedPill(gpu.validated)}</td>
                         <td>${vendorBadge}</td>
-                        <td>${gpu.gpu_model || '-'}</td>
-                        <td>${gpu.form_factor || '-'}</td>
+                        <td>${esc(gpu.gpu_model || '-')}</td>
+                        <td>${esc(gpu.form_factor || '-')}</td>
                         <td>${gpu.memory_gb ?? '-'}</td>
-                        <td>${gpu.memory_type || '-'}</td>
+                        <td>${esc(gpu.memory_type || '-')}</td>
                         <td>${gpu.tdp_watts ?? '-'}</td>
                     `;
                     tableBody.appendChild(row);
@@ -620,6 +663,8 @@
 
         searchInput.addEventListener('input', (e) => debouncedSearch(e.target.value));
 
+        validatedOnly.addEventListener('change', () => displayData(fetchedItems));
+
         searchButton.addEventListener('click', () => {
             if (searchTimeout) { clearTimeout(searchTimeout); searchTimeout = null; }
             searchData(searchInput.value);
@@ -630,13 +675,6 @@
                 if (searchTimeout) { clearTimeout(searchTimeout); searchTimeout = null; }
                 searchData(searchInput.value);
             }
-        });
-
-        document.querySelectorAll('th.sortable').forEach(header => {
-            header.addEventListener('click', () => {
-                const column = header.getAttribute('data-sort');
-                if (column) sortData(column, currentSortDirection);
-            });
         });
 
         document.getElementById('firstPage').addEventListener('click', () => goToPage(1));

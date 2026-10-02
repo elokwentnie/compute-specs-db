@@ -1,0 +1,209 @@
+/* ==========================================================================
+   Propose Page Styles
+   ========================================================================== */
+
+body {
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 880px;
+    margin: 0 auto;
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+header {
+    background: var(--bg-header);
+    padding: 36px 30px 30px;
+    text-align: center;
+    position: relative;
+}
+
+header h1 {
+    font-size: 2em;
+    margin-bottom: 6px;
+}
+
+.header-link {
+    display: inline-block;
+    margin-top: 10px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+main {
+    padding: 30px;
+}
+
+.propose-intro {
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+/* ---------- CPU / GPU switch ---------- */
+.kind-switch {
+    display: inline-flex;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.kind-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.kind-switch label {
+    margin: 0;
+    padding: 10px 28px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    background: var(--bg-surface-muted);
+    font-weight: 600;
+    transition: background 0.15s, color 0.15s;
+}
+
+.kind-switch input:checked + label {
+    background: var(--accent);
+    color: var(--text-on-accent);
+}
+
+.kind-switch input:focus-visible + label {
+    box-shadow: inset 0 0 0 3px var(--focus-ring);
+}
+
+/* ---------- Form ---------- */
+fieldset {
+    border: none;
+    margin: 0 0 8px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px 20px;
+    margin-bottom: 18px;
+}
+
+.form-group {
+    margin-bottom: 0;
+}
+
+.form-group.full {
+    grid-column: 1 / -1;
+}
+
+.field-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
+
+.required {
+    color: var(--error-text);
+}
+
+textarea {
+    width: 100%;
+    min-height: 110px;
+    padding: 12px;
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    font: inherit;
+    font-size: 16px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* Honeypot: kept out of view and out of the tab order. */
+.hp-field {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.form-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.form-note {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
+
+/* ---------- Result messages ---------- */
+.result {
+    padding: 16px 18px;
+    border-radius: var(--radius-md);
+    margin-bottom: 22px;
+    border: 1px solid transparent;
+}
+
+.result.success {
+    background: var(--success-bg);
+    color: var(--success-text);
+    border-color: var(--success-border);
+}
+
+.result.error {
+    background: var(--error-bg);
+    color: var(--error-text);
+    border-color: var(--error-border);
+}
+
+.result a {
+    color: inherit;
+    font-weight: 600;
+}
+
+@media (max-width: 600px) {
+    body {
+        padding: 0;
+    }
+
+    .container {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+
+    header {
+        padding: 56px 16px 24px;
+    }
+
+    main {
+        padding: 22px 16px;
+    }
+
+    .kind-switch {
+        display: flex;
+    }
+
+    .kind-switch label {
+        flex: 1;
+        text-align: center;
+    }
+}

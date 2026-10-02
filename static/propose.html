@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suggest a CPU or GPU — Compute Specs DB</title>
+    <meta name="description" content="Propose a missing server-class CPU or GPU for the Compute Specs DB catalog.">
+    <link rel="canonical" href="https://computespecsdb.com/propose">
+    <link rel="icon" type="image/png" href="/static/images/server-logo.png">
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('compute-specs-theme');
+                if (t === 'light' || t === 'dark') {
+                    document.documentElement.setAttribute('data-theme', t);
+                } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (_) {}
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/theme.css">
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/propose.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button type="button" class="theme-toggle" aria-label="Toggle dark mode" title="Dark mode">
+                <span class="theme-toggle-icon">🌙</span>
+            </button>
+            <h1>💡 Suggest a CPU or GPU</h1>
+            <p>Help fill the gaps in Compute Specs DB</p>
+            <a href="/" class="header-link">← Back to the data table</a>
+        </header>
+
+        <main>
+            <p class="propose-intro">
+                Fill in what you know and link an official spec page or a trusted hardware database.
+                Each suggestion is reviewed before it's added. It's tracked publicly as a GitHub issue, and you'll get a link to follow it.
+            </p>
+
+            <div id="result" class="result hidden" role="status" aria-live="polite"></div>
+
+            <form id="proposeForm" novalidate>
+                <div class="kind-switch" role="radiogroup" aria-label="Hardware type">
+                    <input type="radio" name="kind" id="kindCpu" value="cpu" checked>
+                    <label for="kindCpu">CPU</label>
+                    <input type="radio" name="kind" id="kindGpu" value="gpu">
+                    <label for="kindGpu">GPU</label>
+                </div>
+
+                <fieldset id="cpuFields">
+                    <legend class="hp-field">CPU details</legend>
+                    <div class="form-grid">
+                        <div class="form-group full">
+                            <label for="cpu_model_name">CPU Model Name <span class="required">*</span></label>
+                            <input type="text" id="cpu_model_name" maxlength="200" placeholder="e.g. Intel Xeon 6980P">
+                            <span class="field-hint">Full name including the manufacturer.</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="family">Family</label>
+                            <input type="text" id="family" maxlength="200" placeholder="e.g. Intel Xeon, AMD EPYC">
+                        </div>
+                        <div class="form-group">
+                            <label for="cpu_model">CPU Model</label>
+                            <input type="text" id="cpu_model" maxlength="200" placeholder="e.g. 6980P, EPYC 9754">
+                        </div>
+                        <div class="form-group">
+                            <label for="codename">Codename</label>
+                            <input type="text" id="codename" maxlength="200" placeholder="e.g. Granite Rapids">
+                        </div>
+                        <div class="form-group">
+                            <label for="launch_year">Launch Year</label>
+                            <input type="number" id="launch_year" min="1990" max="2100" placeholder="e.g. 2024">
+                        </div>
+                        <div class="form-group">
+                            <label for="cores">Cores</label>
+                            <input type="number" id="cores" min="0" placeholder="e.g. 128">
+                        </div>
+                        <div class="form-group">
+                            <label for="threads">Threads</label>
+                            <input type="number" id="threads" min="0" placeholder="e.g. 256">
+                        </div>
+                        <div class="form-group">
+                            <label for="max_turbo_frequency_ghz">Max Turbo (GHz)</label>
+                            <input type="number" id="max_turbo_frequency_ghz" min="0" step="0.01" placeholder="e.g. 3.9">
+                        </div>
+                        <div class="form-group">
+                            <label for="l3_cache_mb">L3 Cache (MB)</label>
+                            <input type="number" id="l3_cache_mb" min="0" step="0.1" placeholder="e.g. 504">
+                        </div>
+                        <div class="form-group">
+                            <label for="tdp_watts">TDP (W)</label>
+                            <input type="number" id="tdp_watts" min="0" placeholder="e.g. 500">
+                        </div>
+                        <div class="form-group">
+                            <label for="max_memory_tb">Max Memory (TB)</label>
+                            <input type="number" id="max_memory_tb" min="0" step="0.01" placeholder="e.g. 6">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset id="gpuFields" class="hidden">
+                    <legend class="hp-field">GPU details</legend>
+                    <div class="form-grid">
+                        <div class="form-group full">
+                            <label for="gpu_model_name">GPU Model Name <span class="required">*</span></label>
+                            <input type="text" id="gpu_model_name" maxlength="200" placeholder="e.g. NVIDIA H200 NVL">
+                            <span class="field-hint">Full name including the vendor.</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="vendor">Vendor</label>
+                            <input type="text" id="vendor" maxlength="200" placeholder="e.g. NVIDIA, AMD, Intel">
+                        </div>
+                        <div class="form-group">
+                            <label for="gpu_model">GPU Model</label>
+                            <input type="text" id="gpu_model" maxlength="200" placeholder="e.g. H200 NVL">
+                        </div>
+                        <div class="form-group">
+                            <label for="form_factor">Form Factor</label>
+                            <input type="text" id="form_factor" maxlength="200" placeholder="e.g. PCIe card, SXM module">
+                        </div>
+                        <div class="form-group">
+                            <label for="memory_gb">Memory (GB)</label>
+                            <input type="number" id="memory_gb" min="0" placeholder="e.g. 141">
+                        </div>
+                        <div class="form-group">
+                            <label for="memory_type">Memory Type</label>
+                            <input type="text" id="memory_type" maxlength="200" placeholder="e.g. HBM3E, GDDR7">
+                        </div>
+                        <div class="form-group">
+                            <label for="gpu_tdp_watts">TDP (W)</label>
+                            <input type="number" id="gpu_tdp_watts" min="0" placeholder="e.g. 600">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <div class="form-grid">
+                    <div class="form-group full">
+                        <label for="source_url">Source URL <span class="required">*</span></label>
+                        <input type="url" id="source_url" maxlength="2000" placeholder="https://…">
+                        <span class="field-hint">Official spec page (Intel ARK, AMD, NVIDIA) or a trusted database such as TechPowerUp.</span>
+                    </div>
+                    <div class="form-group full">
+                        <label for="notes">Notes</label>
+                        <textarea id="notes" maxlength="1000" placeholder="Anything that helps with review, e.g. which fields you're unsure about."></textarea>
+                    </div>
+                    <div class="hp-field" aria-hidden="true">
+                        <label for="website">Leave this field empty</label>
+                        <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" id="submitButton">Submit suggestion</button>
+                    <span class="form-note">Please don't include personal information. Suggestions are public.</span>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <footer class="site-footer">
+        <div class="site-footer-inner">
+            <div class="site-footer-top">
+                <span class="site-footer-brand">Compute Specs DB</span>
+                <nav class="site-footer-links">
+                    <a href="/">Data Table</a>
+                    <a href="/visualizations">Visualizations</a>
+                    <a href="/docs" target="_blank">API Docs</a>
+                    <a href="https://github.com/elokwentnie/compute-specs-db" target="_blank" rel="noopener">GitHub</a>
+                </nav>
+            </div>
+            <hr class="site-footer-divider">
+            <div class="site-footer-bottom">
+                <span class="site-footer-disclaimer">Intel, Xeon, and Core are trademarks of Intel Corporation. AMD, EPYC, Ryzen, and Instinct are trademarks of Advanced Micro Devices, Inc. NVIDIA, H100, H200, B100, B200, L4, L40, L40S, and T4 are trademarks of NVIDIA Corporation. All other trademarks are the property of their respective owners. Data is provided "as-is" for informational purposes only, without warranty of any kind.</span>
+                <span>&copy; 2026 Compute Specs DB &middot; Open Source</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const FIELDS = {
+            cpu: {
+                text: ['cpu_model_name', 'family', 'cpu_model', 'codename'],
+                int: ['cores', 'threads', 'tdp_watts', 'launch_year'],
+                float: ['max_turbo_frequency_ghz', 'l3_cache_mb', 'max_memory_tb'],
+                name: 'cpu_model_name',
+            },
+            gpu: {
+                text: ['gpu_model_name', 'vendor', 'gpu_model', 'form_factor', 'memory_type'],
+                int: ['memory_gb', 'tdp_watts'],
+                float: [],
+                name: 'gpu_model_name',
+            },
+        };
+        // Element ids that differ from the API field name.
+        const ELEMENT_IDS = { gpu: { tdp_watts: 'gpu_tdp_watts' } };
+        const GITHUB_FALLBACK = 'https://github.com/elokwentnie/compute-specs-db/issues/new/choose';
+
+        const form = document.getElementById('proposeForm');
+        const result = document.getElementById('result');
+        const submitButton = document.getElementById('submitButton');
+
+        function currentKind() {
+            return document.querySelector('input[name="kind"]:checked').value;
+        }
+
+        function elementFor(kind, field) {
+            return document.getElementById((ELEMENT_IDS[kind] || {})[field] || field);
+        }
+
+        function showResult(type, html) {
+            result.className = `result ${type}`;
+            result.innerHTML = html;
+            result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function esc(value) {
+            const div = document.createElement('div');
+            div.textContent = value;
+            return div.innerHTML;
+        }
+
+        function syncKind() {
+            const kind = currentKind();
+            document.getElementById('cpuFields').classList.toggle('hidden', kind !== 'cpu');
+            document.getElementById('gpuFields').classList.toggle('hidden', kind !== 'gpu');
+        }
+
+        function buildPayload(kind) {
+            const spec = FIELDS[kind];
+            const payload = {};
+            spec.text.forEach(field => {
+                payload[field] = elementFor(kind, field).value.trim() || null;
+            });
+            spec.int.forEach(field => {
+                const value = elementFor(kind, field).value;
+                payload[field] = value === '' ? null : parseInt(value, 10);
+            });
+            spec.float.forEach(field => {
+                const value = elementFor(kind, field).value;
+                payload[field] = value === '' ? null : parseFloat(value);
+            });
+            payload.source_url = document.getElementById('source_url').value.trim();
+            payload.notes = document.getElementById('notes').value.trim() || null;
+            payload.website = document.getElementById('website').value;
+            return payload;
+        }
+
+        function describeError(status, body) {
+            if (status === 409) return esc(body.detail || 'This model is already in the database.');
+            if (status === 429) return 'Too many suggestions from your network. Please wait a minute and try again.';
+            if (status === 422 && Array.isArray(body.detail)) {
+                return body.detail.map(err => {
+                    const field = (err.loc || []).slice(-1)[0];
+                    return esc(field === 'source_url' ? 'Please enter a valid http(s) source URL.' : `${field}: ${err.msg}`);
+                }).join('<br>');
+            }
+            if (status === 503 || status === 502) {
+                return `Suggestions can't be submitted right now. You can <a href="${GITHUB_FALLBACK}" target="_blank" rel="noopener">open a GitHub issue</a> instead.`;
+            }
+            return esc(body.detail || `Something went wrong (HTTP ${status}).`);
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const kind = currentKind();
+            const payload = buildPayload(kind);
+
+            if (!payload[FIELDS[kind].name]) {
+                showResult('error', `Please enter the ${kind.toUpperCase()} model name.`);
+                elementFor(kind, FIELDS[kind].name).focus();
+                return;
+            }
+            if (!/^https?:\/\/\S+\.\S+/.test(payload.source_url)) {
+                showResult('error', 'Please enter a valid http(s) source URL.');
+                document.getElementById('source_url').focus();
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting…';
+            try {
+                const response = await fetch(`/api/proposals/${kind}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const body = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    showResult('error', describeError(response.status, body));
+                    return;
+                }
+                showResult(
+                    'success',
+                    `Thanks! Your suggestion for <strong>${esc(payload[FIELDS[kind].name])}</strong> was submitted for review. ` +
+                    `<a href="${esc(body.issue_url)}" target="_blank" rel="noopener">Follow it on GitHub (#${body.issue_number})</a>.`
+                );
+                form.reset();
+                syncKind();
+            } catch (err) {
+                showResult('error', describeError(0, { detail: 'Network error. Please check your connection and try again.' }));
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Submit suggestion';
+            }
+        });
+
+        document.querySelectorAll('input[name="kind"]').forEach(radio => radio.addEventListener('change', syncKind));
+        syncKind();
+    </script>
+    <script src="/static/js/theme.js"></script>
+</body>
+</html>

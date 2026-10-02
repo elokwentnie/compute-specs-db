@@ -50,6 +50,9 @@
     --focus-ring: rgba(74, 122, 184, 0.28);
     --table-sticky-shadow: 0 1px 0 #a8bfd9, 0 3px 8px rgba(45, 74, 111, 0.08);
     --sort-active: #3a669e;
+    --success-bg: #d1fae5;
+    --success-text: #065f46;
+    --success-border: #6ee7b7;
 }
 
 [data-theme="dark"] {
@@ -98,6 +101,9 @@
     --focus-ring: rgba(126, 179, 232, 0.2);
     --table-sticky-shadow: 0 1px 0 var(--border-strong), 0 4px 12px rgba(0, 0, 0, 0.35);
     --sort-active: #ffffff;
+    --success-bg: #064e3b;
+    --success-text: #6ee7b7;
+    --success-border: #047857;
 }
 
 /* ---------- Light mode component polish ---------- */

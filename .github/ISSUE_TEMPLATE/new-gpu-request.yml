@@ -1,0 +1,73 @@
+name: Request New GPU Entry
+description: Suggest a GPU to be added to the database
+title: "[New GPU] "
+labels: ["new-entry"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing! Please fill in as many fields as you can.
+        A source URL is required so we can verify the data.
+        Tip: you can also suggest a GPU without a GitHub account at https://computespecsdb.com/propose
+
+  - type: input
+    id: gpu_model_name
+    attributes:
+      label: GPU Model Name
+      description: Full name including vendor prefix
+      placeholder: e.g. NVIDIA H200 NVL
+    validations:
+      required: true
+
+  - type: input
+    id: vendor
+    attributes:
+      label: Vendor
+      placeholder: e.g. NVIDIA, AMD, Intel
+    validations:
+      required: true
+
+  - type: input
+    id: gpu_model
+    attributes:
+      label: GPU Model (short identifier)
+      placeholder: e.g. H200 NVL, MI300X
+
+  - type: input
+    id: form_factor
+    attributes:
+      label: Form Factor
+      placeholder: e.g. PCIe card, HGX / SXM module, OAM module
+
+  - type: input
+    id: memory_gb
+    attributes:
+      label: Memory (GB)
+      placeholder: e.g. 141
+
+  - type: input
+    id: memory_type
+    attributes:
+      label: Memory Type
+      placeholder: e.g. HBM3E, GDDR7
+
+  - type: input
+    id: tdp
+    attributes:
+      label: TDP (Watts)
+      placeholder: e.g. 600
+
+  - type: input
+    id: source_url
+    attributes:
+      label: Source URL
+      description: Link to official spec page or trusted hardware database
+      placeholder: e.g. https://www.nvidia.com/en-us/data-center/h200/
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_notes
+    attributes:
+      label: Additional Notes
+      description: Any other relevant information
