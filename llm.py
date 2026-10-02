@@ -29,7 +29,7 @@ Database schema (SQLite):
 
 Table cpu_specs:
   id, cpu_model_name, family, cpu_model, codename, cores, threads, tdp_watts,
-  launch_year, max_turbo_frequency_ghz, l3_cache_mb, max_memory_tb
+  launch_year, max_turbo_frequency_ghz, l3_cache_mb, max_memory_tb, validated
 
   family values are full product lines, NOT short vendor names. Examples:
     AMD: 'AMD EPYC', 'AMD Opteron', 'AMD Ryzen'
@@ -39,9 +39,12 @@ Table cpu_specs:
   Date filtering uses launch_year (integer), e.g. launch_year BETWEEN 2020 AND 2025
 
 Table gpu_specs:
-  id, gpu_model_name, vendor, gpu_model, form_factor, memory_gb, memory_type, tdp_watts
+  id, gpu_model_name, vendor, gpu_model, form_factor, memory_gb, memory_type, tdp_watts, validated
 
   vendor examples: 'NVIDIA', 'AMD'
+
+validated (both tables) is 1 when the specs were manually checked against official
+sources, 0 when not yet verified. Filter with validated = 1 / validated = 0.
 
 Derived metrics (use in run_sql when cores > 0):
   tdp_per_core = tdp_watts * 1.0 / cores
@@ -59,6 +62,7 @@ Rules:
 - Do not guess prices, availability, or benchmark scores — they are not in the database.
 - For ratios and rankings across many rows, use run_sql. For a single CPU/GPU after search, you may compute simple arithmetic.
 - When filtering CPUs by AMD or Intel, always use family LIKE '%AMD%' or family LIKE '%Intel%'.
+- If you cite a row whose validated value is false/0, mention that its specs are not yet verified.
 - For off-topic questions, politely redirect to hardware specs in the database.
 - This is a specs catalog, not buying advice. Keep answers concise and factual.
 """
@@ -102,7 +106,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_stats",
-            "description": "Get summary statistics: total CPUs/GPUs, families, codenames, averages, max cores, year range, etc.",
+            "description": "Get summary statistics: total and validated CPUs/GPUs, families, codenames, averages, max cores, year range, etc.",
             "parameters": {"type": "object", "properties": {}},
         },
     },
@@ -182,6 +186,7 @@ def _cpu_to_dict(cpu: CPUSpec) -> dict[str, Any]:
         "max_turbo_frequency_ghz": cpu.max_turbo_frequency_ghz,
         "l3_cache_mb": cpu.l3_cache_mb,
         "max_memory_tb": cpu.max_memory_tb,
+        "validated": bool(cpu.validated),
     }
 
 
@@ -196,6 +201,7 @@ def _gpu_to_dict(gpu: GPUSpec) -> dict[str, Any]:
         "memory_gb": gpu.memory_gb,
         "memory_type": gpu.memory_type,
         "tdp_watts": gpu.tdp_watts,
+        "validated": bool(gpu.validated),
     }
 
 
@@ -356,14 +362,19 @@ def _get_stats(db: Session) -> dict[str, Any]:
     gpu_memory_types = db.query(GPUSpec.memory_type).distinct().all()
     unique_memory_types = len([m[0] for m in gpu_memory_types if m[0]])
 
+    validated_cpus = db.query(CPUSpec).filter(CPUSpec.validated.is_(True)).count()
+    validated_gpus = db.query(GPUSpec).filter(GPUSpec.validated.is_(True)).count()
+
     return {
         "total_cpus": total,
+        "validated_cpus": validated_cpus,
         "unique_families": unique_families,
         "unique_codenames": unique_codenames,
         "average_cores": round(avg_cores_value, 2) if avg_cores_value else None,
         "max_cores": max_cores,
         "year_range": year_range,
         "total_gpus": total_gpus,
+        "validated_gpus": validated_gpus,
         "unique_gpu_vendors": unique_gpu_vendors,
         "max_gpu_memory_gb": max_gpu_memory,
         "unique_memory_types": unique_memory_types,

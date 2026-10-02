@@ -52,6 +52,7 @@
 
         <div class="admin-panel" id="adminPanel">
             <div class="tabs" style="flex-wrap:wrap;">
+                <button class="tab" data-tab="proposals" onclick="switchTab('proposals')">📨 Proposals<span id="proposalCount" class="tab-count hidden"></span></button>
                 <button class="tab" data-tab="browse" onclick="switchTab('browse')">📋 Browse CPUs</button>
                 <button class="tab active" data-tab="create" onclick="switchTab('create')">➕ Create CPU</button>
                 <button class="tab" data-tab="edit" onclick="switchTab('edit')">✏️ Edit CPU</button>
@@ -63,7 +64,21 @@
                 <button class="tab" data-tab="import" onclick="switchTab('import')">📥 Import CSV</button>
             </div>
 
-            <div id="message" class="message"></div>
+            <div id="message" class="message" role="status" aria-live="polite"></div>
+            <div id="syncBanner" class="sync-banner hidden"></div>
+
+            <div id="proposalsTab" class="tab-content">
+                <div class="proposals-toolbar">
+                    <h2>Proposals</h2>
+                    <button type="button" class="btn-secondary" onclick="loadProposals()">Refresh</button>
+                </div>
+                <p class="browse-description">
+                    Suggestions submitted on <a href="/propose" target="_blank">/propose</a>. Each one is a GitHub issue.
+                    Edit the values if needed, then accept to add the row to the CSV on GitHub and to the live database.
+                </p>
+                <div id="proposalsStatus" class="browse-status-text hidden"></div>
+                <div id="proposalsList"></div>
+            </div>
 
             <div id="browseTab" class="tab-content">
                 <h2>Browse & Edit CPUs</h2>
@@ -84,6 +99,7 @@
                                 <th>L3 (MB)</th>
                                 <th>TDP (W)</th>
                                 <th>Year</th>
+                                <th>Validated</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -141,6 +157,13 @@
                         <div class="form-group">
                             <label for="create_max_memory">Max Memory (TB)</label>
                             <input type="number" step="0.1" id="create_max_memory">
+                        </div>
+                        <div class="form-group switch-group">
+                            <label class="switch" for="create_validated">
+                                <input type="checkbox" id="create_validated" checked>
+                                <span class="switch-track"></span>
+                                <span>Validated</span>
+                            </label>
                         </div>
                     </div>
                     <div class="form-actions">
@@ -203,6 +226,13 @@
                             <label for="edit_max_memory">Max Memory (TB)</label>
                             <input type="number" step="0.1" id="edit_max_memory">
                         </div>
+                        <div class="form-group switch-group">
+                            <label class="switch" for="edit_validated">
+                                <input type="checkbox" id="edit_validated">
+                                <span class="switch-track"></span>
+                                <span>Validated</span>
+                            </label>
+                        </div>
                     </div>
                     <div class="form-actions">
                         <button type="submit">Update CPU</button>
@@ -240,6 +270,7 @@
                                 <th>Memory (GB)</th>
                                 <th>Memory Type</th>
                                 <th>TDP (W)</th>
+                                <th>Validated</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -281,6 +312,13 @@
                         <div class="form-group">
                             <label for="create_gpu_tdp">TDP (W)</label>
                             <input type="number" id="create_gpu_tdp">
+                        </div>
+                        <div class="form-group switch-group">
+                            <label class="switch" for="create_gpu_validated">
+                                <input type="checkbox" id="create_gpu_validated" checked>
+                                <span class="switch-track"></span>
+                                <span>Validated</span>
+                            </label>
                         </div>
                     </div>
                     <div class="form-actions">
@@ -327,6 +365,13 @@
                             <label for="edit_gpu_tdp">TDP (W)</label>
                             <input type="number" id="edit_gpu_tdp">
                         </div>
+                        <div class="form-group switch-group">
+                            <label class="switch" for="edit_gpu_validated">
+                                <input type="checkbox" id="edit_gpu_validated">
+                                <span class="switch-track"></span>
+                                <span>Validated</span>
+                            </label>
+                        </div>
                     </div>
                     <div class="form-actions">
                         <button type="submit">Update GPU</button>
@@ -351,12 +396,15 @@
                 <p class="import-description">
                     Import CPUs from a CSV file. You can either upload a file or import from the repository CSV.
                 </p>
+                <p class="proposal-warning">
+                    Bulk imports only change the live database. They are not written to the CSVs on GitHub,
+                    so they are lost on the next restart. To change data permanently, use the Browse, Create and Edit tabs.
+                </p>
                 
                 <div class="import-option">
                     <h3>Option 1: Import from Repository CSV</h3>
                     <p class="import-option-hint">
-                        Imports from <code>cpu_specifications.csv</code> in the repository. 
-                        Update the CSV in GitHub, then click below to import.
+                        Imports from <code>cpu_spec_validated.csv</code> bundled with the deployed app.
                     </p>
                     <div class="form-group">
                         <label>
@@ -384,7 +432,7 @@
                 <div class="import-divider">
                     <h3>Option 3: Upload CPU CSV File</h3>
                     <p class="import-option-hint">
-                        Upload a CSV file to import. File should be semicolon-delimited (;).
+                        Upload a CSV file to import. Comma- or semicolon-delimited, with the same columns as <code>cpu_spec_validated.csv</code>.
                     </p>
                     <div class="form-group">
                         <label for="csvFile">CSV File</label>
@@ -405,21 +453,258 @@
 
     <script>
         let authToken = null;
+        let syncInfo = null;
         let browseCpus = [];
+        let browseGpus = [];
+        let proposals = [];
+        let proposalsLoaded = false;
+
+        const SPEC_FIELDS = {
+            cpu: [
+                { key: 'cpu_model_name', label: 'CPU Model Name', type: 'text', required: true },
+                { key: 'family', label: 'Family', type: 'text' },
+                { key: 'cpu_model', label: 'CPU Model', type: 'text' },
+                { key: 'codename', label: 'Codename', type: 'text' },
+                { key: 'cores', label: 'Cores', type: 'int' },
+                { key: 'threads', label: 'Threads', type: 'int' },
+                { key: 'max_turbo_frequency_ghz', label: 'Max Turbo (GHz)', type: 'float' },
+                { key: 'l3_cache_mb', label: 'L3 Cache (MB)', type: 'float' },
+                { key: 'tdp_watts', label: 'TDP (W)', type: 'int' },
+                { key: 'launch_year', label: 'Launch Year', type: 'int' },
+                { key: 'max_memory_tb', label: 'Max Memory (TB)', type: 'float' },
+            ],
+            gpu: [
+                { key: 'gpu_model_name', label: 'GPU Model Name', type: 'text', required: true },
+                { key: 'vendor', label: 'Vendor', type: 'text' },
+                { key: 'gpu_model', label: 'GPU Model', type: 'text' },
+                { key: 'form_factor', label: 'Form Factor', type: 'text' },
+                { key: 'memory_gb', label: 'Memory (GB)', type: 'int' },
+                { key: 'memory_type', label: 'Memory Type', type: 'text' },
+                { key: 'tdp_watts', label: 'TDP (W)', type: 'int' },
+            ],
+        };
+
+        // Form element id for each API field, per form.
+        const FORM_IDS = {
+            createCpu: {
+                cpu_model_name: 'create_model_name', family: 'create_family', cpu_model: 'create_cpu_model',
+                codename: 'create_codename', cores: 'create_cores', threads: 'create_threads',
+                max_turbo_frequency_ghz: 'create_max_turbo', l3_cache_mb: 'create_l3_cache', tdp_watts: 'create_tdp',
+                launch_year: 'create_launch_year', max_memory_tb: 'create_max_memory', validated: 'create_validated',
+            },
+            editCpu: {
+                cpu_model_name: 'edit_model_name', family: 'edit_family', cpu_model: 'edit_cpu_model',
+                codename: 'edit_codename', cores: 'edit_cores', threads: 'edit_threads',
+                max_turbo_frequency_ghz: 'edit_max_turbo', l3_cache_mb: 'edit_l3_cache', tdp_watts: 'edit_tdp',
+                launch_year: 'edit_launch_year', max_memory_tb: 'edit_max_memory', validated: 'edit_validated',
+            },
+            createGpu: {
+                gpu_model_name: 'create_gpu_model_name', vendor: 'create_gpu_vendor', gpu_model: 'create_gpu_model',
+                form_factor: 'create_gpu_form_factor', memory_gb: 'create_gpu_memory', memory_type: 'create_gpu_memory_type',
+                tdp_watts: 'create_gpu_tdp', validated: 'create_gpu_validated',
+            },
+            editGpu: {
+                gpu_model_name: 'edit_gpu_model_name', vendor: 'edit_gpu_vendor', gpu_model: 'edit_gpu_model',
+                form_factor: 'edit_gpu_form_factor', memory_gb: 'edit_gpu_memory', memory_type: 'edit_gpu_memory_type',
+                tdp_watts: 'edit_gpu_tdp', validated: 'edit_gpu_validated',
+            },
+        };
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML.replace(/"/g, '&quot;');
+        }
+
+        function showMessage(message, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.textContent = message;
+            msgDiv.className = `message ${type}`;
+            msgDiv.style.display = 'block';
+            clearTimeout(showMessage.timer);
+            showMessage.timer = setTimeout(() => { msgDiv.style.display = 'none'; msgDiv.className = 'message'; }, type === 'error' ? 10000 : 5000);
+        }
+
+        function savedMessage(what) {
+            return syncInfo && syncInfo.enabled
+                ? `${what} Saved to GitHub (${syncInfo.repo}@${syncInfo.branch}) and the live database.`
+                : `${what} Saved to the live database only (GitHub sync is off).`;
+        }
+
+        function getAuthHeaders() {
+            return {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        function errorDetail(body, status) {
+            const detail = body && body.detail;
+            if (Array.isArray(detail)) {
+                return detail.map(err => `${(err.loc || []).slice(-1)[0]}: ${err.msg}`).join('; ');
+            }
+            return detail || `HTTP ${status}`;
+        }
+
+        // fetch wrapper: throws Error(detail) on non-2xx, returns parsed JSON (or null).
+        async function apiFetch(url, options = {}) {
+            const response = await fetch(url, options);
+            const body = response.status === 204 ? null : await response.json().catch(() => null);
+            if (!response.ok) {
+                if (response.status === 401) showMessage('Session expired, please log in again.', 'error');
+                throw new Error(errorDetail(body, response.status));
+            }
+            return body;
+        }
+
+        // ---------- Form helpers ----------
+
+        function fieldType(kind, key) {
+            if (key === 'validated') return 'bool';
+            const field = SPEC_FIELDS[kind].find(f => f.key === key);
+            return field ? field.type : 'text';
+        }
+
+        function readForm(kind, ids) {
+            const data = {};
+            for (const [key, elId] of Object.entries(ids)) {
+                const el = document.getElementById(elId);
+                const type = fieldType(kind, key);
+                if (type === 'bool') {
+                    data[key] = el.checked;
+                } else if (type === 'int') {
+                    data[key] = el.value === '' ? null : parseInt(el.value, 10);
+                } else if (type === 'float') {
+                    data[key] = el.value === '' ? null : parseFloat(el.value);
+                } else {
+                    data[key] = el.value.trim() || null;
+                }
+            }
+            return data;
+        }
+
+        function fillForm(ids, item) {
+            for (const [key, elId] of Object.entries(ids)) {
+                const el = document.getElementById(elId);
+                if (el.type === 'checkbox') {
+                    el.checked = Boolean(item[key]);
+                } else {
+                    el.value = item[key] ?? '';
+                }
+            }
+        }
+
+        function upsertLocal(list, item) {
+            const idx = list.findIndex(x => x.id === item.id);
+            if (idx >= 0) list[idx] = item; else if (list.length) list.push(item);
+        }
+
+        // ---------- Auth ----------
+
+        async function authenticate() {
+            const password = document.getElementById('passwordInput').value;
+            if (!password) {
+                showMessage('Please enter a password', 'error');
+                return;
+            }
+
+            try {
+                const data = await apiFetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: password })
+                });
+                authToken = data.access_token;
+
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('adminPanel').classList.add('active');
+                showMessage('Login successful!', 'success');
+                await loadSyncInfo();
+                loadProposals();
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+                authToken = null;
+            }
+        }
+
+        async function loadSyncInfo() {
+            const banner = document.getElementById('syncBanner');
+            try {
+                const me = await apiFetch('/api/auth/me', { headers: getAuthHeaders() });
+                syncInfo = me.github_sync;
+            } catch (_) {
+                syncInfo = null;
+            }
+            if (syncInfo && syncInfo.enabled) {
+                banner.className = 'sync-banner';
+                banner.innerHTML = `GitHub sync is on. Every change is committed to <code>${escapeHtml(syncInfo.repo)}</code> @ <code>${escapeHtml(syncInfo.branch)}</code> before it reaches the live database.`;
+            } else {
+                banner.className = 'sync-banner off';
+                banner.innerHTML = 'GitHub sync is off (<code>GITHUB_TOKEN</code> not set). Changes only affect the live database and are lost when the server restarts. Proposals are unavailable.';
+            }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            const tabBtn = document.querySelector(`.tab[data-tab="${tabName}"]`);
+            if (tabBtn) tabBtn.classList.add('active');
+            const content = document.getElementById(tabName + 'Tab');
+            if (content) content.classList.add('active');
+            if (tabName === 'browse') loadBrowseDataIfNeeded();
+            if (tabName === 'browseGpu') loadBrowseGpuDataIfNeeded();
+            // Load once; Refresh reloads explicitly so in-progress edits aren't wiped.
+            if (tabName === 'proposals' && !proposalsLoaded) loadProposals();
+        }
+
+        // ---------- Validated toggle ----------
+
+        function validatedSwitch(kind, item) {
+            return `<label class="switch" title="Toggle validated">
+                <input type="checkbox" ${item.validated ? 'checked' : ''}
+                       aria-label="Validated: ${escapeHtml(item.cpu_model_name || item.gpu_model_name)}"
+                       onchange="toggleValidated('${kind}', ${item.id}, this)">
+                <span class="switch-track"></span>
+                <span class="switch-text">${item.validated ? 'Validated' : 'Unverified'}</span>
+            </label>`;
+        }
+
+        async function toggleValidated(kind, id, input) {
+            const validated = input.checked;
+            const text = input.parentElement.querySelector('.switch-text');
+            input.disabled = true;
+            text.textContent = 'Saving…';
+            try {
+                const updated = await apiFetch(`/api/${kind}s/${id}/validated`, {
+                    method: 'PATCH',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ validated })
+                });
+                upsertLocal(kind === 'cpu' ? browseCpus : browseGpus, updated);
+                text.textContent = validated ? 'Validated' : 'Unverified';
+                const name = updated.cpu_model_name || updated.gpu_model_name;
+                showMessage(savedMessage(`${name} marked ${validated ? 'validated' : 'unverified'}.`), 'success');
+            } catch (error) {
+                input.checked = !validated;
+                text.textContent = input.checked ? 'Validated' : 'Unverified';
+                showMessage('Error: ' + error.message, 'error');
+            } finally {
+                input.disabled = false;
+            }
+        }
+
+        // ---------- CPUs ----------
 
         async function loadBrowseDataIfNeeded() {
             const container = document.getElementById('browseTableContainer');
             const loadingEl = document.getElementById('browseLoading');
             const emptyEl = document.getElementById('browseEmpty');
-            const tbody = document.getElementById('browseTableBody');
             if (browseCpus.length === 0) {
                 loadingEl.classList.remove('hidden');
                 container.classList.add('hidden');
                 emptyEl.classList.add('hidden');
                 try {
-                    const response = await fetch('/api/cpus?limit=1000');
-                    if (!response.ok) throw new Error('Failed to load CPUs');
-                    browseCpus = await response.json();
+                    browseCpus = await apiFetch('/api/cpus?limit=1000');
                     loadingEl.classList.add('hidden');
                     container.classList.remove('hidden');
                     renderBrowseTable(browseCpus);
@@ -450,6 +735,7 @@
             tbody.innerHTML = '';
             if (filtered.length === 0) {
                 container.classList.add('hidden');
+                emptyEl.textContent = 'No CPUs match your search.';
                 emptyEl.classList.remove('hidden');
                 return;
             }
@@ -466,206 +752,73 @@
                     <td>${cpu.l3_cache_mb ?? '-'}</td>
                     <td>${cpu.tdp_watts ?? '-'}</td>
                     <td>${cpu.launch_year ?? '-'}</td>
+                    <td>${validatedSwitch('cpu', cpu)}</td>
                     <td><button type="button" class="edit-btn" onclick="startEditFromBrowse(${cpu.id})">Edit</button></td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        function escapeHtml(str) {
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
-        }
-
         function startEditFromBrowse(cpuId) {
             const cpu = browseCpus.find(c => c.id === cpuId);
             if (!cpu) return;
             document.getElementById('edit_cpu_id').value = cpu.id;
-            document.getElementById('edit_model_name').value = cpu.cpu_model_name || '';
-            document.getElementById('edit_family').value = cpu.family || '';
-            document.getElementById('edit_cpu_model').value = cpu.cpu_model || '';
-            document.getElementById('edit_codename').value = cpu.codename || '';
-            document.getElementById('edit_cores').value = cpu.cores ?? '';
-            document.getElementById('edit_threads').value = cpu.threads ?? '';
-            document.getElementById('edit_max_turbo').value = cpu.max_turbo_frequency_ghz ?? '';
-            document.getElementById('edit_l3_cache').value = cpu.l3_cache_mb ?? '';
-            document.getElementById('edit_tdp').value = cpu.tdp_watts ?? '';
-            document.getElementById('edit_launch_year').value = cpu.launch_year ?? '';
-            document.getElementById('edit_max_memory').value = cpu.max_memory_tb ?? '';
+            fillForm(FORM_IDS.editCpu, cpu);
             document.getElementById('editForm').classList.remove('hidden');
             switchTab('edit');
         }
 
-        async function authenticate() {
-            const password = document.getElementById('passwordInput').value;
-            if (!password) {
-                showMessage('Please enter a password', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: password })
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Invalid password');
-                }
-
-                const data = await response.json();
-                authToken = data.access_token;
-                
-                document.getElementById('authSection').classList.add('hidden');
-                document.getElementById('adminPanel').classList.add('active');
-                showMessage('Login successful!', 'success');
-            } catch (error) {
-                showMessage('Error: ' + error.message, 'error');
-                authToken = null;
-            }
-        }
-
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            const tabBtn = document.querySelector(`.tab[data-tab="${tabName}"]`);
-            if (tabBtn) tabBtn.classList.add('active');
-            const content = document.getElementById(tabName + 'Tab');
-            if (content) content.classList.add('active');
-            if (tabName === 'browse') loadBrowseDataIfNeeded();
-            if (tabName === 'browseGpu') loadBrowseGpuDataIfNeeded();
-        }
-
-        function showMessage(message, type) {
-            const msgDiv = document.getElementById('message');
-            msgDiv.textContent = message;
-            msgDiv.className = `message ${type}`;
-            msgDiv.style.display = 'block';
-            setTimeout(() => { msgDiv.style.display = 'none'; msgDiv.className = 'message'; }, 5000);
-        }
-
-        function getAuthHeaders() {
-            return {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            };
-        }
-
-        function createCPU(event) {
+        async function createCPU(event) {
             event.preventDefault();
-            
-            const data = {
-                cpu_model_name: document.getElementById('create_model_name').value,
-                family: document.getElementById('create_family').value || null,
-                cpu_model: document.getElementById('create_cpu_model').value || null,
-                codename: document.getElementById('create_codename').value.trim() || null,
-                cores: parseInt(document.getElementById('create_cores').value) || null,
-                threads: parseInt(document.getElementById('create_threads').value) || null,
-                max_turbo_frequency_ghz: parseFloat(document.getElementById('create_max_turbo').value) || null,
-                l3_cache_mb: parseFloat(document.getElementById('create_l3_cache').value) || null,
-                tdp_watts: parseInt(document.getElementById('create_tdp').value) || null,
-                launch_year: parseInt(document.getElementById('create_launch_year').value) || null,
-                max_memory_tb: parseFloat(document.getElementById('create_max_memory').value) || null
-            };
-
-            fetch('/api/cpus', {
-                method: 'POST',
-                headers: getAuthHeaders(),
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(data => {
-                showMessage('CPU created successfully!', 'success');
+            const data = readForm('cpu', FORM_IDS.createCpu);
+            try {
+                const created = await apiFetch('/api/cpus', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(data)
+                });
+                upsertLocal(browseCpus, created);
+                showMessage(savedMessage(`CPU "${created.cpu_model_name}" created.`), 'success');
                 clearCreateForm();
-            })
-            .catch(error => {
+            } catch (error) {
                 showMessage('Error creating CPU: ' + error.message, 'error');
-            });
+            }
         }
 
         function clearCreateForm() {
             document.getElementById('createForm').reset();
         }
 
-        function loadCPUForEdit() {
+        async function loadCPUForEdit() {
             const cpuId = document.getElementById('edit_cpu_id').value;
             if (!cpuId) {
                 showMessage('Please enter a CPU ID', 'error');
                 return;
             }
-
-            fetch(`/api/cpus/${cpuId}`)
-            .then(response => {
-                if (!response.ok) throw new Error('CPU not found');
-                return response.json();
-            })
-            .then(cpu => {
-                document.getElementById('edit_model_name').value = cpu.cpu_model_name || '';
-                document.getElementById('edit_family').value = cpu.family || '';
-                document.getElementById('edit_cpu_model').value = cpu.cpu_model || '';
-                document.getElementById('edit_codename').value = cpu.codename || '';
-                document.getElementById('edit_cores').value = cpu.cores || '';
-                document.getElementById('edit_threads').value = cpu.threads || '';
-                document.getElementById('edit_max_turbo').value = cpu.max_turbo_frequency_ghz || '';
-                document.getElementById('edit_l3_cache').value = cpu.l3_cache_mb || '';
-                document.getElementById('edit_tdp').value = cpu.tdp_watts || '';
-                document.getElementById('edit_launch_year').value = cpu.launch_year || '';
-                document.getElementById('edit_max_memory').value = cpu.max_memory_tb || '';
+            try {
+                const cpu = await apiFetch(`/api/cpus/${cpuId}`);
+                fillForm(FORM_IDS.editCpu, cpu);
                 document.getElementById('editForm').classList.remove('hidden');
-            })
-            .catch(error => {
+            } catch (error) {
                 showMessage('Error loading CPU: ' + error.message, 'error');
-            });
+            }
         }
 
-        function updateCPU(event) {
+        async function updateCPU(event) {
             event.preventDefault();
-            
             const cpuId = document.getElementById('edit_cpu_id').value;
-            const data = {};
-            
-            const fields = ['model_name', 'family', 'cpu_model', 'codename', 'cores', 'threads', 
-                          'max_turbo', 'l3_cache', 'tdp', 'launch_year', 'max_memory'];
-            
-            fields.forEach(field => {
-                const value = document.getElementById(`edit_${field}`).value;
-                if (value !== undefined && value !== null) {
-                    const key = field === 'model_name' ? 'cpu_model_name' :
-                               field === 'max_turbo' ? 'max_turbo_frequency_ghz' :
-                               field === 'l3_cache' ? 'l3_cache_mb' :
-                               field === 'max_memory' ? 'max_memory_tb' : field;
-                    if (field === 'codename') {
-                        data[key] = value.trim() || null;
-                    } else if (value !== '') {
-                        if (['cores', 'threads', 'tdp', 'launch_year'].includes(field)) {
-                            data[key] = parseInt(value);
-                        } else if (['max_turbo', 'l3_cache', 'max_memory'].includes(field)) {
-                            data[key] = parseFloat(value);
-                        } else {
-                            data[key] = value;
-                        }
-                    }
-                }
-            });
-
-            fetch(`/api/cpus/${cpuId}`, {
-                method: 'PUT',
-                headers: getAuthHeaders(),
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(updated => {
-                showMessage('CPU updated successfully!', 'success');
-                const idx = browseCpus.findIndex(c => c.id === updated.id);
-                if (idx >= 0) browseCpus[idx] = updated;
-                if (document.getElementById('browseTab').classList.contains('active')) renderBrowseTable(browseCpus);
-            })
-            .catch(error => {
+            const data = readForm('cpu', FORM_IDS.editCpu);
+            try {
+                const updated = await apiFetch(`/api/cpus/${cpuId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(data)
+                });
+                upsertLocal(browseCpus, updated);
+                showMessage(savedMessage(`CPU "${updated.cpu_model_name}" updated.`), 'success');
+            } catch (error) {
                 showMessage('Error updating CPU: ' + error.message, 'error');
-            });
+            }
         }
 
         function cancelEdit() {
@@ -673,32 +826,23 @@
             document.getElementById('edit_cpu_id').value = '';
         }
 
-        function deleteCPU() {
+        async function deleteCPU() {
             const cpuId = document.getElementById('delete_cpu_id').value;
             if (!cpuId) {
                 showMessage('Please enter a CPU ID', 'error');
                 return;
             }
-
-            if (!confirm(`Are you sure you want to delete CPU #${cpuId}? This action cannot be undone.`)) {
+            if (!confirm(`Are you sure you want to delete CPU #${cpuId}? This removes it from the CSV on GitHub too.`)) {
                 return;
             }
-
-            fetch(`/api/cpus/${cpuId}`, {
-                method: 'DELETE',
-                headers: getAuthHeaders()
-            })
-            .then(response => {
-                if (response.ok) {
-                    showMessage('CPU deleted successfully!', 'success');
-                    document.getElementById('delete_cpu_id').value = '';
-                } else {
-                    throw new Error('Failed to delete CPU');
-                }
-            })
-            .catch(error => {
+            try {
+                await apiFetch(`/api/cpus/${cpuId}`, { method: 'DELETE', headers: getAuthHeaders() });
+                browseCpus = browseCpus.filter(c => c.id !== Number(cpuId));
+                showMessage(savedMessage(`CPU #${cpuId} deleted.`), 'success');
+                document.getElementById('delete_cpu_id').value = '';
+            } catch (error) {
                 showMessage('Error deleting CPU: ' + error.message, 'error');
-            });
+            }
         }
 
         document.getElementById('passwordInput').addEventListener('keypress', (e) => {
@@ -709,34 +853,7 @@
             if (browseCpus.length) renderBrowseTable(browseCpus);
         });
 
-        function importFromRepo() {
-            const clearExisting = document.getElementById('clearExistingRepo').checked;
-            
-            if (!confirm(`This will import CPUs from the repository CSV file.${clearExisting ? '\n\n⚠️ WARNING: This will DELETE all existing CPUs first!' : ''}\n\nContinue?`)) {
-                return;
-            }
-
-            const url = `/api/import/csv-repo?clear_existing=${clearExisting}`;
-            
-            fetch(url, {
-                method: 'POST',
-                headers: getAuthHeaders()
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.errors && data.total_errors > 0) {
-                    showMessage(`Imported ${data.imported} CPUs. ${data.total_errors} errors occurred.`, 'error');
-                } else {
-                    showMessage(`Successfully imported ${data.imported} CPUs from repository!`, 'success');
-                }
-            })
-            .catch(error => {
-                showMessage('Error importing: ' + error.message, 'error');
-            });
-        }
-
-        // GPU functions
-        let browseGpus = [];
+        // ---------- GPUs ----------
 
         async function loadBrowseGpuDataIfNeeded() {
             const container = document.getElementById('browseGpuTableContainer');
@@ -747,9 +864,7 @@
                 container.classList.add('hidden');
                 emptyEl.classList.add('hidden');
                 try {
-                    const response = await fetch('/api/gpus?limit=1000');
-                    if (!response.ok) throw new Error('Failed to load GPUs');
-                    browseGpus = await response.json();
+                    browseGpus = await apiFetch('/api/gpus?limit=1000');
                     loadingEl.classList.add('hidden');
                     container.classList.remove('hidden');
                     renderBrowseGpuTable(browseGpus);
@@ -780,6 +895,7 @@
             tbody.innerHTML = '';
             if (filtered.length === 0) {
                 container.classList.add('hidden');
+                emptyEl.textContent = 'No GPUs match your search.';
                 emptyEl.classList.remove('hidden');
                 return;
             }
@@ -795,6 +911,7 @@
                     <td>${gpu.memory_gb ?? '-'}</td>
                     <td>${escapeHtml(gpu.memory_type || '-')}</td>
                     <td>${gpu.tdp_watts ?? '-'}</td>
+                    <td>${validatedSwitch('gpu', gpu)}</td>
                     <td><button type="button" class="edit-btn" onclick="startEditGpuFromBrowse(${gpu.id})">Edit</button></td>
                 `;
                 tbody.appendChild(tr);
@@ -809,95 +926,55 @@
             const gpu = browseGpus.find(g => g.id === gpuId);
             if (!gpu) return;
             document.getElementById('edit_gpu_id').value = gpu.id;
-            document.getElementById('edit_gpu_model_name').value = gpu.gpu_model_name || '';
-            document.getElementById('edit_gpu_vendor').value = gpu.vendor || '';
-            document.getElementById('edit_gpu_model').value = gpu.gpu_model || '';
-            document.getElementById('edit_gpu_form_factor').value = gpu.form_factor || '';
-            document.getElementById('edit_gpu_memory').value = gpu.memory_gb ?? '';
-            document.getElementById('edit_gpu_memory_type').value = gpu.memory_type || '';
-            document.getElementById('edit_gpu_tdp').value = gpu.tdp_watts ?? '';
+            fillForm(FORM_IDS.editGpu, gpu);
             document.getElementById('editGpuForm').classList.remove('hidden');
             switchTab('editGpu');
         }
 
-        function createGPU(event) {
+        async function createGPU(event) {
             event.preventDefault();
-            const data = {
-                gpu_model_name: document.getElementById('create_gpu_model_name').value,
-                vendor: document.getElementById('create_gpu_vendor').value || null,
-                gpu_model: document.getElementById('create_gpu_model').value || null,
-                form_factor: document.getElementById('create_gpu_form_factor').value || null,
-                memory_gb: parseInt(document.getElementById('create_gpu_memory').value) || null,
-                memory_type: document.getElementById('create_gpu_memory_type').value || null,
-                tdp_watts: parseInt(document.getElementById('create_gpu_tdp').value) || null,
-            };
-            fetch('/api/gpus', {
-                method: 'POST',
-                headers: getAuthHeaders(),
-                body: JSON.stringify(data)
-            })
-            .then(r => r.json())
-            .then(() => {
-                showMessage('GPU created successfully!', 'success');
+            const data = readForm('gpu', FORM_IDS.createGpu);
+            try {
+                const created = await apiFetch('/api/gpus', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(data)
+                });
+                upsertLocal(browseGpus, created);
+                showMessage(savedMessage(`GPU "${created.gpu_model_name}" created.`), 'success');
                 document.getElementById('createGpuForm').reset();
-                browseGpus = [];
-            })
-            .catch(err => showMessage('Error creating GPU: ' + err.message, 'error'));
+            } catch (err) {
+                showMessage('Error creating GPU: ' + err.message, 'error');
+            }
         }
 
-        function loadGPUForEdit() {
+        async function loadGPUForEdit() {
             const gpuId = document.getElementById('edit_gpu_id').value;
             if (!gpuId) { showMessage('Please enter a GPU ID', 'error'); return; }
-            fetch(`/api/gpus/${gpuId}`)
-            .then(r => { if (!r.ok) throw new Error('GPU not found'); return r.json(); })
-            .then(gpu => {
-                document.getElementById('edit_gpu_model_name').value = gpu.gpu_model_name || '';
-                document.getElementById('edit_gpu_vendor').value = gpu.vendor || '';
-                document.getElementById('edit_gpu_model').value = gpu.gpu_model || '';
-                document.getElementById('edit_gpu_form_factor').value = gpu.form_factor || '';
-                document.getElementById('edit_gpu_memory').value = gpu.memory_gb ?? '';
-                document.getElementById('edit_gpu_memory_type').value = gpu.memory_type || '';
-                document.getElementById('edit_gpu_tdp').value = gpu.tdp_watts ?? '';
+            try {
+                const gpu = await apiFetch(`/api/gpus/${gpuId}`);
+                fillForm(FORM_IDS.editGpu, gpu);
                 document.getElementById('editGpuForm').classList.remove('hidden');
-            })
-            .catch(err => showMessage('Error loading GPU: ' + err.message, 'error'));
+            } catch (err) {
+                showMessage('Error loading GPU: ' + err.message, 'error');
+            }
         }
 
-        function updateGPU(event) {
+        async function updateGPU(event) {
             event.preventDefault();
             const gpuId = document.getElementById('edit_gpu_id').value;
-            const data = {};
-            const fields = {
-                'gpu_model_name': 'edit_gpu_model_name',
-                'vendor': 'edit_gpu_vendor',
-                'gpu_model': 'edit_gpu_model',
-                'form_factor': 'edit_gpu_form_factor',
-                'memory_gb': 'edit_gpu_memory',
-                'memory_type': 'edit_gpu_memory_type',
-                'tdp_watts': 'edit_gpu_tdp'
-            };
-            for (const [key, elId] of Object.entries(fields)) {
-                const val = document.getElementById(elId).value;
-                if (val !== '') {
-                    if (key === 'memory_gb' || key === 'tdp_watts') {
-                        data[key] = parseInt(val);
-                    } else {
-                        data[key] = val;
-                    }
-                }
+            const data = readForm('gpu', FORM_IDS.editGpu);
+            try {
+                const updated = await apiFetch(`/api/gpus/${gpuId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(data)
+                });
+                upsertLocal(browseGpus, updated);
+                showMessage(savedMessage(`GPU "${updated.gpu_model_name}" updated.`), 'success');
+            } catch (err) {
+                showMessage('Error updating GPU: ' + err.message, 'error');
             }
-            fetch(`/api/gpus/${gpuId}`, {
-                method: 'PUT',
-                headers: getAuthHeaders(),
-                body: JSON.stringify(data)
-            })
-            .then(r => r.json())
-            .then(updated => {
-                showMessage('GPU updated successfully!', 'success');
-                const idx = browseGpus.findIndex(g => g.id === updated.id);
-                if (idx >= 0) browseGpus[idx] = updated;
-            })
-            .catch(err => showMessage('Error updating GPU: ' + err.message, 'error'));
         }
 
         function cancelGpuEdit() {
@@ -905,80 +982,253 @@
             document.getElementById('edit_gpu_id').value = '';
         }
 
-        function deleteGPU() {
+        async function deleteGPU() {
             const gpuId = document.getElementById('delete_gpu_id').value;
             if (!gpuId) { showMessage('Please enter a GPU ID', 'error'); return; }
-            if (!confirm(`Are you sure you want to delete GPU #${gpuId}? This action cannot be undone.`)) return;
-            fetch(`/api/gpus/${gpuId}`, {
-                method: 'DELETE',
-                headers: getAuthHeaders()
-            })
-            .then(r => {
-                if (r.ok) {
-                    showMessage('GPU deleted successfully!', 'success');
-                    document.getElementById('delete_gpu_id').value = '';
-                    browseGpus = [];
-                } else throw new Error('Failed to delete GPU');
-            })
-            .catch(err => showMessage('Error deleting GPU: ' + err.message, 'error'));
+            if (!confirm(`Are you sure you want to delete GPU #${gpuId}? This removes it from the CSV on GitHub too.`)) return;
+            try {
+                await apiFetch(`/api/gpus/${gpuId}`, { method: 'DELETE', headers: getAuthHeaders() });
+                browseGpus = browseGpus.filter(g => g.id !== Number(gpuId));
+                showMessage(savedMessage(`GPU #${gpuId} deleted.`), 'success');
+                document.getElementById('delete_gpu_id').value = '';
+            } catch (err) {
+                showMessage('Error deleting GPU: ' + err.message, 'error');
+            }
         }
 
-        function importGpuFromRepo() {
+        // ---------- Proposals ----------
+
+        async function loadProposals() {
+            const status = document.getElementById('proposalsStatus');
+            const list = document.getElementById('proposalsList');
+            proposalsLoaded = true;
+            status.textContent = 'Loading proposals…';
+            status.classList.remove('hidden');
+            try {
+                proposals = await apiFetch('/api/proposals', { headers: getAuthHeaders() });
+            } catch (err) {
+                proposals = [];
+                list.innerHTML = '';
+                status.textContent = 'Could not load proposals: ' + err.message;
+                updateProposalCount();
+                return;
+            }
+            updateProposalCount();
+            if (proposals.length === 0) {
+                list.innerHTML = '';
+                status.textContent = 'No open proposals. 🎉';
+                return;
+            }
+            status.classList.add('hidden');
+            list.innerHTML = proposals.map(renderProposal).join('');
+        }
+
+        function updateProposalCount() {
+            const badge = document.getElementById('proposalCount');
+            badge.textContent = proposals.length;
+            badge.classList.toggle('hidden', proposals.length === 0);
+        }
+
+        function safeLink(url) {
+            if (!url || !/^https?:\/\//i.test(url)) return escapeHtml(url || '—');
+            return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
+        }
+
+        function renderProposal(p) {
+            const n = p.number;
+            const kind = p.kind;
+            const opened = new Date(p.created_at).toLocaleDateString();
+            const head = `
+                <div class="proposal-head">
+                    <span class="kind-badge">${kind ? kind.toUpperCase() : '?'}</span>
+                    <h3>${escapeHtml(p.title)}</h3>
+                </div>
+                <div class="proposal-meta">
+                    <a href="${escapeHtml(p.url)}" target="_blank" rel="noopener">#${n} on GitHub</a> · opened ${escapeHtml(opened)}
+                </div>`;
+
+            if (!kind || !p.parsed) {
+                return `<div class="proposal-card" id="proposal-${n}">${head}
+                    <div class="proposal-warning">This issue has no machine-readable proposal data. Review it on GitHub, or reject it here.</div>
+                    ${rejectControls(n)}</div>`;
+            }
+
+            const fields = SPEC_FIELDS[kind].map(f => {
+                const value = p.data[f.key] ?? '';
+                const inputType = f.type === 'text' ? 'text' : 'number';
+                const step = f.type === 'float' ? ' step="any"' : '';
+                return `<div class="form-group">
+                    <label for="p${n}_${f.key}">${f.label}${f.required ? ' *' : ''}</label>
+                    <input type="${inputType}"${step} id="p${n}_${f.key}" value="${escapeHtml(String(value))}">
+                </div>`;
+            }).join('');
+
+            const duplicate = p.duplicate_of
+                ? `<div class="proposal-warning">Possible duplicate of #${p.duplicate_of.id} "${escapeHtml(p.duplicate_of.name)}". Rename it before accepting, or reject it.</div>`
+                : '';
+            const similar = (p.similar || []).length
+                ? `<div class="proposal-warning">Similar existing ${kind.toUpperCase()}s: ${p.similar.map(s =>
+                    `#${s.id} "${escapeHtml(s.name)}"${s.validated ? '' : ' (unverified)'}`).join(', ')}. If one of these is the same part, reject this proposal and edit the existing entry instead.</div>`
+                : '';
+            const notes = p.notes ? `<div class="proposal-notes">${escapeHtml(p.notes)}</div>` : '';
+
+            return `<div class="proposal-card" id="proposal-${n}">${head}
+                <div class="proposal-source"><strong>Source:</strong> ${safeLink(p.source_url)}</div>
+                ${notes}
+                ${duplicate}
+                ${similar}
+                <div class="form-grid">${fields}
+                    <div class="form-group switch-group">
+                        <label class="switch" for="p${n}_validated">
+                            <input type="checkbox" id="p${n}_validated" checked>
+                            <span class="switch-track"></span>
+                            <span>Validated</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="proposal-actions">
+                    <button type="button" onclick="acceptProposal(${n})">Accept &amp; add to ${kind.toUpperCase()}s</button>
+                    <button type="button" class="btn-danger" onclick="toggleReject(${n})">Reject…</button>
+                </div>
+                ${rejectControls(n, true)}
+            </div>`;
+        }
+
+        function rejectControls(n, hidden = false) {
+            return `<div class="reject-box${hidden ? ' hidden' : ''}" id="reject-${n}">
+                <label for="reject-reason-${n}">Reason (posted publicly on the issue)</label>
+                <textarea id="reject-reason-${n}" maxlength="2000" placeholder="e.g. Not a datacenter part, or no official source"></textarea>
+                <button type="button" class="btn-danger" onclick="rejectProposal(${n})">Confirm reject</button>
+            </div>`;
+        }
+
+        function toggleReject(n) {
+            document.getElementById(`reject-${n}`).classList.toggle('hidden');
+        }
+
+        function setCardBusy(n, busy) {
+            document.querySelectorAll(`#proposal-${n} button, #proposal-${n} input, #proposal-${n} textarea`)
+                .forEach(el => { el.disabled = busy; });
+        }
+
+        async function acceptProposal(n) {
+            const p = proposals.find(x => x.number === n);
+            if (!p) return;
+            const data = {};
+            SPEC_FIELDS[p.kind].forEach(f => {
+                const value = document.getElementById(`p${n}_${f.key}`).value.trim();
+                data[f.key] = value === '' ? null
+                    : f.type === 'int' ? parseInt(value, 10)
+                    : f.type === 'float' ? parseFloat(value)
+                    : value;
+            });
+            data.validated = document.getElementById(`p${n}_validated`).checked;
+
+            setCardBusy(n, true);
+            try {
+                const result = await apiFetch(`/api/proposals/${n}/accept`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(data)
+                });
+                if (p.kind === 'cpu') browseCpus = []; else browseGpus = [];
+                const note = result.issue_closed ? '' : ' (but the issue could not be closed, so close it on GitHub)';
+                showMessage(`Accepted "${result.name}": committed to GitHub and added to the database${note}.`, 'success');
+                loadProposals();
+            } catch (err) {
+                setCardBusy(n, false);
+                showMessage(`Could not accept #${n}: ${err.message}`, 'error');
+            }
+        }
+
+        async function rejectProposal(n) {
+            const reason = document.getElementById(`reject-reason-${n}`).value.trim();
+            setCardBusy(n, true);
+            try {
+                await apiFetch(`/api/proposals/${n}/reject`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ reason: reason || null })
+                });
+                showMessage(`Rejected proposal #${n} and closed the issue.`, 'success');
+                loadProposals();
+            } catch (err) {
+                setCardBusy(n, false);
+                showMessage(`Could not reject #${n}: ${err.message}`, 'error');
+            }
+        }
+
+        // ---------- Imports (database only) ----------
+
+        async function importFromRepo() {
+            const clearExisting = document.getElementById('clearExistingRepo').checked;
+            if (!confirm(`This will import CPUs from the repository CSV file.${clearExisting ? '\n\n⚠️ WARNING: This will DELETE all existing CPUs first!' : ''}\n\nContinue?`)) {
+                return;
+            }
+            try {
+                const data = await apiFetch(`/api/import/csv-repo?clear_existing=${clearExisting}`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                browseCpus = [];
+                if (data.errors && data.total_errors > 0) {
+                    showMessage(`Imported ${data.imported} CPUs. ${data.total_errors} errors occurred.`, 'error');
+                } else {
+                    showMessage(`Successfully imported ${data.imported} CPUs from repository!`, 'success');
+                }
+            } catch (error) {
+                showMessage('Error importing: ' + error.message, 'error');
+            }
+        }
+
+        async function importGpuFromRepo() {
             const clearExisting = document.getElementById('clearExistingGpuRepo').checked;
             if (!confirm(`This will import GPUs from the repository CSV file.${clearExisting ? '\n\n⚠️ WARNING: This will DELETE all existing GPUs first!' : ''}\n\nContinue?`)) return;
-            fetch(`/api/import/gpu-csv-repo?clear_existing=${clearExisting}`, {
-                method: 'POST',
-                headers: getAuthHeaders()
-            })
-            .then(r => r.json())
-            .then(data => {
+            try {
+                const data = await apiFetch(`/api/import/gpu-csv-repo?clear_existing=${clearExisting}`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                browseGpus = [];
                 if (data.errors && data.total_errors > 0) {
                     showMessage(`Imported ${data.imported} GPUs. ${data.total_errors} errors occurred.`, 'error');
                 } else {
                     showMessage(`Successfully imported ${data.imported} GPUs from repository!`, 'success');
                 }
-                browseGpus = [];
-            })
-            .catch(err => showMessage('Error importing: ' + err.message, 'error'));
+            } catch (err) {
+                showMessage('Error importing: ' + err.message, 'error');
+            }
         }
 
-        function importFromFile() {
+        async function importFromFile() {
             const fileInput = document.getElementById('csvFile');
             const file = fileInput.files[0];
-            
             if (!file) {
                 showMessage('Please select a CSV file', 'error');
                 return;
             }
-
             const clearExisting = document.getElementById('clearExistingFile').checked;
-            
             if (!confirm(`This will import CPUs from the uploaded file.${clearExisting ? '\n\n⚠️ WARNING: This will DELETE all existing CPUs first!' : ''}\n\nContinue?`)) {
                 return;
             }
-
             const formData = new FormData();
             formData.append('file', file);
-
-            fetch(`/api/import/csv-file?clear_existing=${clearExisting}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
+            try {
+                const data = await apiFetch(`/api/import/csv-file?clear_existing=${clearExisting}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` },
+                    body: formData
+                });
+                browseCpus = [];
                 if (data.errors && data.total_errors > 0) {
                     showMessage(`Imported ${data.imported} CPUs. ${data.total_errors} errors occurred.`, 'error');
                 } else {
                     showMessage(`Successfully imported ${data.imported} CPUs!`, 'success');
                 }
-                fileInput.value = ''; // Clear file input
-            })
-            .catch(error => {
+                fileInput.value = '';
+            } catch (error) {
                 showMessage('Error importing: ' + error.message, 'error');
-            });
+            }
         }
     </script>
 

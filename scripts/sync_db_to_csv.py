@@ -50,6 +50,7 @@ DATASETS: dict[str, dict] = {
             "TDP (W)",
             "Launch Year",
             "Max Memory (TB)",
+            "Validated",
         ],
     },
     "gpu": {
@@ -64,6 +65,7 @@ DATASETS: dict[str, dict] = {
             "Memory (GB)",
             "Memory Type",
             "TDP (W)",
+            "Validated",
         ],
     },
 }
@@ -96,10 +98,34 @@ def fetch_export(export_path: str) -> bytes:
     return response.content
 
 
-def normalize_export(raw: bytes, columns: list[str], sort_column: str) -> pd.DataFrame:
+def existing_validated(path: str, sort_column: str) -> dict[str, bool]:
+    """Validated flags from the current repo CSV, keyed by model name."""
+    if not os.path.exists(path):
+        return {}
+    current = pd.read_csv(path, sep=None, engine="python", encoding="utf-8-sig")
+    if "Validated" not in current.columns or sort_column not in current.columns:
+        return {}
+    flags = current["Validated"].astype(str).str.strip().str.lower() == "true"
+    return dict(zip(current[sort_column].astype(str).str.strip(), flags))
+
+
+def normalize_export(
+    raw: bytes,
+    columns: list[str],
+    sort_column: str,
+    previous_validated: dict[str, bool] | None = None,
+) -> pd.DataFrame:
     df = pd.read_csv(BytesIO(raw), sep=";")
     if "ID" in df.columns:
         df = df.drop(columns=["ID"])
+
+    if "Validated" not in df.columns:
+        # Production predates the Validated export: keep the repo's flags
+        # instead of dropping them, and never mark new rows as validated.
+        previous_validated = previous_validated or {}
+        df["Validated"] = [
+            previous_validated.get(str(name).strip(), False) for name in df[sort_column]
+        ]
 
     missing = [col for col in columns if col not in df.columns]
     if missing:
@@ -126,7 +152,8 @@ def main() -> int:
 
     try:
         raw = fetch_export(cfg["export_path"])
-        df = normalize_export(raw, cfg["columns"], cfg["sort_column"])
+        previous = existing_validated(csv_path, cfg["sort_column"])
+        df = normalize_export(raw, cfg["columns"], cfg["sort_column"], previous)
         write_repo_csv(df, csv_path)
     except requests.RequestException as exc:
         print(

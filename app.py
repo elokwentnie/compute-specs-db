@@ -5,16 +5,16 @@ A FastAPI web application for managing and accessing HPC and datacenter compute 
 Provides REST API endpoints and web interfaces for viewing and managing compute hardware data.
 """
 
-from fastapi import FastAPI, Depends, Query, HTTPException, UploadFile, File, Request
+from fastapi import FastAPI, Body, Depends, Query, HTTPException, UploadFile, File, Request
 from fastapi.responses import JSONResponse, HTMLResponse, FileResponse, StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, HttpUrl, ValidationError
 import os
 import logging
 import pandas as pd
@@ -34,6 +34,10 @@ from auth import (
 )
 from utils import determine_cpu_generation
 from llm import ask_question, LLMError, LLMRateLimitError, LLMTimeoutError
+from import_data import import_cpu_text_to_db, import_gpu_text_to_db, parse_bool
+import csv_store
+import github_client
+import proposals
 
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "production")
 ENABLE_ADMIN_UI = os.environ.get("ENABLE_ADMIN_UI", "false").lower() == "true"
@@ -47,32 +51,27 @@ if ENVIRONMENT == "production" and not ADMIN_PASSWORD:
 
 init_db()
 
-# Auto-import CSV data on first run if database is empty
+# Auto-import CSV data on first run if database is empty.
+# When GITHUB_TOKEN is set the CSVs are read from GitHub, so admin edits
+# committed since this build was deployed are not lost on restart.
 def auto_import_if_empty():
     """Automatically import CSV data if database tables are empty"""
     db = SessionLocal()
     try:
-        cpu_count = db.query(CPUSpec).count()
-        if cpu_count == 0:
-            csv_file_path = "cpu_spec_validated.csv"
-            if os.path.exists(csv_file_path):
-                try:
-                    from import_data import import_csv_to_db
-                    import_csv_to_db(csv_file_path)
-                    print(f"✅ Auto-imported CPU data from {csv_file_path}")
-                except Exception as e:
-                    print(f"⚠️  CPU auto-import failed: {e}")
-
-        gpu_count = db.query(GPUSpec).count()
-        if gpu_count == 0:
-            gpu_csv_path = "gpu_spec_validated.csv"
-            if os.path.exists(gpu_csv_path):
-                try:
-                    from import_data import import_gpu_csv_to_db
-                    import_gpu_csv_to_db(gpu_csv_path)
-                    print(f"✅ Auto-imported GPU data from {gpu_csv_path}")
-                except Exception as e:
-                    print(f"⚠️  GPU auto-import failed: {e}")
+        for kind, model, importer in (
+            ("cpu", CPUSpec, import_cpu_text_to_db),
+            ("gpu", GPUSpec, import_gpu_text_to_db),
+        ):
+            if db.query(model).count() > 0:
+                continue
+            text = csv_store.load_text(kind)
+            if text is None:
+                continue
+            try:
+                importer(text)
+                print(f"✅ Auto-imported {kind.upper()} data from {csv_store.SCHEMAS[kind]['path']}")
+            except Exception as e:
+                print(f"⚠️  {kind.upper()} auto-import failed: {e}")
     finally:
         db.close()
 
@@ -125,6 +124,11 @@ async def sitemap_xml():
         <priority>0.8</priority>
     </url>
     <url>
+        <loc>https://computespecsdb.com/propose</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.6</priority>
+    </url>
+    <url>
         <loc>https://computespecsdb.com/api</loc>
         <changefreq>monthly</changefreq>
         <priority>0.5</priority>
@@ -153,6 +157,7 @@ class CPUSpecResponse(BaseModel):
     tdp_watts: Optional[int] = None
     launch_year: Optional[int] = None
     max_memory_tb: Optional[float] = None
+    validated: bool = False
 
     class Config:
         from_attributes = True
@@ -168,6 +173,7 @@ class GPUSpecResponse(BaseModel):
     memory_gb: Optional[int] = None
     memory_type: Optional[str] = None
     tdp_watts: Optional[int] = None
+    validated: bool = False
 
     class Config:
         from_attributes = True
@@ -183,6 +189,12 @@ async def root():
 async def visualizations():
     """Serve the visualizations page"""
     return FileResponse("static/visualizations.html")
+
+
+@app.get("/propose", response_class=HTMLResponse)
+async def propose_page():
+    """Serve the public form for proposing a new CPU or GPU"""
+    return FileResponse("static/propose.html")
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -206,14 +218,24 @@ async def api_info():
         "version": "1.0.0",
         "endpoints": {
             "all_cpus": "/api/cpus",
+            "validated_cpus": "/api/cpus?validated=true",
             "search_cpus": "/api/cpus/search?q=EPYC",
             "cpu_by_id": "/api/cpus/{id}",
             "all_gpus": "/api/gpus",
+            "validated_gpus": "/api/gpus?validated=true",
             "search_gpus": "/api/gpus/search?q=H100",
             "gpu_by_id": "/api/gpus/{id}",
             "stats": "/api/stats",
             "ask": "POST /api/ask",
+            "propose_cpu": "POST /api/proposals/cpu",
+            "propose_gpu": "POST /api/proposals/gpu",
             "docs": "/docs"
+        },
+        "notes": {
+            "validated": (
+                "Every CPU/GPU has a boolean 'validated' field: true means the specs "
+                "were manually checked against official sources. Filter with ?validated=true|false."
+            )
         }
     }
 
@@ -222,16 +244,21 @@ async def api_info():
 async def get_all_cpus(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
+    validated: Optional[bool] = Query(None, description="Only return validated (true) or unvalidated (false) entries"),
     db: Session = Depends(get_db)
 ):
     """Get all CPUs with pagination"""
-    cpus = db.query(CPUSpec).offset(skip).limit(limit).all()
+    query = db.query(CPUSpec)
+    if validated is not None:
+        query = query.filter(CPUSpec.validated == validated)
+    cpus = query.offset(skip).limit(limit).all()
     return cpus
 
 
 @app.get("/api/cpus/search", response_model=List[CPUSpecResponse])
 async def search_cpus(
     q: str = Query(..., description="Search query (searches in model name, family, CPU model, and codename)"),
+    validated: Optional[bool] = Query(None, description="Only return validated (true) or unvalidated (false) entries"),
     db: Session = Depends(get_db)
 ):
     """Search CPUs by name, family, model, or codename"""
@@ -242,8 +269,10 @@ async def search_cpus(
         CPUSpec.codename.ilike(f"%{q}%")
     )
 
-    cpus = db.query(CPUSpec).filter(search_filter).all()
-    return cpus
+    query = db.query(CPUSpec).filter(search_filter)
+    if validated is not None:
+        query = query.filter(CPUSpec.validated == validated)
+    return query.all()
 
 
 @app.get("/api/cpus/{cpu_id}", response_model=CPUSpecResponse)
@@ -291,14 +320,21 @@ async def get_stats(db: Session = Depends(get_db)):
     gpu_memory_types = db.query(GPUSpec.memory_type).distinct().all()
     unique_memory_types = len([m[0] for m in gpu_memory_types if m[0]])
 
+    validated_cpus = db.query(CPUSpec).filter(CPUSpec.validated.is_(True)).count()
+    validated_gpus = db.query(GPUSpec).filter(GPUSpec.validated.is_(True)).count()
+
     return {
         "total_cpus": total,
+        "validated_cpus": validated_cpus,
+        "unvalidated_cpus": total - validated_cpus,
         "unique_families": unique_families,
         "unique_codenames": unique_codenames,
         "average_cores": round(avg_cores_value, 2) if avg_cores_value else None,
         "max_cores": max_cores,
         "year_range": year_range,
         "total_gpus": total_gpus,
+        "validated_gpus": validated_gpus,
+        "unvalidated_gpus": total_gpus - validated_gpus,
         "unique_gpu_vendors": unique_gpu_vendors,
         "max_gpu_memory_gb": max_gpu_memory,
         "unique_memory_types": unique_memory_types
@@ -316,8 +352,8 @@ class AskResponse(BaseModel):
     sources: List[dict] = []
 
 
-@limiter.limit("10/minute")
 @app.post("/api/ask", response_model=AskResponse)
+@limiter.limit("10/minute")
 async def ask(
     request: Request,
     payload: AskRequest,
@@ -365,16 +401,21 @@ async def ask(
 async def get_all_gpus(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
+    validated: Optional[bool] = Query(None, description="Only return validated (true) or unvalidated (false) entries"),
     db: Session = Depends(get_db)
 ):
     """Get all GPUs with pagination"""
-    gpus = db.query(GPUSpec).offset(skip).limit(limit).all()
+    query = db.query(GPUSpec)
+    if validated is not None:
+        query = query.filter(GPUSpec.validated == validated)
+    gpus = query.offset(skip).limit(limit).all()
     return gpus
 
 
 @app.get("/api/gpus/search", response_model=List[GPUSpecResponse])
 async def search_gpus(
     q: str = Query(..., description="Search query (searches in model name, vendor, GPU model, form factor, and memory type)"),
+    validated: Optional[bool] = Query(None, description="Only return validated (true) or unvalidated (false) entries"),
     db: Session = Depends(get_db)
 ):
     """Search GPUs by name, vendor, model, form factor, or memory type"""
@@ -385,8 +426,10 @@ async def search_gpus(
         GPUSpec.form_factor.ilike(f"%{q}%"),
         GPUSpec.memory_type.ilike(f"%{q}%")
     )
-    gpus = db.query(GPUSpec).filter(search_filter).all()
-    return gpus
+    query = db.query(GPUSpec).filter(search_filter)
+    if validated is not None:
+        query = query.filter(GPUSpec.validated == validated)
+    return query.all()
 
 
 @app.get("/api/gpus/{gpu_id}", response_model=GPUSpecResponse)
@@ -406,8 +449,8 @@ class LoginRequest(BaseModel):
     password: str
 
 
-@limiter.limit("5/minute")
 @app.post("/api/auth/login")
+@limiter.limit("5/minute")
 async def login(request: Request, payload: LoginRequest):
     """
     Login endpoint - Get authentication token
@@ -443,7 +486,12 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
     """Get current authenticated user information"""
     return {
         "authenticated": True,
-        "message": "You are authenticated!"
+        "message": "You are authenticated!",
+        "github_sync": {
+            "enabled": github_client.is_configured(),
+            "repo": github_client.repo(),
+            "branch": github_client.branch(),
+        },
     }
 
 
@@ -460,6 +508,7 @@ class CPUSpecCreate(BaseModel):
     tdp_watts: Optional[int] = None
     launch_year: Optional[int] = None
     max_memory_tb: Optional[float] = None
+    validated: bool = False
 
 
 class CPUSpecUpdate(BaseModel):
@@ -475,6 +524,7 @@ class CPUSpecUpdate(BaseModel):
     tdp_watts: Optional[int] = None
     launch_year: Optional[int] = None
     max_memory_tb: Optional[float] = None
+    validated: Optional[bool] = None
 
 
 class GPUSpecCreate(BaseModel):
@@ -486,6 +536,7 @@ class GPUSpecCreate(BaseModel):
     memory_gb: Optional[int] = None
     memory_type: Optional[str] = None
     tdp_watts: Optional[int] = None
+    validated: bool = False
 
 
 class GPUSpecUpdate(BaseModel):
@@ -497,46 +548,145 @@ class GPUSpecUpdate(BaseModel):
     memory_gb: Optional[int] = None
     memory_type: Optional[str] = None
     tdp_watts: Optional[int] = None
+    validated: Optional[bool] = None
 
 
-@limiter.limit("30/minute")
+class ValidatedUpdate(BaseModel):
+    """Request model for toggling the validated flag"""
+    validated: bool
+
+
+# ---------- Write-through helpers ----------
+# Every admin change is committed to the CSV on GitHub first and only then
+# applied to SQLite, so the two never diverge. Without GITHUB_TOKEN (local
+# development) changes only touch the database.
+
+SPEC_MODELS = {"cpu": CPUSpec, "gpu": GPUSpec}
+SPEC_CREATE_MODELS = {"cpu": CPUSpecCreate, "gpu": GPUSpecCreate}
+
+
+def _spec_label(kind: str) -> str:
+    return csv_store.SCHEMAS[kind]["label"]
+
+
+def _find_by_name(db: Session, kind: str, name: str, exclude_id: Optional[int] = None):
+    model = SPEC_MODELS[kind]
+    column = getattr(model, csv_store.SCHEMAS[kind]["key_attr"])
+    query = db.query(model).filter(func.lower(column) == name.strip().lower())
+    if exclude_id is not None:
+        query = query.filter(model.id != exclude_id)
+    return query.first()
+
+
+def _sync_csv(action):
+    """Run a csv_store commit, translating failures into HTTP errors."""
+    if not github_client.is_configured():
+        return None
+    try:
+        return action()
+    except csv_store.DuplicateRowError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    except (github_client.GitHubError, csv_store.CsvStoreError) as exc:
+        logger.exception("Could not write CSV change to GitHub")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Could not save the change to GitHub, so nothing was changed: {exc}",
+        )
+
+
+def _clean_name(kind: str, name: Optional[str]) -> str:
+    name = " ".join((name or "").split())
+    if not name:
+        raise HTTPException(status_code=400, detail=f"{_spec_label(kind)} model name cannot be empty")
+    return name
+
+
+def _create_spec(db: Session, kind: str, values: dict, message: str):
+    key = csv_store.SCHEMAS[kind]["key_attr"]
+    values[key] = _clean_name(kind, values.get(key))
+    if _find_by_name(db, kind, values[key]):
+        raise HTTPException(status_code=409, detail=f"{_spec_label(kind)} '{values[key]}' already exists")
+
+    commit_url = _sync_csv(lambda: csv_store.commit_upsert(kind, None, values, message))
+
+    item = SPEC_MODELS[kind](**values)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item, commit_url
+
+
+def _get_spec_or_404(db: Session, kind: str, item_id: int):
+    item = db.query(SPEC_MODELS[kind]).filter(SPEC_MODELS[kind].id == item_id).first()
+    if item is None:
+        raise HTTPException(status_code=404, detail=f"{_spec_label(kind)} with ID {item_id} not found")
+    return item
+
+
+def _update_spec(db: Session, kind: str, item_id: int, changes: dict):
+    item = _get_spec_or_404(db, kind, item_id)
+    label = _spec_label(kind)
+    key = csv_store.SCHEMAS[kind]["key_attr"]
+    old_name = getattr(item, key)
+
+    if key in changes:
+        changes[key] = _clean_name(kind, changes[key])
+        if _find_by_name(db, kind, changes[key], exclude_id=item_id):
+            raise HTTPException(status_code=409, detail=f"{label} '{changes[key]}' already exists")
+    if "validated" in changes and changes["validated"] is None:
+        del changes["validated"]
+
+    values = {**csv_store.values_from_orm(kind, item), **changes}
+    new_name = values[key]
+    if set(changes) == {"validated"}:
+        message = f"Mark {label} {'validated' if values['validated'] else 'unvalidated'}: {new_name}"
+    elif new_name != old_name:
+        message = f"Rename {label}: {old_name} -> {new_name}"
+    else:
+        message = f"Update {label}: {new_name}"
+
+    _sync_csv(lambda: csv_store.commit_upsert(kind, old_name, values, message))
+
+    for field_name, value in changes.items():
+        setattr(item, field_name, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def _delete_spec(db: Session, kind: str, item_id: int) -> None:
+    item = _get_spec_or_404(db, kind, item_id)
+    name = getattr(item, csv_store.SCHEMAS[kind]["key_attr"])
+    _sync_csv(lambda: csv_store.commit_remove(kind, name, f"Remove {_spec_label(kind)}: {name}"))
+    db.delete(item)
+    db.commit()
+
+
+def _cpu_create_values(cpu: CPUSpecCreate) -> dict:
+    values = cpu.model_dump()
+    # Automatically determine codename if not provided
+    if not values.get("codename") and cpu.cpu_model and cpu.launch_year:
+        values["codename"] = determine_cpu_generation(cpu.cpu_model, cpu.launch_year, cpu.family) or None
+    return values
+
+
 @app.post("/api/cpus", response_model=CPUSpecResponse, status_code=201)
-async def create_cpu(
+@limiter.limit("30/minute")
+def create_cpu(
     request: Request,
     cpu: CPUSpecCreate,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Create a new compute specification (requires authentication)"""
-    # Automatically determine codename if not provided
-    codename = cpu.codename
-    if not codename and cpu.cpu_model and cpu.launch_year:
-        codename = determine_cpu_generation(cpu.cpu_model, cpu.launch_year, cpu.family) or None
-    
-    db_cpu = CPUSpec(
-        cpu_model_name=cpu.cpu_model_name,
-        family=cpu.family,
-        cpu_model=cpu.cpu_model,
-        codename=codename,
-        cores=cpu.cores,
-        threads=cpu.threads,
-        max_turbo_frequency_ghz=cpu.max_turbo_frequency_ghz,
-        l3_cache_mb=cpu.l3_cache_mb,
-        tdp_watts=cpu.tdp_watts,
-        launch_year=cpu.launch_year,
-        max_memory_tb=cpu.max_memory_tb
-    )
-
-    db.add(db_cpu)
-    db.commit()
-    db.refresh(db_cpu)
-
-    return db_cpu
+    values = _cpu_create_values(cpu)
+    item, _ = _create_spec(db, "cpu", values, f"Add CPU: {values['cpu_model_name']}")
+    return item
 
 
-@limiter.limit("30/minute")
 @app.put("/api/cpus/{cpu_id}", response_model=CPUSpecResponse)
-async def update_cpu(
+@limiter.limit("30/minute")
+def update_cpu(
     request: Request,
     cpu_id: int,
     cpu: CPUSpecUpdate,
@@ -544,68 +694,52 @@ async def update_cpu(
     current_user: dict = Depends(get_current_user)
 ):
     """Update an existing compute specification (requires authentication)"""
-    db_cpu = db.query(CPUSpec).filter(CPUSpec.id == cpu_id).first()
-
-    if db_cpu is None:
-        raise HTTPException(status_code=404, detail=f"CPU with ID {cpu_id} not found")
-
-    update_data = cpu.dict(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(db_cpu, field, value)
-
-    db.commit()
-    db.refresh(db_cpu)
-
-    return db_cpu
+    return _update_spec(db, "cpu", cpu_id, cpu.model_dump(exclude_unset=True))
 
 
-@limiter.limit("30/minute")
+@app.patch("/api/cpus/{cpu_id}/validated", response_model=CPUSpecResponse)
+@limiter.limit("60/minute")
+def set_cpu_validated(
+    request: Request,
+    cpu_id: int,
+    payload: ValidatedUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Mark a CPU as validated or unvalidated (requires authentication)"""
+    return _update_spec(db, "cpu", cpu_id, {"validated": payload.validated})
+
+
 @app.delete("/api/cpus/{cpu_id}", status_code=204)
-async def delete_cpu(
+@limiter.limit("30/minute")
+def delete_cpu(
     request: Request,
     cpu_id: int,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Delete a compute specification (requires authentication)"""
-    db_cpu = db.query(CPUSpec).filter(CPUSpec.id == cpu_id).first()
-
-    if db_cpu is None:
-        raise HTTPException(status_code=404, detail=f"CPU with ID {cpu_id} not found")
-
-    db.delete(db_cpu)
-    db.commit()
-
+    _delete_spec(db, "cpu", cpu_id)
     return None
 
 
-@limiter.limit("30/minute")
 @app.post("/api/gpus", response_model=GPUSpecResponse, status_code=201)
-async def create_gpu(
+@limiter.limit("30/minute")
+def create_gpu(
     request: Request,
     gpu: GPUSpecCreate,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Create a new GPU specification (requires authentication)"""
-    db_gpu = GPUSpec(
-        gpu_model_name=gpu.gpu_model_name,
-        vendor=gpu.vendor,
-        gpu_model=gpu.gpu_model,
-        form_factor=gpu.form_factor,
-        memory_gb=gpu.memory_gb,
-        memory_type=gpu.memory_type,
-        tdp_watts=gpu.tdp_watts,
-    )
-    db.add(db_gpu)
-    db.commit()
-    db.refresh(db_gpu)
-    return db_gpu
+    values = gpu.model_dump()
+    item, _ = _create_spec(db, "gpu", values, f"Add GPU: {values['gpu_model_name']}")
+    return item
 
 
-@limiter.limit("30/minute")
 @app.put("/api/gpus/{gpu_id}", response_model=GPUSpecResponse)
-async def update_gpu(
+@limiter.limit("30/minute")
+def update_gpu(
     request: Request,
     gpu_id: int,
     gpu: GPUSpecUpdate,
@@ -613,35 +747,226 @@ async def update_gpu(
     current_user: dict = Depends(get_current_user)
 ):
     """Update an existing GPU specification (requires authentication)"""
-    db_gpu = db.query(GPUSpec).filter(GPUSpec.id == gpu_id).first()
-    if db_gpu is None:
-        raise HTTPException(status_code=404, detail=f"GPU with ID {gpu_id} not found")
-
-    update_data = gpu.dict(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(db_gpu, field, value)
-
-    db.commit()
-    db.refresh(db_gpu)
-    return db_gpu
+    return _update_spec(db, "gpu", gpu_id, gpu.model_dump(exclude_unset=True))
 
 
-@limiter.limit("30/minute")
+@app.patch("/api/gpus/{gpu_id}/validated", response_model=GPUSpecResponse)
+@limiter.limit("60/minute")
+def set_gpu_validated(
+    request: Request,
+    gpu_id: int,
+    payload: ValidatedUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Mark a GPU as validated or unvalidated (requires authentication)"""
+    return _update_spec(db, "gpu", gpu_id, {"validated": payload.validated})
+
+
 @app.delete("/api/gpus/{gpu_id}", status_code=204)
-async def delete_gpu(
+@limiter.limit("30/minute")
+def delete_gpu(
     request: Request,
     gpu_id: int,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Delete a GPU specification (requires authentication)"""
-    db_gpu = db.query(GPUSpec).filter(GPUSpec.id == gpu_id).first()
-    if db_gpu is None:
-        raise HTTPException(status_code=404, detail=f"GPU with ID {gpu_id} not found")
-
-    db.delete(db_gpu)
-    db.commit()
+    _delete_spec(db, "gpu", gpu_id)
     return None
+
+
+# ---------- Public proposals (stored as GitHub issues) ----------
+
+PROPOSAL_MAX_TEXT = 200
+
+
+class _ProposalExtras(BaseModel):
+    source_url: HttpUrl
+    notes: Optional[str] = Field(None, max_length=1000)
+    # Honeypot: hidden in the form, so only bots fill it in.
+    website: Optional[str] = None
+
+
+class CPUProposal(_ProposalExtras, CPUSpecCreate):
+    """Public request model for proposing a new CPU"""
+
+
+class GPUProposal(_ProposalExtras, GPUSpecCreate):
+    """Public request model for proposing a new GPU"""
+
+
+class RejectRequest(BaseModel):
+    """Request model for rejecting a proposal"""
+    reason: Optional[str] = Field(None, max_length=2000)
+
+
+def _require_github():
+    if not github_client.is_configured():
+        raise HTTPException(status_code=503, detail="Proposals are not configured on this server")
+
+
+def _submit_proposal(kind: str, payload: _ProposalExtras, db: Session) -> dict:
+    if payload.website:
+        raise HTTPException(status_code=400, detail="Invalid submission")
+    _require_github()
+
+    data = payload.model_dump(exclude={"source_url", "notes", "website", "validated"})
+    for field_name, value in list(data.items()):
+        if isinstance(value, str):
+            value = " ".join(value.split())
+            if len(value) > PROPOSAL_MAX_TEXT:
+                raise HTTPException(status_code=422, detail=f"'{field_name}' is too long")
+            data[field_name] = value or None
+        elif isinstance(value, (int, float)) and value < 0:
+            raise HTTPException(status_code=422, detail=f"'{field_name}' cannot be negative")
+
+    key = csv_store.SCHEMAS[kind]["key_attr"]
+    data[key] = _clean_name(kind, data.get(key))
+    if _find_by_name(db, kind, data[key]):
+        raise HTTPException(status_code=409, detail=f"'{data[key]}' is already in the database")
+
+    notes = (payload.notes or "").strip() or None
+    title, body = proposals.render_issue(kind, data, str(payload.source_url), notes)
+    try:
+        issue = github_client.create_issue(title, body, [proposals.PROPOSAL_LABEL, kind])
+    except github_client.GitHubError:
+        logger.exception("Could not create proposal issue")
+        raise HTTPException(status_code=502, detail="Could not submit the proposal right now. Please try again later.")
+
+    return {"issue_number": issue["number"], "issue_url": issue["html_url"]}
+
+
+@app.post("/api/proposals/cpu", status_code=201)
+@limiter.limit("3/minute")
+def propose_cpu(request: Request, payload: CPUProposal, db: Session = Depends(get_db)):
+    """Propose a new CPU. Creates a GitHub issue for the maintainer to review."""
+    return _submit_proposal("cpu", payload, db)
+
+
+@app.post("/api/proposals/gpu", status_code=201)
+@limiter.limit("3/minute")
+def propose_gpu(request: Request, payload: GPUProposal, db: Session = Depends(get_db)):
+    """Propose a new GPU. Creates a GitHub issue for the maintainer to review."""
+    return _submit_proposal("gpu", payload, db)
+
+
+def _load_open_proposal(number: int) -> tuple[dict, str, Optional[dict]]:
+    try:
+        issue = github_client.get_issue(number)
+    except github_client.GitHubError as exc:
+        status = 404 if exc.status == 404 else 502
+        raise HTTPException(status_code=status, detail=f"Could not load issue #{number}: {exc}")
+    if not proposals.is_open_proposal(issue):
+        raise HTTPException(status_code=409, detail=f"Issue #{number} is not an open proposal")
+    payload = proposals.parse_issue(issue)
+    kind = payload["kind"] if payload else proposals.issue_kind(issue)
+    if kind is None:
+        raise HTTPException(status_code=409, detail=f"Issue #{number} is not labelled cpu or gpu")
+    return issue, kind, payload
+
+
+@app.get("/api/proposals")
+def list_proposals(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    """List open proposals (requires authentication)"""
+    _require_github()
+    try:
+        issues = github_client.list_issues([proposals.PROPOSAL_LABEL])
+    except github_client.GitHubError as exc:
+        raise HTTPException(status_code=502, detail=f"Could not load proposals from GitHub: {exc}")
+
+    candidates = {}
+    for kind, model in SPEC_MODELS.items():
+        name_column = getattr(model, csv_store.SCHEMAS[kind]["key_attr"])
+        candidates[kind] = db.query(model.id, name_column, model.validated).all()
+
+    results = []
+    for issue in issues:
+        payload = proposals.parse_issue(issue)
+        kind = payload["kind"] if payload else proposals.issue_kind(issue)
+        data = payload["data"] if payload else {}
+        duplicate = None
+        similar = []
+        if kind and data:
+            name = data.get(csv_store.SCHEMAS[kind]["key_attr"]) or ""
+            existing = _find_by_name(db, kind, name) if name else None
+            if existing:
+                duplicate = {"id": existing.id, "name": getattr(existing, csv_store.SCHEMAS[kind]["key_attr"])}
+            similar = proposals.find_similar(name, candidates[kind])
+        results.append({
+            "number": issue["number"],
+            "title": issue["title"],
+            "url": issue["html_url"],
+            "created_at": issue["created_at"],
+            "kind": kind,
+            "data": data,
+            "source_url": payload.get("source_url") if payload else None,
+            "notes": payload.get("notes") if payload else None,
+            "parsed": payload is not None,
+            "duplicate_of": duplicate,
+            "similar": similar,
+        })
+    return results
+
+
+@app.post("/api/proposals/{number}/accept", status_code=201)
+@limiter.limit("30/minute")
+def accept_proposal(
+    request: Request,
+    number: int,
+    payload: dict = Body(..., description="Final field values; defaults to validated=true"),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Accept a proposal: add it to the CSV on GitHub and the database, then close the issue."""
+    _require_github()
+    _, kind, _ = _load_open_proposal(number)
+
+    try:
+        spec = SPEC_CREATE_MODELS[kind].model_validate({"validated": True, **payload})
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors(include_url=False))
+
+    values = _cpu_create_values(spec) if kind == "cpu" else spec.model_dump()
+    key = csv_store.SCHEMAS[kind]["key_attr"]
+    label = _spec_label(kind)
+    name = _clean_name(kind, values.get(key))
+    item, commit_url = _create_spec(db, kind, values, f"Add {label}: {name} (closes #{number})")
+
+    issue_closed = True
+    try:
+        added = f" in {commit_url}" if commit_url else ""
+        github_client.comment(number, f"Thanks! This {label} was accepted and added to the database{added}.")
+        github_client.close_issue(number, [proposals.ACCEPTED_LABEL], reason="completed")
+    except github_client.GitHubError:
+        logger.exception("Accepted proposal #%s but could not close the issue", number)
+        issue_closed = False
+
+    return {"kind": kind, "id": item.id, "name": name, "commit_url": commit_url, "issue_closed": issue_closed}
+
+
+@app.post("/api/proposals/{number}/reject")
+@limiter.limit("30/minute")
+def reject_proposal(
+    request: Request,
+    number: int,
+    payload: RejectRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Reject a proposal: comment with the reason and close the issue."""
+    _require_github()
+    _load_open_proposal(number)
+
+    message = "Thanks for the proposal! It was not added to the database."
+    reason = (payload.reason or "").strip()
+    if reason:
+        message += f"\n\n**Reason:** {reason}"
+    try:
+        github_client.comment(number, message)
+        github_client.close_issue(number, [proposals.REJECTED_LABEL], reason="not_planned")
+    except github_client.GitHubError as exc:
+        raise HTTPException(status_code=502, detail=f"Could not update issue #{number}: {exc}")
+    return {"number": number, "rejected": True}
 
 
 @app.get("/api/export/csv")
@@ -661,7 +986,8 @@ async def export_csv(db: Session = Depends(get_db)):
         "L3 Cache (MB)": cpu.l3_cache_mb or "",
         "TDP (W)": cpu.tdp_watts or "",
         "Launch Year": cpu.launch_year or "",
-        "Max Memory (TB)": cpu.max_memory_tb or ""
+        "Max Memory (TB)": cpu.max_memory_tb or "",
+        "Validated": bool(cpu.validated)
     } for cpu in cpus])
 
     stream = io.StringIO()
@@ -694,7 +1020,8 @@ async def export_excel(db: Session = Depends(get_db)):
         "L3 Cache (MB)": cpu.l3_cache_mb or "",
         "TDP (W)": cpu.tdp_watts or "",
         "Launch Year": cpu.launch_year or "",
-        "Max Memory (TB)": cpu.max_memory_tb or ""
+        "Max Memory (TB)": cpu.max_memory_tb or "",
+        "Validated": bool(cpu.validated)
     } for cpu in cpus])
 
     output = io.BytesIO()
@@ -726,6 +1053,7 @@ async def export_gpus_csv(db: Session = Depends(get_db)):
         "Memory (GB)": gpu.memory_gb or "",
         "Memory Type": gpu.memory_type or "",
         "TDP (W)": gpu.tdp_watts or "",
+        "Validated": bool(gpu.validated),
     } for gpu in gpus])
 
     stream = io.StringIO()
@@ -755,6 +1083,7 @@ async def export_gpus_excel(db: Session = Depends(get_db)):
         "Memory (GB)": gpu.memory_gb or "",
         "Memory Type": gpu.memory_type or "",
         "TDP (W)": gpu.tdp_watts or "",
+        "Validated": bool(gpu.validated),
     } for gpu in gpus])
 
     output = io.BytesIO()
@@ -770,6 +1099,17 @@ async def export_gpus_excel(db: Session = Depends(get_db)):
             "Content-Disposition": f"attachment; filename=gpu_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         }
     )
+
+
+def read_import_csv(source) -> pd.DataFrame:
+    """Read an uploaded or repository CSV, detecting ; or , from the header line."""
+    if isinstance(source, bytes):
+        text = source.decode('utf-8-sig')
+    else:
+        with open(source, 'r', encoding='utf-8-sig', newline='') as file:
+            text = file.read()
+    delimiter = ';' if ';' in text.split('\n', 1)[0] else ','
+    return pd.read_csv(io.StringIO(text), delimiter=delimiter)
 
 
 def clean_number(value, default=None):
@@ -809,8 +1149,8 @@ def validate_csv_columns(df: pd.DataFrame) -> None:
         )
 
 
-@limiter.limit("10/minute")
 @app.post("/api/import/csv-file")
+@limiter.limit("10/minute")
 async def import_csv_file(
     request: Request,
     file: UploadFile = File(...),
@@ -821,7 +1161,7 @@ async def import_csv_file(
     """
     Import CPUs from uploaded CSV file (requires authentication)
     
-    CSV should be semicolon-delimited matching cpu_spec_validated.csv format.
+    CSV may be comma- or semicolon-delimited, matching cpu_spec_validated.csv format.
     """
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="File must be a CSV file")
@@ -841,7 +1181,7 @@ async def import_csv_file(
         contents = contents[3:]
 
     try:
-        df = pd.read_csv(io.BytesIO(contents), delimiter=';', encoding='utf-8')
+        df = read_import_csv(contents)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error reading CSV: {str(e)}")
 
@@ -882,7 +1222,8 @@ async def import_csv_file(
                 l3_cache_mb=clean_number(row.get('L3 Cache (MB)')),
                 tdp_watts=clean_number(row.get('TDP (W)')),
                 launch_year=launch_year,
-                max_memory_tb=clean_number(row.get('Max Memory (TB)'))
+                max_memory_tb=clean_number(row.get('Max Memory (TB)')),
+                validated=parse_bool(row.get('Validated'))
             )
 
             db.add(db_cpu)
@@ -901,8 +1242,8 @@ async def import_csv_file(
     }
 
 
-@limiter.limit("10/minute")
 @app.post("/api/import/csv-repo")
+@limiter.limit("10/minute")
 async def import_csv_from_repo(
     request: Request,
     clear_existing: bool = Query(False, description="Clear existing data before import"),
@@ -933,7 +1274,7 @@ async def import_csv_from_repo(
         db.commit()
 
     try:
-        df = pd.read_csv(csv_file_path, delimiter=';', encoding='utf-8')
+        df = read_import_csv(csv_file_path)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error reading CSV: {str(e)}")
 
@@ -974,7 +1315,8 @@ async def import_csv_from_repo(
                 l3_cache_mb=clean_number(row.get('L3 Cache (MB)')),
                 tdp_watts=clean_number(row.get('TDP (W)')),
                 launch_year=launch_year,
-                max_memory_tb=clean_number(row.get('Max Memory (TB)'))
+                max_memory_tb=clean_number(row.get('Max Memory (TB)')),
+                validated=parse_bool(row.get('Validated'))
             )
 
             db.add(db_cpu)
@@ -1015,8 +1357,8 @@ def validate_gpu_csv_columns(df: pd.DataFrame) -> None:
         )
 
 
-@limiter.limit("10/minute")
 @app.post("/api/import/gpu-csv-file")
+@limiter.limit("10/minute")
 async def import_gpu_csv_file(
     request: Request,
     file: UploadFile = File(...),
@@ -1043,7 +1385,7 @@ async def import_gpu_csv_file(
         contents = contents[3:]
 
     try:
-        df = pd.read_csv(io.BytesIO(contents), delimiter=';', encoding='utf-8')
+        df = read_import_csv(contents)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error reading CSV: {str(e)}")
 
@@ -1068,6 +1410,7 @@ async def import_gpu_csv_file(
                 memory_gb=clean_number(row.get('Memory (GB)')),
                 memory_type=str(row.get('Memory Type', '')).strip() or None,
                 tdp_watts=clean_number(row.get('TDP (W)')),
+                validated=parse_bool(row.get('Validated')),
             )
             db.add(db_gpu)
             imported += 1
@@ -1086,8 +1429,8 @@ async def import_gpu_csv_file(
     }
 
 
-@limiter.limit("10/minute")
 @app.post("/api/import/gpu-csv-repo")
+@limiter.limit("10/minute")
 async def import_gpu_csv_from_repo(
     request: Request,
     clear_existing: bool = Query(False, description="Clear existing GPU data before import"),
@@ -1113,7 +1456,7 @@ async def import_gpu_csv_from_repo(
         db.commit()
 
     try:
-        df = pd.read_csv(csv_file_path, delimiter=';', encoding='utf-8')
+        df = read_import_csv(csv_file_path)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error reading CSV: {str(e)}")
 
@@ -1138,6 +1481,7 @@ async def import_gpu_csv_from_repo(
                 memory_gb=clean_number(row.get('Memory (GB)')),
                 memory_type=str(row.get('Memory Type', '')).strip() or None,
                 tdp_watts=clean_number(row.get('TDP (W)')),
+                validated=parse_bool(row.get('Validated')),
             )
             db.add(db_gpu)
             imported += 1

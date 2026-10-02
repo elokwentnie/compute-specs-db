@@ -20,10 +20,11 @@ https://computespecsdb.com/
 
 ## API access
 The API supports:
-- Listing CPUs
+- Listing CPUs and GPUs (filter with `?validated=true|false`)
 - Searching by model, family, or codename
-- Accessing summary stats
+- Accessing summary stats (including validated counts)
 - Exporting data (CSV/Excel)
+- Proposing new CPUs/GPUs (`POST /api/proposals/cpu|gpu`)
 
 See the API docs link from the website.
 
@@ -31,7 +32,9 @@ See the API docs link from the website.
 This project currently focuses on HPC and datacenter CPUs (Intel Xeon, AMD EPYC, Opteron, etc.). GPU and ARM processor data is planned for future releases. If you spot missing entries or incorrect specs, contributions are welcome.
 
 ## Data validation
-All specifications have been manually validated by [me](@elokwentnie) against official manufacturer sources and trusted hardware databases:
+Every CPU and GPU has a **Validated** flag (`Validated` column in the CSVs, `validated` field in the API). Validated entries have been manually checked by [me](@elokwentnie) against official manufacturer sources and trusted hardware databases. Unverified entries have not been checked yet. They are labelled in the table and can be filtered out with `?validated=true`.
+
+Sources used for validation:
 
 - [Intel — Official product specifications](https://www.intel.com/content/www/us/en/products/overview.html)
 - [AMD — Official processor specifications](https://www.amd.com/en/products/specifications/processors.html)
@@ -47,16 +50,23 @@ compute-specs-db/
 ├── auth.py                     # JWT authentication helpers
 ├── database.py                 # SQLAlchemy models/config
 ├── import_data.py              # CSV import utility
+├── csv_store.py                # Format-preserving CSV edits + GitHub write-through
+├── github_client.py            # Minimal GitHub REST client (contents + issues)
+├── proposals.py                # Public proposals stored as GitHub issues
 ├── utils.py                    # Helpers (generation/codename logic)
 ├── requirements.txt            # Python dependencies
 ├── Procfile                    # Render deployment entrypoint
-├── cpu_spec_validated.csv      # Source data file
+├── cpu_spec_validated.csv      # Source data file (CPUs)
+├── gpu_spec_validated.csv      # Source data file (GPUs)
+├── tests/                      # pytest suite (no network: GitHub is faked)
 ├── .github/
 │   └── ISSUE_TEMPLATE/
 │       ├── new-cpu-request.yml # Template for requesting new CPU entries
+│       ├── new-gpu-request.yml # Template for requesting new GPU entries
 │       └── report-data-error.yml # Template for reporting data errors
 └── static/
     ├── index.html              # Public web interface
+    ├── propose.html            # Public "suggest a CPU/GPU" form
     ├── visualizations.html     # Charts and insights
     ├── admin.html              # Admin UI (protected)
     ├── css/
@@ -94,7 +104,34 @@ cp .env.example .env
 uvicorn app:app --reload
 ```
 
-The app will be available at `http://localhost:8000`. The database is auto-populated from `cpu_spec_validated.csv` on first run.
+The app will be available at `http://localhost:8000`. The database is auto-populated from `cpu_spec_validated.csv` and `gpu_spec_validated.csv` on first run.
+
+If you have a `cpu_database.db` from before the `Validated` column existed, delete it and restart so it is rebuilt from the CSVs.
+
+Run the tests with:
+
+```bash
+pip install pytest httpx
+pytest
+```
+
+## How data changes flow
+
+The CSVs on GitHub (`main`) are the source of truth. The SQLite database is a cache that is rebuilt from them on every start.
+
+- **Admin edits** (create, edit, rename, delete, the Validated switch) in `/admin` are committed to the CSV on GitHub first, as a one-line commit. Only after that succeeds is the change applied to the live database. If GitHub is unreachable, nothing changes and the admin panel shows the error.
+- **Data commits** carry `[skip render] [skip ci]`. The running app already has the change and re-reads the CSVs from GitHub when it starts, so no redeploy or sync run is needed.
+- **Proposals:** anyone can suggest a CPU/GPU at `/propose`. Each suggestion becomes a GitHub issue labelled `proposal`. The admin panel's **Proposals** tab lists them. **Accept** (optionally after editing the values) commits the row with `closes #N` and adds it to the database. **Reject** comments with a reason and closes the issue.
+- **Bulk CSV imports** in the admin panel only change the live database.
+
+### Configuration
+
+| Variable | Purpose |
+| --- | --- |
+| `GITHUB_TOKEN` | Fine-grained personal access token limited to this repository, with **Contents: read & write** and **Issues: read & write**. Without it, admin edits only touch the database and proposals are disabled. |
+| `GITHUB_REPO` | `owner/name` of the data repository (default `elokwentnie/compute-specs-db`). Point it at a fork for testing. |
+| `GITHUB_BRANCH` | Branch holding the CSVs (default `main`). |
+| `CSV_COMMIT_SUFFIX` | Appended to data commit messages (default ` [skip render] [skip ci]`). |
 
 ## Contributing
 
@@ -104,8 +141,8 @@ Contributions are encouraged, especially:
 - Improving data quality or coverage
 - UI/UX improvements
 
-### Request a new CPU entry
-Use the **[New CPU Request](https://github.com/elokwentnie/compute-specs-db/issues/new?template=new-cpu-request.yml)** issue template. Fill in as many fields as you can and include a link to the official spec page or a trusted hardware database.
+### Request a new CPU or GPU entry
+The easiest way is the **[Suggest a CPU/GPU](https://computespecsdb.com/propose)** form, which needs no GitHub account. You can also use the **[New CPU Request](https://github.com/elokwentnie/compute-specs-db/issues/new?template=new-cpu-request.yml)** or **[New GPU Request](https://github.com/elokwentnie/compute-specs-db/issues/new?template=new-gpu-request.yml)** issue templates. Fill in as many fields as you can and include a link to the official spec page or a trusted hardware database.
 
 ### Report a data error
 Use the **[Report Data Error](https://github.com/elokwentnie/compute-specs-db/issues/new?template=report-data-error.yml)** issue template. Specify which field is wrong, the current and correct values, and a source URL.
