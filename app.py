@@ -6,7 +6,7 @@ Provides REST API endpoints and web interfaces for viewing and managing compute 
 """
 
 from fastapi import FastAPI, Body, Depends, Query, HTTPException, UploadFile, File, Request
-from fastapi.responses import JSONResponse, HTMLResponse, FileResponse, StreamingResponse, Response
+from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -16,6 +16,8 @@ from sqlalchemy import func, or_
 from typing import List, Optional
 from pydantic import BaseModel, Field, HttpUrl, ValidationError
 import os
+import re
+import time
 import logging
 import pandas as pd
 import io
@@ -84,6 +86,19 @@ app = FastAPI(
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Cloudflare caches /static/* for hours, so a deploy could pair new HTML with
+# stale CSS/JS. Pages are served with a per-deploy version on asset URLs
+# (Render sets RENDER_GIT_COMMIT) so every deploy fetches fresh assets.
+ASSET_VERSION = (os.environ.get("RENDER_GIT_COMMIT") or str(int(time.time())))[:12]
+_ASSET_URL = re.compile(r'((?:href|src)="/static/[^"?]+\.(?:css|js))"')
+
+
+def serve_page(path: str) -> HTMLResponse:
+    """Serve an HTML page with cache-busting versions on its CSS/JS links."""
+    with open(path, encoding="utf-8") as file:
+        html = file.read()
+    return HTMLResponse(_ASSET_URL.sub(rf'\1?v={ASSET_VERSION}"', html))
 
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
@@ -182,19 +197,19 @@ class GPUSpecResponse(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """Serve the public web interface"""
-    return FileResponse("static/index.html")
+    return serve_page("static/index.html")
 
 
 @app.get("/visualizations", response_class=HTMLResponse)
 async def visualizations():
     """Serve the visualizations page"""
-    return FileResponse("static/visualizations.html")
+    return serve_page("static/visualizations.html")
 
 
 @app.get("/propose", response_class=HTMLResponse)
 async def propose_page():
     """Serve the public form for proposing a new CPU or GPU"""
-    return FileResponse("static/propose.html")
+    return serve_page("static/propose.html")
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -207,7 +222,7 @@ async def admin_panel():
     if ENVIRONMENT == "production" and not ENABLE_ADMIN_UI:
         raise HTTPException(status_code=404, detail="Not found")
 
-    return FileResponse("static/admin.html")
+    return serve_page("static/admin.html")
 
 
 @app.get("/api", response_class=JSONResponse)

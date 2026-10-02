@@ -1,4 +1,5 @@
 import csv
+import re
 import difflib
 import io
 
@@ -214,3 +215,11 @@ def test_login_is_rate_limited(client):
     # The fixture already logged in once; the limit is 5/minute.
     statuses = [client.post("/api/auth/login", json={"password": "wrong"}).status_code for _ in range(5)]
     assert statuses == [401, 401, 401, 401, 429]
+
+
+def test_pages_version_static_assets(client):
+    for page in ("/", "/visualizations", "/propose", "/admin"):
+        html = client.get(page).text
+        assert re.search(r'href="/static/css/common\.css\?v=\w+"', html), page
+        assert re.search(r'src="/static/js/theme\.js\?v=\w+"', html), page
+        assert 'href="/static/images/server-logo.png"' in html  # images untouched
