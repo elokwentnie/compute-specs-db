@@ -223,7 +223,7 @@ AMD EPYC 7601 32-Core Processor,AMD EPYC,EPYC 7601,Naples,32,64,3.2,64,180,2017,
 Intel(R) Xeon(R) 6767P,Intel Xeon 6,Xeon 6767P,Granite Rapids,64,128,3.9,336,350,2025,4.0,False
 Intel(R) Xeon(R) CPU E5-2695 v4 @ 2.10,Intel Xeon E5/E3,E5-2695 v4,Broadwell,18,36,3.3,45,120,2016,1.5,False
 AMD EPYC 7B12 64-Core Processor,AMD EPYC,EPYC 7B12,Rome,64,128,3.3,256,240,2020,4.0,False
-AMD EPYC 7232P 8-Core Processor,AMD EPYC,EPYC 7232P,Rome,8,16,3.2,32,120,2019,4.0,False
+AMD EPYC 7232P 8-Core Processor,AMD EPYC,EPYC 7232P,Rome,8,16,3.2,32,120,2019,4.0,True
 Intel(R) Xeon(R) Gold 6526Y,Intel Xeon Gold,Gold 6526Y,Emerald Rapids,16,32,3.9,37.5,195,2023,4.0,False
 Intel(R) Xeon(R) CPU E5540 @ 2.53,Intel Xeon E5/E3,E5540,Nehalem-EP,4,8,2.8,8,80,2009,0.144,False
 Intel(R) Xeon(R) CPU L5520 @ 2.27,Intel Xeon 5600,L5520,Nehalem-EP,4,8,2.53,8,60,2009,0.144,False
