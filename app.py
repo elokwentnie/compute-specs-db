@@ -571,6 +571,16 @@ class ValidatedUpdate(BaseModel):
     validated: bool
 
 
+class ValidatedChange(BaseModel):
+    id: int
+    validated: bool
+
+
+class BulkValidatedUpdate(BaseModel):
+    """Request model for setting the validated flag on many rows at once"""
+    changes: List[ValidatedChange] = Field(..., min_length=1, max_length=2000)
+
+
 # ---------- Write-through helpers ----------
 # Every admin change is committed to the CSV on GitHub first and only then
 # applied to SQLite, so the two never diverge. Without GITHUB_TOKEN (local
@@ -669,6 +679,54 @@ def _update_spec(db: Session, kind: str, item_id: int, changes: dict):
     return item
 
 
+def _bulk_set_validated(db: Session, kind: str, changes: List[ValidatedChange]) -> dict:
+    """Set validated on many rows with a single CSV commit."""
+    model = SPEC_MODELS[kind]
+    label = _spec_label(kind)
+    key = csv_store.SCHEMAS[kind]["key_attr"]
+
+    wanted = {change.id: change.validated for change in changes}
+    items = db.query(model).filter(model.id.in_(wanted)).all()
+    missing = sorted(set(wanted) - {item.id for item in items})
+    if missing:
+        raise HTTPException(status_code=404, detail=f"{label} IDs not found: {', '.join(map(str, missing))}")
+
+    to_change = sorted(
+        (item for item in items if bool(item.validated) != wanted[item.id]),
+        key=lambda item: getattr(item, key).casefold(),
+    )
+    commit_url = None
+    if to_change:
+        validated = [getattr(item, key) for item in to_change if wanted[item.id]]
+        unvalidated = [getattr(item, key) for item in to_change if not wanted[item.id]]
+        if len(to_change) == 1:
+            state = "validated" if validated else "unvalidated"
+            message = f"Mark {label} {state}: {getattr(to_change[0], key)}"
+        else:
+            parts = [f"{len(validated)} validated"] if validated else []
+            parts += [f"{len(unvalidated)} unvalidated"] if unvalidated else []
+            message = f"Mark {len(to_change)} {label}s: {', '.join(parts)}"
+            for title, names in (("Validated", validated), ("Unvalidated", unvalidated)):
+                if names:
+                    message += f"\n\n{title}:\n" + "\n".join(f"- {name}" for name in names)
+
+        updates = [
+            (getattr(item, key), {key: getattr(item, key), "validated": wanted[item.id]})
+            for item in to_change
+        ]
+        commit_url = _sync_csv(lambda: csv_store.commit_upserts(kind, updates, message))
+
+        for item in to_change:
+            item.validated = wanted[item.id]
+        db.commit()
+
+    return {
+        "changed": len(to_change),
+        "commit_url": commit_url,
+        "items": [(CPUSpecResponse if kind == "cpu" else GPUSpecResponse).model_validate(item) for item in items],
+    }
+
+
 def _delete_spec(db: Session, kind: str, item_id: int) -> None:
     item = _get_spec_or_404(db, kind, item_id)
     name = getattr(item, csv_store.SCHEMAS[kind]["key_attr"])
@@ -710,6 +768,18 @@ def update_cpu(
 ):
     """Update an existing compute specification (requires authentication)"""
     return _update_spec(db, "cpu", cpu_id, cpu.model_dump(exclude_unset=True))
+
+
+@app.patch("/api/cpus/validated")
+@limiter.limit("30/minute")
+def set_cpus_validated(
+    request: Request,
+    payload: BulkValidatedUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Mark many CPUs validated/unvalidated in one CSV commit (requires authentication)"""
+    return _bulk_set_validated(db, "cpu", payload.changes)
 
 
 @app.patch("/api/cpus/{cpu_id}/validated", response_model=CPUSpecResponse)
@@ -763,6 +833,18 @@ def update_gpu(
 ):
     """Update an existing GPU specification (requires authentication)"""
     return _update_spec(db, "gpu", gpu_id, gpu.model_dump(exclude_unset=True))
+
+
+@app.patch("/api/gpus/validated")
+@limiter.limit("30/minute")
+def set_gpus_validated(
+    request: Request,
+    payload: BulkValidatedUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Mark many GPUs validated/unvalidated in one CSV commit (requires authentication)"""
+    return _bulk_set_validated(db, "gpu", payload.changes)
 
 
 @app.patch("/api/gpus/{gpu_id}/validated", response_model=GPUSpecResponse)

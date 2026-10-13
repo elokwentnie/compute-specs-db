@@ -337,6 +337,92 @@ header h1 {
     padding-bottom: 10px;
 }
 
+/* ---------- Batch validation ---------- */
+.browse-controls {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.browse-filter-group {
+    width: 200px;
+}
+
+.batch-bar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface-raised);
+}
+
+.batch-bar.has-pending {
+    border-color: #d97706;
+    box-shadow: 0 0 0 1px #d97706 inset;
+}
+
+.batch-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.batch-count {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin-right: 4px;
+}
+
+.has-pending .batch-group:last-child .batch-count {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.btn-small {
+    padding: 7px 14px;
+    font-size: 14px;
+}
+
+.browse-table .select-col {
+    width: 36px;
+    padding-right: 0;
+}
+
+.browse-table .select-col input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.browse-table tbody tr.row-pending,
+.browse-table tbody tr.row-pending:nth-child(even) {
+    background: rgba(217, 119, 6, 0.12);
+}
+
+.pending-mark {
+    font-style: normal;
+    font-size: 11px;
+    font-weight: 700;
+    color: #b45309;
+    margin-left: 4px;
+}
+
+[data-theme="dark"] .pending-mark {
+    color: #fbbf24;
+}
+
 /* ---------- Proposals ---------- */
 .proposals-toolbar {
     display: flex;

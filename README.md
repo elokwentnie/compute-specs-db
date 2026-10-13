@@ -119,7 +119,8 @@ pytest
 
 The CSVs on GitHub (`main`) are the source of truth. The SQLite database is a cache that is rebuilt from them on every start.
 
-- **Admin edits** (create, edit, rename, delete, the Validated switch) in `/admin` are committed to the CSV on GitHub first, as a one-line commit. Only after that succeeds is the change applied to the live database. If GitHub is unreachable, nothing changes and the admin panel shows the error.
+- **Admin edits** (create, edit, rename, delete, the Validated switch) in `/admin` are committed to the CSV on GitHub first, as a one-line commit.
+- **Validation in batches:** in the Browse tabs, Validated switches and the "Mark selected" buttons only queue changes, and unsaved rows are highlighted. **Save** writes all queued changes as a single commit that lists every model. `PATCH /api/cpus/validated` and `PATCH /api/gpus/validated` accept `{"changes": [{"id": 1, "validated": true}, ...]}`. Only after that succeeds is the change applied to the live database. If GitHub is unreachable, nothing changes and the admin panel shows the error.
 - **Data commits** carry `[skip render] [skip ci]`. The running app already has the change and re-reads the CSVs from GitHub when it starts, so no redeploy or sync run is needed.
 - **Proposals:** anyone can suggest a CPU/GPU at `/propose`. Each suggestion becomes a GitHub issue labelled `proposal`. The admin panel's **Proposals** tab lists them. **Accept** (optionally after editing the values) commits the row with `closes #N` and adds it to the database. **Reject** comments with a reason and closes the issue.
 - **Bulk CSV imports** in the admin panel only change the live database.

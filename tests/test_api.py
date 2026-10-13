@@ -7,6 +7,18 @@ CPU_PATH = "cpu_spec_validated.csv"
 GPU_PATH = "gpu_spec_validated.csv"
 
 
+def csv_counts(path):
+    """(total rows, validated rows) in the repo CSV, so tests follow data edits."""
+    from conftest import ROOT
+    with open(ROOT / path, encoding="utf-8-sig", newline="") as f:
+        rows = list(csv.DictReader(f))
+    return len(rows), sum(row["Validated"] == "True" for row in rows)
+
+
+CPU_TOTAL, CPU_VALIDATED = csv_counts(CPU_PATH)
+GPU_TOTAL, GPU_VALIDATED = csv_counts(GPU_PATH)
+
+
 def changed_lines(before, after):
     return [
         line for line in difflib.unified_diff(before.splitlines(), after.splitlines(), lineterm="", n=0)
@@ -39,24 +51,24 @@ def proposal_payload(**overrides):
 
 def test_validated_exposed_in_api_and_stats(client):
     cpus = all_cpus(client)
-    assert len(cpus) == 428
+    assert len(cpus) == CPU_TOTAL
     assert all(isinstance(cpu["validated"], bool) for cpu in cpus)
-    assert len(all_cpus(client, validated="true")) == 212
-    assert len(all_cpus(client, validated="false")) == 216
+    assert len(all_cpus(client, validated="true")) == CPU_VALIDATED
+    assert len(all_cpus(client, validated="false")) == CPU_TOTAL - CPU_VALIDATED
 
     gpus = client.get("/api/gpus", params={"limit": 1000}).json()
-    assert len(gpus) == 35 and sum(g["validated"] for g in gpus) == 17
+    assert len(gpus) == GPU_TOTAL and sum(g["validated"] for g in gpus) == GPU_VALIDATED
     assert len(client.get("/api/gpus/search", params={"q": "NVIDIA", "validated": "true"}).json()) > 0
 
     stats = client.get("/api/stats").json()
-    assert (stats["validated_cpus"], stats["unvalidated_cpus"]) == (212, 216)
-    assert (stats["validated_gpus"], stats["unvalidated_gpus"]) == (17, 18)
+    assert (stats["validated_cpus"], stats["unvalidated_cpus"]) == (CPU_VALIDATED, CPU_TOTAL - CPU_VALIDATED)
+    assert (stats["validated_gpus"], stats["unvalidated_gpus"]) == (GPU_VALIDATED, GPU_TOTAL - GPU_VALIDATED)
 
 
 def test_exports_include_validated(client):
     text = client.get("/api/export/csv").text
     rows = list(csv.DictReader(io.StringIO(text), delimiter=";"))
-    assert sum(row["Validated"] == "True" for row in rows) == 212
+    assert sum(row["Validated"] == "True" for row in rows) == CPU_VALIDATED
     gpu_text = client.get("/api/export/gpus/csv").text
     assert gpu_text.splitlines()[0].endswith(";Validated")
 
@@ -223,3 +235,45 @@ def test_pages_version_static_assets(client):
         assert re.search(r'href="/static/css/common\.css\?v=\w+"', html), page
         assert re.search(r'src="/static/js/theme\.js\?v=\w+"', html), page
         assert 'href="/static/images/server-logo.png"' in html  # images untouched
+
+
+def test_batch_validation_is_one_commit(client, fake_github):
+    validated = all_cpus(client, validated="true")[:2]
+    unvalidated = all_cpus(client, validated="false")[:3]
+    before = fake_github.files[CPU_PATH]
+    changes = [{"id": c["id"], "validated": False} for c in validated]
+    changes += [{"id": c["id"], "validated": True} for c in unvalidated]
+
+    response = client.patch("/api/cpus/validated", json={"changes": changes}, headers=client.admin_headers)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["changed"] == 5 and len(body["items"]) == 5
+    assert len(fake_github.commits) == 1
+    subject, _, details = fake_github.commits[0].partition("\n")
+    assert subject == "Mark 5 CPUs: 3 validated, 2 unvalidated [skip render] [skip ci]"
+    assert unvalidated[0]["cpu_model_name"] in details and validated[0]["cpu_model_name"] in details
+    assert len(changed_lines(before, fake_github.files[CPU_PATH])) == 10
+    assert len(all_cpus(client, validated="true")) == CPU_VALIDATED - 2 + 3
+
+
+def test_batch_validation_skips_noops_and_rejects_unknown_ids(client, fake_github):
+    cpu = all_cpus(client, validated="true")[0]
+    response = client.patch("/api/cpus/validated", json={"changes": [{"id": cpu["id"], "validated": True}]}, headers=client.admin_headers)
+    assert response.status_code == 200 and response.json()["changed"] == 0
+    assert fake_github.commits == []
+
+    response = client.patch("/api/gpus/validated", json={"changes": [{"id": 99999, "validated": True}]}, headers=client.admin_headers)
+    assert response.status_code == 404
+
+
+def test_batch_validation_failure_changes_nothing(client, fake_github):
+    cpus = all_cpus(client, validated="false")[:2]
+    fake_github.fail = True
+    response = client.patch(
+        "/api/cpus/validated",
+        json={"changes": [{"id": c["id"], "validated": True} for c in cpus]},
+        headers=client.admin_headers,
+    )
+    assert response.status_code == 502
+    assert len(all_cpus(client, validated="true")) == CPU_VALIDATED

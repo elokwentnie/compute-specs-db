@@ -250,8 +250,11 @@ def _commit(kind: str, mutate: Callable[[CsvDoc], CsvDoc], message: str) -> str 
             new_text = serialize(mutate(parse(text)))
             if new_text == text:
                 return None
+            # Keep the skip markers on the subject line, before any body text.
+            subject, _, body = message.partition("\n")
+            full_message = subject + COMMIT_SUFFIX + ("\n" + body if body else "")
             try:
-                result = github_client.put_file(path, new_text, sha, message + COMMIT_SUFFIX)
+                result = github_client.put_file(path, new_text, sha, full_message)
                 return (result.get("commit") or {}).get("html_url", "")
             except github_client.GitHubConflict:
                 if attempt == 1:
@@ -262,6 +265,15 @@ def _commit(kind: str, mutate: Callable[[CsvDoc], CsvDoc], message: str) -> str 
 
 def commit_upsert(kind: str, old_name: str | None, values: dict[str, Any], message: str) -> str | None:
     return _commit(kind, lambda doc: upsert(doc, kind, old_name, values), message)
+
+
+def commit_upserts(kind: str, updates: list[tuple[str, dict[str, Any]]], message: str) -> str | None:
+    """Apply several (old_name, values) upserts to the CSV in a single commit."""
+    def mutate(doc: CsvDoc) -> CsvDoc:
+        for old_name, values in updates:
+            upsert(doc, kind, old_name, values)
+        return doc
+    return _commit(kind, mutate, message)
 
 
 def commit_remove(kind: str, name: str, message: str) -> str | None:

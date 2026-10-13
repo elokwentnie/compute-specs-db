@@ -82,15 +82,41 @@
 
             <div id="browseTab" class="tab-content">
                 <h2>Browse & Edit CPUs</h2>
-                <p class="browse-description">Search and click Edit to change any CPU. No need to look up IDs.</p>
-                <div class="form-group browse-search-group">
-                    <label for="browseSearch">Search</label>
-                    <input type="text" id="browseSearch" placeholder="Search by name, family, codename...">
+                <p class="browse-description">
+                    Search and click Edit to change any CPU. To validate in bulk, tick rows (or flip switches) and click
+                    <strong>Save</strong>. All queued changes go to GitHub as a single commit.
+                </p>
+                <div class="browse-controls">
+                    <div class="form-group browse-search-group">
+                        <label for="browseSearch">Search</label>
+                        <input type="text" id="browseSearch" placeholder="Search by name, family, codename...">
+                    </div>
+                    <div class="form-group browse-filter-group">
+                        <label for="browseFilterCpu">Show</label>
+                        <select id="browseFilterCpu">
+                            <option value="all">All</option>
+                            <option value="unverified">Unverified only</option>
+                            <option value="validated">Validated only</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="batch-bar" id="batchBarCpu" aria-live="polite">
+                    <div class="batch-group">
+                        <span class="batch-count" id="batchSelectedCpu">0 selected</span>
+                        <button type="button" class="btn-small" id="batchValidateCpu" onclick="markSelected('cpu', true)" disabled>Mark validated</button>
+                        <button type="button" class="btn-small btn-secondary" id="batchUnverifyCpu" onclick="markSelected('cpu', false)" disabled>Mark unverified</button>
+                    </div>
+                    <div class="batch-group">
+                        <span class="batch-count" id="batchPendingCpu">No unsaved changes</span>
+                        <button type="button" class="btn-small" id="batchSaveCpu" onclick="savePending('cpu')" disabled>Save</button>
+                        <button type="button" class="btn-small btn-secondary" id="batchDiscardCpu" onclick="discardPending('cpu')" disabled>Discard</button>
+                    </div>
                 </div>
                 <div id="browseTableContainer" class="overflow-x-auto">
                     <table class="browse-table" id="browseTable">
                         <thead>
                             <tr>
+                                <th class="select-col"><input type="checkbox" id="selectAllCpu" aria-label="Select all shown CPUs" onchange="selectAllShown('cpu', this.checked)"></th>
                                 <th>ID</th>
                                 <th>CPU Model Name</th>
                                 <th>Codename</th>
@@ -254,15 +280,41 @@
 
             <div id="browseGpuTab" class="tab-content">
                 <h2>Browse & Edit GPUs</h2>
-                <p class="browse-description">Search and click Edit to change any GPU.</p>
-                <div class="form-group browse-search-group">
-                    <label for="browseGpuSearch">Search</label>
-                    <input type="text" id="browseGpuSearch" placeholder="Search by name, vendor, memory type...">
+                <p class="browse-description">
+                    Search and click Edit to change any GPU. To validate in bulk, tick rows (or flip switches) and click
+                    <strong>Save</strong>. All queued changes go to GitHub as a single commit.
+                </p>
+                <div class="browse-controls">
+                    <div class="form-group browse-search-group">
+                        <label for="browseGpuSearch">Search</label>
+                        <input type="text" id="browseGpuSearch" placeholder="Search by name, vendor, memory type...">
+                    </div>
+                    <div class="form-group browse-filter-group">
+                        <label for="browseFilterGpu">Show</label>
+                        <select id="browseFilterGpu">
+                            <option value="all">All</option>
+                            <option value="unverified">Unverified only</option>
+                            <option value="validated">Validated only</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="batch-bar" id="batchBarGpu" aria-live="polite">
+                    <div class="batch-group">
+                        <span class="batch-count" id="batchSelectedGpu">0 selected</span>
+                        <button type="button" class="btn-small" id="batchValidateGpu" onclick="markSelected('gpu', true)" disabled>Mark validated</button>
+                        <button type="button" class="btn-small btn-secondary" id="batchUnverifyGpu" onclick="markSelected('gpu', false)" disabled>Mark unverified</button>
+                    </div>
+                    <div class="batch-group">
+                        <span class="batch-count" id="batchPendingGpu">No unsaved changes</span>
+                        <button type="button" class="btn-small" id="batchSaveGpu" onclick="savePending('gpu')" disabled>Save</button>
+                        <button type="button" class="btn-small btn-secondary" id="batchDiscardGpu" onclick="discardPending('gpu')" disabled>Discard</button>
+                    </div>
                 </div>
                 <div id="browseGpuTableContainer" class="overflow-x-auto">
                     <table class="browse-table" id="browseGpuTable">
                         <thead>
                             <tr>
+                                <th class="select-col"><input type="checkbox" id="selectAllGpu" aria-label="Select all shown GPUs" onchange="selectAllShown('gpu', this.checked)"></th>
                                 <th>ID</th>
                                 <th>GPU Model Name</th>
                                 <th>Vendor</th>
@@ -657,41 +709,151 @@
             if (tabName === 'proposals' && !proposalsLoaded) loadProposals();
         }
 
-        // ---------- Validated toggle ----------
+        // ---------- Batch validation ----------
+        // Switch flips and "Mark selected" only queue changes; Save sends them all
+        // in one request, which becomes a single commit on GitHub.
+
+        const pendingValidated = { cpu: new Map(), gpu: new Map() };  // id -> desired value
+        const selectedIds = { cpu: new Set(), gpu: new Set() };
+        const shownIds = { cpu: [], gpu: [] };
+        const BATCH_UI = { cpu: 'Cpu', gpu: 'Gpu' };
+
+        function browseList(kind) {
+            return kind === 'cpu' ? browseCpus : browseGpus;
+        }
+
+        function rerenderBrowse(kind) {
+            if (kind === 'cpu') renderBrowseTable(browseCpus); else renderBrowseGpuTable(browseGpus);
+        }
+
+        function effectiveValidated(kind, item) {
+            const pending = pendingValidated[kind];
+            return pending.has(item.id) ? pending.get(item.id) : Boolean(item.validated);
+        }
+
+        // Applies the "Show" filter. It uses the saved value, so queued rows stay visible until saved.
+        function passesValidatedFilter(kind, item) {
+            const filter = document.getElementById(`browseFilter${BATCH_UI[kind]}`).value;
+            if (filter === 'validated') return Boolean(item.validated);
+            if (filter === 'unverified') return !item.validated;
+            return true;
+        }
+
+        function stageValidated(kind, id, value) {
+            const item = browseList(kind).find(x => x.id === id);
+            if (!item) return;
+            if (value === Boolean(item.validated)) pendingValidated[kind].delete(id);
+            else pendingValidated[kind].set(id, value);
+            rerenderBrowse(kind);
+        }
+
+        function toggleSelect(kind, id, checked) {
+            if (checked) selectedIds[kind].add(id); else selectedIds[kind].delete(id);
+            updateBatchBar(kind);
+        }
+
+        function selectAllShown(kind, checked) {
+            shownIds[kind].forEach(id => checked ? selectedIds[kind].add(id) : selectedIds[kind].delete(id));
+            rerenderBrowse(kind);
+        }
+
+        function markSelected(kind, value) {
+            selectedIds[kind].forEach(id => {
+                const item = browseList(kind).find(x => x.id === id);
+                if (!item) return;
+                if (value === Boolean(item.validated)) pendingValidated[kind].delete(id);
+                else pendingValidated[kind].set(id, value);
+            });
+            selectedIds[kind].clear();
+            rerenderBrowse(kind);
+        }
+
+        function updateBatchBar(kind) {
+            const k = BATCH_UI[kind];
+            const selected = selectedIds[kind].size;
+            const pending = [...pendingValidated[kind].values()];
+            const toValidate = pending.filter(v => v).length;
+            const toUnverify = pending.length - toValidate;
+
+            document.getElementById(`batchSelected${k}`).textContent = `${selected} selected`;
+            document.getElementById(`batchValidate${k}`).disabled = selected === 0;
+            document.getElementById(`batchUnverify${k}`).disabled = selected === 0;
+
+            const parts = [];
+            if (toValidate) parts.push(`${toValidate} to validate`);
+            if (toUnverify) parts.push(`${toUnverify} to unverify`);
+            document.getElementById(`batchPending${k}`).textContent = pending.length
+                ? `Unsaved: ${parts.join(', ')}`
+                : 'No unsaved changes';
+            const save = document.getElementById(`batchSave${k}`);
+            save.disabled = pending.length === 0;
+            save.textContent = pending.length ? `Save ${pending.length} (1 commit)` : 'Save';
+            document.getElementById(`batchDiscard${k}`).disabled = pending.length === 0;
+            document.getElementById(`batchBar${k}`).classList.toggle('has-pending', pending.length > 0);
+
+            const selectAll = document.getElementById(`selectAll${k}`);
+            const shownSelected = shownIds[kind].filter(id => selectedIds[kind].has(id)).length;
+            selectAll.checked = shownIds[kind].length > 0 && shownSelected === shownIds[kind].length;
+            selectAll.indeterminate = shownSelected > 0 && shownSelected < shownIds[kind].length;
+        }
+
+        async function savePending(kind) {
+            const changes = [...pendingValidated[kind]].map(([id, validated]) => ({ id, validated }));
+            if (changes.length === 0) return;
+            const k = BATCH_UI[kind];
+            const save = document.getElementById(`batchSave${k}`);
+            save.disabled = true;
+            save.textContent = 'Saving…';
+            try {
+                const result = await apiFetch(`/api/${kind}s/validated`, {
+                    method: 'PATCH',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ changes })
+                });
+                result.items.forEach(item => upsertLocal(browseList(kind), item));
+                pendingValidated[kind].clear();
+                const label = kind.toUpperCase() + (result.changed === 1 ? '' : 's');
+                showMessage(savedMessage(`Updated ${result.changed} ${label} in one commit.`), 'success');
+            } catch (error) {
+                showMessage('Error saving changes (nothing was saved): ' + error.message, 'error');
+            } finally {
+                rerenderBrowse(kind);
+            }
+        }
+
+        function discardPending(kind) {
+            pendingValidated[kind].clear();
+            rerenderBrowse(kind);
+        }
 
         function validatedSwitch(kind, item) {
-            return `<label class="switch" title="Toggle validated">
-                <input type="checkbox" ${item.validated ? 'checked' : ''}
+            const value = effectiveValidated(kind, item);
+            const pending = pendingValidated[kind].has(item.id);
+            return `<label class="switch" title="Queue a validated change">
+                <input type="checkbox" ${value ? 'checked' : ''}
                        aria-label="Validated: ${escapeHtml(item.cpu_model_name || item.gpu_model_name)}"
-                       onchange="toggleValidated('${kind}', ${item.id}, this)">
+                       onchange="stageValidated('${kind}', ${item.id}, this.checked)">
                 <span class="switch-track"></span>
-                <span class="switch-text">${item.validated ? 'Validated' : 'Unverified'}</span>
+                <span class="switch-text">${value ? 'Validated' : 'Unverified'}${pending ? ' <em class="pending-mark">unsaved</em>' : ''}</span>
             </label>`;
         }
 
-        async function toggleValidated(kind, id, input) {
-            const validated = input.checked;
-            const text = input.parentElement.querySelector('.switch-text');
-            input.disabled = true;
-            text.textContent = 'Saving…';
-            try {
-                const updated = await apiFetch(`/api/${kind}s/${id}/validated`, {
-                    method: 'PATCH',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({ validated })
-                });
-                upsertLocal(kind === 'cpu' ? browseCpus : browseGpus, updated);
-                text.textContent = validated ? 'Validated' : 'Unverified';
-                const name = updated.cpu_model_name || updated.gpu_model_name;
-                showMessage(savedMessage(`${name} marked ${validated ? 'validated' : 'unverified'}.`), 'success');
-            } catch (error) {
-                input.checked = !validated;
-                text.textContent = input.checked ? 'Validated' : 'Unverified';
-                showMessage('Error: ' + error.message, 'error');
-            } finally {
-                input.disabled = false;
-            }
+        function selectCell(kind, item) {
+            return `<td class="select-col"><input type="checkbox" ${selectedIds[kind].has(item.id) ? 'checked' : ''}
+                aria-label="Select ${escapeHtml(item.cpu_model_name || item.gpu_model_name)}"
+                onchange="toggleSelect('${kind}', ${item.id}, this.checked)"></td>`;
         }
+
+        function rowClass(kind, item) {
+            return pendingValidated[kind].has(item.id) ? 'row-pending' : '';
+        }
+
+        window.addEventListener('beforeunload', (event) => {
+            if (pendingValidated.cpu.size || pendingValidated.gpu.size) {
+                event.preventDefault();
+                event.returnValue = '';
+            }
+        });
 
         // ---------- CPUs ----------
 
@@ -720,7 +882,7 @@
 
         function renderBrowseTable(cpus) {
             const searchText = (document.getElementById('browseSearch').value || '').trim().toLowerCase();
-            const filtered = searchText
+            const searched = searchText
                 ? cpus.filter(c => {
                     const name = (c.cpu_model_name || '').toLowerCase();
                     const family = (c.family || '').toLowerCase();
@@ -729,13 +891,16 @@
                     return name.includes(searchText) || family.includes(searchText) || codename.includes(searchText) || model.includes(searchText);
                 })
                 : cpus;
+            const filtered = searched.filter(c => passesValidatedFilter('cpu', c));
+            shownIds.cpu = filtered.map(c => c.id);
+            updateBatchBar('cpu');
             const tbody = document.getElementById('browseTableBody');
             const container = document.getElementById('browseTableContainer');
             const emptyEl = document.getElementById('browseEmpty');
             tbody.innerHTML = '';
             if (filtered.length === 0) {
                 container.classList.add('hidden');
-                emptyEl.textContent = 'No CPUs match your search.';
+                emptyEl.textContent = 'No CPUs match your search and filter.';
                 emptyEl.classList.remove('hidden');
                 return;
             }
@@ -743,7 +908,9 @@
             emptyEl.classList.add('hidden');
             filtered.forEach(cpu => {
                 const tr = document.createElement('tr');
+                tr.className = rowClass('cpu', cpu);
                 tr.innerHTML = `
+                    ${selectCell('cpu', cpu)}
                     <td>${cpu.id}</td>
                     <td><strong>${escapeHtml(cpu.cpu_model_name || '-')}</strong></td>
                     <td>${escapeHtml(cpu.codename || '-')}</td>
@@ -853,6 +1020,10 @@
             if (browseCpus.length) renderBrowseTable(browseCpus);
         });
 
+        document.getElementById('browseFilterCpu').addEventListener('change', () => {
+            if (browseCpus.length) renderBrowseTable(browseCpus);
+        });
+
         // ---------- GPUs ----------
 
         async function loadBrowseGpuDataIfNeeded() {
@@ -880,7 +1051,7 @@
 
         function renderBrowseGpuTable(gpus) {
             const searchText = (document.getElementById('browseGpuSearch').value || '').trim().toLowerCase();
-            const filtered = searchText
+            const searched = searchText
                 ? gpus.filter(g => {
                     return (g.gpu_model_name || '').toLowerCase().includes(searchText)
                         || (g.vendor || '').toLowerCase().includes(searchText)
@@ -889,13 +1060,16 @@
                         || (g.form_factor || '').toLowerCase().includes(searchText);
                 })
                 : gpus;
+            const filtered = searched.filter(g => passesValidatedFilter('gpu', g));
+            shownIds.gpu = filtered.map(g => g.id);
+            updateBatchBar('gpu');
             const tbody = document.getElementById('browseGpuTableBody');
             const container = document.getElementById('browseGpuTableContainer');
             const emptyEl = document.getElementById('browseGpuEmpty');
             tbody.innerHTML = '';
             if (filtered.length === 0) {
                 container.classList.add('hidden');
-                emptyEl.textContent = 'No GPUs match your search.';
+                emptyEl.textContent = 'No GPUs match your search and filter.';
                 emptyEl.classList.remove('hidden');
                 return;
             }
@@ -903,7 +1077,9 @@
             emptyEl.classList.add('hidden');
             filtered.forEach(gpu => {
                 const tr = document.createElement('tr');
+                tr.className = rowClass('gpu', gpu);
                 tr.innerHTML = `
+                    ${selectCell('gpu', gpu)}
                     <td>${gpu.id}</td>
                     <td><strong>${escapeHtml(gpu.gpu_model_name || '-')}</strong></td>
                     <td>${escapeHtml(gpu.vendor || '-')}</td>
@@ -919,6 +1095,10 @@
         }
 
         document.getElementById('browseGpuSearch').addEventListener('input', () => {
+            if (browseGpus.length) renderBrowseGpuTable(browseGpus);
+        });
+
+        document.getElementById('browseFilterGpu').addEventListener('change', () => {
             if (browseGpus.length) renderBrowseGpuTable(browseGpus);
         });
 
@@ -1171,6 +1351,8 @@
                     headers: getAuthHeaders()
                 });
                 browseCpus = [];
+                pendingValidated.cpu.clear();
+                selectedIds.cpu.clear();
                 if (data.errors && data.total_errors > 0) {
                     showMessage(`Imported ${data.imported} CPUs. ${data.total_errors} errors occurred.`, 'error');
                 } else {
@@ -1190,6 +1372,8 @@
                     headers: getAuthHeaders()
                 });
                 browseGpus = [];
+                pendingValidated.gpu.clear();
+                selectedIds.gpu.clear();
                 if (data.errors && data.total_errors > 0) {
                     showMessage(`Imported ${data.imported} GPUs. ${data.total_errors} errors occurred.`, 'error');
                 } else {
@@ -1220,6 +1404,8 @@
                     body: formData
                 });
                 browseCpus = [];
+                pendingValidated.cpu.clear();
+                selectedIds.cpu.clear();
                 if (data.errors && data.total_errors > 0) {
                     showMessage(`Imported ${data.imported} CPUs. ${data.total_errors} errors occurred.`, 'error');
                 } else {
