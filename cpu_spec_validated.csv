@@ -211,7 +211,7 @@ Intel(R) Xeon(R) Platinum 8358P CPU @ 2.60,Intel Xeon Platinum,Platinum 8358P,Ic
 Intel(R) Xeon(R) Platinum 8362 CPU @ 2.80,Intel Xeon Platinum,Platinum 8362,Ice Lake,32,64,3.6,48,265,2021,6.0,True
 Intel (R) Xeon (R) CPU Max 9462,Intel Xeon Max,Xeon Max 9462,Sapphire Rapids HBM,32,64,3.5,75,350,2023,4.0,True
 Intel (R) Xeon (R) CPU Max 9480,Intel Xeon Max,Xeon Max 9480,Sapphire Rapids HBM,56,112,3.5,112.5,350,2023,4.0,True
-Intel(R) Xeon(R) Platinum 8480+,Intel Xeon Platinum,Platinum 8480+,Sapphire Rapids,56,112,3.8,105,350,2023,4.0,False
+Intel(R) Xeon(R) Platinum 8480+,Intel Xeon Platinum,Platinum 8480+,Sapphire Rapids,56,112,3.8,105,350,2023,4.0,True
 Intel(R) Xeon(R) Platinum 8174 CPU @ 3.10,Intel Xeon Platinum,Platinum 8174,Skylake,24,48,3.9,33,240,2017,0.768,False
 Intel(R) Xeon(R) Platinum 8280 CPU @ 2.70,Intel Xeon Platinum,Platinum 8280,Cascade Lake,28,56,4.0,38.5,205,2019,1.0,False
 Intel(R) Xeon(R) Platinum 8276 CPU @ 2.20,Intel Xeon Platinum,Platinum 8276,Cascade Lake,28,56,4.0,38.5,165,2019,1.0,False
