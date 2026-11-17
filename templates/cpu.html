@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "macros.html" import report_form, validated_pill, cpu_table, validation_note %}
+
+{% block heading %}{{ cpu.name }} specifications{% endblock %}
+{% block subheading %}<p>{{ [cpu.family, cpu.codename, cpu.launch_year] | select | join(" · ") }}</p>{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <p class="lead">{{ sentences | join(" ") }}</p>
+
+    <div class="spec-layout">
+        <div class="table-wrap spec-table-wrap">
+            <table class="spec-table">
+                <caption>{{ cpu.name }} specifications</caption>
+                <tbody>
+                    <tr><th scope="row">Model</th><td>{{ cpu.name }}</td></tr>
+                    {% if cpu.family %}<tr><th scope="row">Family</th><td><a href="{{ family_url }}">{{ cpu.family }}</a></td></tr>{% endif %}
+                    {% if cpu.codename %}<tr><th scope="row">Generation (codename)</th><td><a href="{{ codename_url }}">{{ cpu.codename }}</a></td></tr>{% endif %}
+                    {% for label, value in specs %}
+                    <tr><th scope="row">{{ label }}</th><td>{{ value }}</td></tr>
+                    {% endfor %}
+                    <tr><th scope="row">Full model string</th><td class="mono">{{ cpu.cpu_model_name }}</td></tr>
+                    <tr><th scope="row">Status</th><td>{{ validated_pill(cpu.validated) }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <aside class="side-panel">
+            {{ validation_note(cpu.validated) }}
+            <h2>Get this data</h2>
+            <ul class="plain-list">
+                <li><a href="/api/cpus/{{ cpu.id }}" target="_blank">JSON (API)</a></li>
+                <li><a href="/api/export/csv">All CPUs as CSV</a></li>
+                <li><a href="/?q={{ cpu.cpu_model | urlencode }}">Find in the data table</a></li>
+            </ul>
+        </aside>
+    </div>
+</section>
+
+{{ report_form(report, cpu.name) }}
+
+{% if similar %}
+<section class="page-section">
+    <h2>Similar processors</h2>
+    {{ cpu_table(similar, "codename") }}
+    <p class="more-links">
+        {% if codename_url %}<a href="{{ codename_url }}">All {{ cpu.codename }} processors →</a>{% endif %}
+        {% if family_url %}<a href="{{ family_url }}">All {{ cpu.family }} processors →</a>{% endif %}
+    </p>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}<script src="/static/js/report.js?v={{ asset_version }}" defer></script>{% endblock %}

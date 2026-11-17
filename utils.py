@@ -2,6 +2,32 @@
 Utility functions for Compute Specs DB
 """
 
+import re
+
+
+def display_name(model_name: str) -> str:
+    """Readable product name from a raw model string.
+
+    "Intel(R) Xeon(R) Gold 6330 CPU @ 2.00" -> "Intel Xeon Gold 6330"
+    "AMD EPYC 9654 96-Core Processor"      -> "AMD EPYC 9654"
+    """
+    name = re.sub(r"\s*\((?:R|TM)\)", "", model_name or "", flags=re.IGNORECASE)
+    name = re.sub(r"\s*@\s*[\d.]+\s*(?:GHz)?\s*$", "", name, flags=re.IGNORECASE)
+    name = re.sub(r"\b\d+-Core\b", "", name)
+    name = re.sub(r"\b(?:CPU|Processor)\b", "", name)
+    return re.sub(r"\s+", " ", name).strip() or (model_name or "").strip()
+
+
+def slugify(text: str) -> str:
+    """URL slug: lowercase ASCII words joined by hyphens ("8480+" -> "8480-plus")."""
+    text = (text or "").lower().replace("+", " plus")
+    return re.sub(r"[^a-z0-9]+", "-", text).strip("-")
+
+
+def model_slug(model_name: str) -> str:
+    """Stable URL slug for a CPU or GPU, derived from its model name."""
+    return slugify(display_name(model_name))
+
 
 def determine_cpu_generation(cpu_model: str, launch_year: int, family: str = None) -> str:
     """

@@ -1,0 +1,25 @@
+{%- from "macros.html" import link_list -%}
+<section class="browse-section" aria-labelledby="browseTitle">
+    <h2 id="browseTitle">Browse the catalog</h2>
+    <p>
+        Every processor and GPU has its own spec page. Browse {{ cpu_count }} <a href="/cpus">server CPUs</a>
+        by family or generation, or see all {{ gpu_count }} <a href="/gpus">datacenter GPUs</a>.
+    </p>
+    <div class="browse-grid">
+        <div>
+            <h3>CPU families</h3>
+            {{ link_list(families) }}
+        </div>
+        <div>
+            <h3>CPU generations</h3>
+            {% for vendor, links in codenames %}
+            <h4>{{ vendor }}</h4>
+            {{ link_list(links) }}
+            {% endfor %}
+        </div>
+        <div>
+            <h3>GPU vendors</h3>
+            {{ link_list(gpu_vendors) }}
+        </div>
+    </div>
+</section>

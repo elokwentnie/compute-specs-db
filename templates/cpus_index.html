@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "macros.html" import link_list %}
+
+{% block heading %}Server CPU specifications{% endblock %}
+{% block subheading %}<p>{{ summary.count }} processors{% if summary.years %} · {{ summary.years }}{% endif %}</p>{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <p class="lead">
+        Browse {{ summary.count }} server-class processors by product family or by generation (codename).
+        Each processor has its own page with cores, threads, turbo frequency, L3 cache, TDP, launch year and maximum memory.
+        {{ summary.validated }} of {{ summary.count }} entries have been validated against manufacturer sources.
+    </p>
+</section>
+
+<section class="page-section">
+    <h2>By product family</h2>
+    {{ link_list(families) }}
+</section>
+
+<section class="page-section">
+    <h2>By generation</h2>
+    {% for vendor, links in codenames %}
+    <h3>{{ vendor }}</h3>
+    {{ link_list(links) }}
+    {% endfor %}
+</section>
+
+<section class="page-section">
+    <h2>Datacenter GPUs</h2>
+    <p>Looking for accelerators? See <a href="/gpus">all {{ gpu_count }} datacenter GPUs</a>.</p>
+</section>
+{% endblock %}

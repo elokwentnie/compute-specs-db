@@ -6,8 +6,10 @@ Provides REST API endpoints and web interfaces for viewing and managing compute 
 """
 
 from fastapi import FastAPI, Body, Depends, Query, HTTPException, UploadFile, File, Request
-from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse, Response
+from fastapi.exception_handlers import http_exception_handler
+from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse, Response, FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -34,11 +36,12 @@ from auth import (
     get_current_user,
     create_access_token
 )
-from utils import determine_cpu_generation
+from utils import determine_cpu_generation, model_slug
 from llm import ask_question, LLMError, LLMRateLimitError, LLMTimeoutError
 from import_data import import_cpu_text_to_db, import_gpu_text_to_db, parse_bool
 import csv_store
 import github_client
+import pages
 import proposals
 
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "production")
@@ -94,67 +97,117 @@ ASSET_VERSION = (os.environ.get("RENDER_GIT_COMMIT") or str(int(time.time())))[:
 _ASSET_URL = re.compile(r'((?:href|src)="/static/[^"?]+\.(?:css|js))"')
 
 
-def serve_page(path: str) -> HTMLResponse:
-    """Serve an HTML page with cache-busting versions on its CSS/JS links."""
+SITE_URL = "https://computespecsdb.com"
+
+# Public pages are cached briefly by browsers; admin and error pages are not cached.
+PUBLIC_PAGE_CACHE = "public, max-age=300"
+
+
+pages.templates.env.globals["asset_version"] = ASSET_VERSION
+
+
+def serve_page(path: str, status_code: int = 200, cache_control: str = PUBLIC_PAGE_CACHE,
+               fragments: Optional[dict] = None) -> HTMLResponse:
+    """Serve an HTML page with cache-busting versions on its CSS/JS links.
+
+    `fragments` maps placeholder comments in the page to server-rendered HTML.
+    """
     with open(path, encoding="utf-8") as file:
         html = file.read()
-    return HTMLResponse(_ASSET_URL.sub(rf'\1?v={ASSET_VERSION}"', html))
+    for placeholder, fragment in (fragments or {}).items():
+        html = html.replace(placeholder, fragment)
+    return HTMLResponse(
+        _ASSET_URL.sub(rf'\1?v={ASSET_VERSION}"', html),
+        status_code=status_code,
+        headers={"Cache-Control": cache_control},
+    )
+
+
+# Machine-readable endpoints stay crawlable (pages fetch them while rendering)
+# but should never show up as search results themselves.
+NOINDEX_PREFIXES = ("/api", "/docs", "/redoc", "/openapi.json", "/admin")
+
+
+class SeoHeadersMiddleware:
+    """Answer HEAD like GET without a body, and mark non-page URLs noindex.
+
+    FastAPI routes declared with @app.get reject HEAD with 405, which crawlers,
+    uptime monitors and link checkers treat as a broken URL.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        is_head = scope["method"] == "HEAD"
+        if is_head:
+            scope = dict(scope, method="GET")
+        noindex = scope["path"].startswith(NOINDEX_PREFIXES)
+
+        async def wrapped_send(message):
+            if message["type"] == "http.response.start" and noindex:
+                message = dict(message, headers=[*message.get("headers", []), (b"x-robots-tag", b"noindex")])
+            elif message["type"] == "http.response.body" and is_head:
+                message = dict(message, body=b"")
+            await send(message)
+
+        await self.app(scope, receive, wrapped_send)
+
+
+app.add_middleware(SeoHeadersMiddleware)
+app.include_router(pages.router)
 
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
+@app.exception_handler(StarletteHTTPException)
+async def not_found_as_html(request: Request, exc: StarletteHTTPException):
+    """Return an HTML 404 page for browser URLs; API paths keep JSON errors."""
+    if exc.status_code == 404 and not request.url.path.startswith(NOINDEX_PREFIXES):
+        return serve_page("static/404.html", status_code=404, cache_control="no-store")
+    return await http_exception_handler(request, exc)
+
+
 @app.get("/favicon.ico")
 async def favicon():
-    """Handle favicon requests to prevent 404 errors"""
-    return Response(status_code=204)
+    """Serve the site icon at the path browsers and crawlers request by default"""
+    return FileResponse("static/images/favicon.ico", media_type="image/x-icon",
+                        headers={"Cache-Control": "public, max-age=604800"})
 
 
 @app.get("/robots.txt")
 async def robots_txt():
     """Serve robots.txt for search engine crawlers"""
-    content = """User-agent: *
+    content = f"""User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api/import/
-Sitemap: https://computespecsdb.com/sitemap.xml
+Sitemap: {SITE_URL}/sitemap.xml
 """
     return Response(content=content, media_type="text/plain")
 
 
+# Static pages listed in the sitemap, followed by every spec and overview page.
+# API endpoints and /docs are left out on purpose: they are sent with X-Robots-Tag: noindex.
+SITEMAP_PAGES = ("/", "/visualizations", "/propose")
+
+
 @app.get("/sitemap.xml")
-async def sitemap_xml():
+async def sitemap_xml(db: Session = Depends(get_db)):
     """Serve sitemap.xml for search engine indexing"""
-    content = """<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-    <url>
-        <loc>https://computespecsdb.com/</loc>
-        <changefreq>weekly</changefreq>
-        <priority>1.0</priority>
-    </url>
-    <url>
-        <loc>https://computespecsdb.com/visualizations</loc>
-        <changefreq>weekly</changefreq>
-        <priority>0.8</priority>
-    </url>
-    <url>
-        <loc>https://computespecsdb.com/propose</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.6</priority>
-    </url>
-    <url>
-        <loc>https://computespecsdb.com/api</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.5</priority>
-    </url>
-    <url>
-        <loc>https://computespecsdb.com/docs</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.5</priority>
-    </url>
-</urlset>
-"""
+    paths = [*SITEMAP_PAGES, *pages.sitemap_paths(db)]
+    urls = "".join(f"  <url><loc>{SITE_URL}{path}</loc></url>\n" for path in paths)
+    content = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{urls}</urlset>\n"
+    )
     return Response(content=content, media_type="application/xml")
 
 
@@ -173,6 +226,7 @@ class CPUSpecResponse(BaseModel):
     launch_year: Optional[int] = None
     max_memory_tb: Optional[float] = None
     validated: bool = False
+    slug: str = Field(description="URL slug of the spec page: /cpu/{slug}")
 
     class Config:
         from_attributes = True
@@ -189,15 +243,16 @@ class GPUSpecResponse(BaseModel):
     memory_type: Optional[str] = None
     tdp_watts: Optional[int] = None
     validated: bool = False
+    slug: str = Field(description="URL slug of the spec page: /gpu/{slug}")
 
     class Config:
         from_attributes = True
 
 
 @app.get("/", response_class=HTMLResponse)
-async def root():
-    """Serve the public web interface"""
-    return serve_page("static/index.html")
+async def root(db: Session = Depends(get_db)):
+    """Serve the public web interface, with the first table page and browse links pre-rendered."""
+    return serve_page("static/index.html", fragments=pages.render_home_fragments(db))
 
 
 @app.get("/visualizations", response_class=HTMLResponse)
@@ -222,7 +277,7 @@ async def admin_panel():
     if ENVIRONMENT == "production" and not ENABLE_ADMIN_UI:
         raise HTTPException(status_code=404, detail="Not found")
 
-    return serve_page("static/admin.html")
+    return serve_page("static/admin.html", cache_control="no-store")
 
 
 @app.get("/api", response_class=JSONResponse)
@@ -244,6 +299,8 @@ async def api_info():
             "ask": "POST /api/ask",
             "propose_cpu": "POST /api/proposals/cpu",
             "propose_gpu": "POST /api/proposals/gpu",
+            "report_cpu_error": "POST /api/reports/cpu/{id}",
+            "report_gpu_error": "POST /api/reports/gpu/{id}",
             "docs": "/docs"
         },
         "notes": {
@@ -585,12 +642,17 @@ def _spec_label(kind: str) -> str:
 
 
 def _find_by_name(db: Session, kind: str, name: str, exclude_id: Optional[int] = None):
+    """An existing entry with the same name, or one whose spec page URL (/cpu/<slug>) would clash."""
     model = SPEC_MODELS[kind]
     column = getattr(model, csv_store.SCHEMAS[kind]["key_attr"])
-    query = db.query(model).filter(func.lower(column) == name.strip().lower())
+    query = db.query(model)
     if exclude_id is not None:
         query = query.filter(model.id != exclude_id)
-    return query.first()
+    same_name = query.filter(func.lower(column) == name.strip().lower()).first()
+    if same_name is not None:
+        return same_name
+    slug = model_slug(name)
+    return next((item for item in query if item.slug == slug), None)
 
 
 def _sync_csv(action):
@@ -864,6 +926,64 @@ def propose_cpu(request: Request, payload: CPUProposal, db: Session = Depends(ge
 def propose_gpu(request: Request, payload: GPUProposal, db: Session = Depends(get_db)):
     """Propose a new GPU. Creates a GitHub issue for the maintainer to review."""
     return _submit_proposal("gpu", payload, db)
+
+
+# ---------- Public data-error reports (stored as GitHub issues) ----------
+
+class DataErrorReport(BaseModel):
+    """Public request model for reporting a wrong value on a CPU or GPU page"""
+    field: str = Field(max_length=40, description="Attribute name of the wrong field, or 'other'")
+    suggested_value: str = Field(min_length=1, max_length=PROPOSAL_MAX_TEXT, description="The correct value")
+    source_url: Optional[HttpUrl] = None
+    notes: Optional[str] = Field(None, max_length=1000)
+    # Honeypot: hidden in the form, so only bots fill it in.
+    website: Optional[str] = None
+
+
+def _submit_report(kind: str, item_id: int, payload: DataErrorReport, db: Session) -> dict:
+    if payload.website:
+        raise HTTPException(status_code=400, detail="Invalid submission")
+    item = _get_spec_or_404(db, kind, item_id)
+    labels = dict(proposals.report_fields(kind))
+    if payload.field not in labels:
+        raise HTTPException(status_code=422, detail="Please choose which field is wrong")
+    suggested = " ".join(payload.suggested_value.split())
+    if not suggested:
+        raise HTTPException(status_code=422, detail="Please enter the correct value")
+    _require_github()
+
+    current = getattr(item, payload.field) if payload.field != proposals.REPORT_OTHER_FIELD else None
+    title, body = proposals.render_report(
+        kind,
+        getattr(item, csv_store.SCHEMAS[kind]["key_attr"]),
+        f"{SITE_URL}/{kind}/{item.slug}",
+        labels[payload.field],
+        current,
+        suggested,
+        str(payload.source_url) if payload.source_url else None,
+        (payload.notes or "").strip() or None,
+    )
+    try:
+        issue = github_client.create_issue(title, body, [proposals.REPORT_LABEL, kind])
+    except github_client.GitHubError:
+        logger.exception("Could not create data-error issue")
+        raise HTTPException(status_code=502, detail="Could not send the report right now. Please try again later.")
+
+    return {"issue_number": issue["number"], "issue_url": issue["html_url"]}
+
+
+@app.post("/api/reports/cpu/{cpu_id}", status_code=201)
+@limiter.limit("3/minute;30/day")
+def report_cpu_error(request: Request, cpu_id: int, payload: DataErrorReport, db: Session = Depends(get_db)):
+    """Report a wrong value for a CPU. Creates a GitHub issue; no GitHub account needed."""
+    return _submit_report("cpu", cpu_id, payload, db)
+
+
+@app.post("/api/reports/gpu/{gpu_id}", status_code=201)
+@limiter.limit("3/minute;30/day")
+def report_gpu_error(request: Request, gpu_id: int, payload: DataErrorReport, db: Session = Depends(get_db)):
+    """Report a wrong value for a GPU. Creates a GitHub issue; no GitHub account needed."""
+    return _submit_report("gpu", gpu_id, payload, db)
 
 
 def _load_open_proposal(number: int) -> tuple[dict, str, Optional[dict]]:

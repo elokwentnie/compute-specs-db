@@ -6,7 +6,9 @@
     <title>Compute Specs DB — HPC and Datacenter Hardware Specifications</title>
     <meta name="description" content="Search, compare, and export server-class CPU and GPU specifications. Covers Intel Xeon, AMD EPYC, NVIDIA, AMD Instinct, and more. Free public API and downloadable data.">
     <link rel="canonical" href="https://computespecsdb.com/">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" href="/static/images/server-logo.png">
+    <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
@@ -14,50 +16,95 @@
     <meta property="og:title" content="Compute Specs DB — HPC and Datacenter Hardware Specifications">
     <meta property="og:description" content="Search, compare, and export server-class CPU and GPU specifications. Covers Intel Xeon, AMD EPYC, NVIDIA, AMD Instinct, and more.">
     <meta property="og:url" content="https://computespecsdb.com/">
-    <meta property="og:image" content="https://computespecsdb.com/static/images/server-logo.png">
+    <meta property="og:image" content="https://computespecsdb.com/static/images/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Compute Specs DB: server CPU and GPU specifications">
 
     <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Compute Specs DB — HPC and Datacenter Hardware Specifications">
     <meta name="twitter:description" content="Search, compare, and export server-class CPU and GPU specifications. Free public API and downloadable data.">
+    <meta name="twitter:image" content="https://computespecsdb.com/static/images/og-image.png">
 
     <!-- Structured Data -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
         "@type": "WebSite",
+        "@id": "https://computespecsdb.com/#website",
         "name": "Compute Specs DB",
         "url": "https://computespecsdb.com/",
-        "description": "A public, searchable catalog of HPC and datacenter CPU specifications.",
-        "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://computespecsdb.com/?search={search_term_string}",
-            "query-input": "required name=search_term_string"
-        }
+        "description": "A public, searchable catalog of HPC and datacenter CPU and GPU specifications.",
+        "inLanguage": "en"
     }
     </script>
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
         "@type": "Dataset",
-        "name": "HPC and Datacenter CPU Specifications",
-        "description": "Specifications for server-class CPUs including Intel Xeon, AMD EPYC, and AMD Opteron processors. Each entry is marked as manually validated or not yet verified.",
+        "name": "HPC and Datacenter CPU and GPU Specifications",
+        "description": "Specifications for server-class CPUs and datacenter GPUs, including Intel Xeon, AMD EPYC, AMD Opteron, NVIDIA and AMD Instinct accelerators. CPU entries list cores, threads, max turbo frequency, L3 cache, TDP, launch year and maximum memory; GPU entries list vendor, form factor, memory size, memory type and TDP. Each entry is marked as manually validated against manufacturer sources or not yet verified.",
         "url": "https://computespecsdb.com/",
+        "sameAs": "https://github.com/elokwentnie/compute-specs-db",
         "license": "https://opensource.org/licenses/MIT",
+        "isAccessibleForFree": true,
+        "inLanguage": "en",
+        "keywords": [
+            "server CPU specifications",
+            "datacenter GPU specifications",
+            "HPC hardware",
+            "Intel Xeon",
+            "AMD EPYC",
+            "NVIDIA datacenter GPU",
+            "AMD Instinct",
+            "TDP",
+            "core count",
+            "L3 cache"
+        ],
+        "variableMeasured": [
+            "Cores",
+            "Threads",
+            "Max turbo frequency (GHz)",
+            "L3 cache (MB)",
+            "TDP (W)",
+            "Launch year",
+            "Max memory (TB)",
+            "GPU memory (GB)",
+            "GPU memory type",
+            "Form factor",
+            "Validated"
+        ],
         "creator": {
             "@type": "Organization",
-            "name": "Compute Specs DB"
+            "name": "Compute Specs DB",
+            "url": "https://computespecsdb.com/",
+            "sameAs": "https://github.com/elokwentnie/compute-specs-db"
         },
         "distribution": [
             {
                 "@type": "DataDownload",
-                "encodingFormat": "application/json",
-                "contentUrl": "https://computespecsdb.com/api/cpus"
+                "name": "CPU specifications (CSV)",
+                "encodingFormat": "text/csv",
+                "contentUrl": "https://computespecsdb.com/api/export/csv"
             },
             {
                 "@type": "DataDownload",
+                "name": "CPU specifications (Excel)",
+                "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "contentUrl": "https://computespecsdb.com/api/export/excel"
+            },
+            {
+                "@type": "DataDownload",
+                "name": "GPU specifications (CSV)",
                 "encodingFormat": "text/csv",
-                "contentUrl": "https://computespecsdb.com/api/export/csv"
+                "contentUrl": "https://computespecsdb.com/api/export/gpus/csv"
+            },
+            {
+                "@type": "DataDownload",
+                "name": "GPU specifications (Excel)",
+                "encodingFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "contentUrl": "https://computespecsdb.com/api/export/gpus/excel"
             }
         ]
     }
@@ -79,6 +126,7 @@
     <link rel="stylesheet" href="/static/css/common.css">
     <link rel="stylesheet" href="/static/css/index.css">
     <link rel="stylesheet" href="/static/css/ask.css">
+    <link rel="stylesheet" href="/static/css/pages.css">
 </head>
 <body>
     <div class="container">
@@ -165,7 +213,7 @@
                     <span id="validatedSummary"></span>
                 </div>
 
-                <div id="loading" class="loading">
+                <div id="loading" class="loading hidden">
                     <div class="spinner"></div>
                     <p>Loading data...</p>
                 </div>
@@ -175,7 +223,7 @@
                     <p id="errorMessage"></p>
                 </div>
 
-                <div id="tableContainer" class="hidden">
+                <div id="tableContainer">
                     <table id="cpuTable">
                     <thead id="cpuTableHead">
                         <tr>
@@ -207,7 +255,7 @@
                             <th class="sortable-gpu" data-sort="tdp_watts">TDP (W)</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody"></tbody>
+                    <tbody id="tableBody"><!--SSR:CPU_ROWS--></tbody>
                 </table>
             </div>
 
@@ -237,6 +285,8 @@
                 </div>
             </div>
         </div>
+
+        <!--SSR:BROWSE-->
         </main>
 
         <footer class="data-footer">
@@ -258,6 +308,8 @@
                 <span class="site-footer-brand">Compute Specs DB</span>
                 <nav class="site-footer-links">
                     <a href="/">Data Table</a>
+                    <a href="/cpus">CPUs</a>
+                    <a href="/gpus">GPUs</a>
                     <a href="/visualizations">Visualizations</a>
                     <a href="/docs" target="_blank">API Docs</a>
                     <a href="https://github.com/elokwentnie/compute-specs-db" target="_blank" rel="noopener">GitHub</a>
@@ -332,7 +384,7 @@
         const tableContainer = document.getElementById('tableContainer');
         const emptyState = document.getElementById('emptyState');
 
-        function switchDataTab(tab) {
+        function switchDataTab(tab, load = true) {
             activeTab = tab;
             currentData = [];
             currentSortColumn = null;
@@ -351,7 +403,8 @@
                 : 'Search by model, vendor, form factor, or memory type (e.g., H100, NVIDIA, HBM3)...';
 
             renderStats();
-            loadAllData();
+            syncUrl('');
+            if (load) loadAllData();
             bindSortHeaders();
         }
 
@@ -441,7 +494,7 @@
                         : '<span>-</span>';
                     row.innerHTML = `
                         <td>${cpu.id}</td>
-                        <td><strong>${esc(cpu.cpu_model_name || '-')}</strong></td>
+                        <td><strong><a class="model-link" href="/cpu/${encodeURIComponent(cpu.slug)}">${esc(cpu.cpu_model_name || '-')}</a></strong></td>
                         <td>${validatedPill(cpu.validated)}</td>
                         <td>${codenameBadge}</td>
                         <td>${esc(cpu.family || '-')}</td>
@@ -474,7 +527,7 @@
                         : '<span>-</span>';
                     row.innerHTML = `
                         <td>${gpu.id}</td>
-                        <td><strong>${esc(gpu.gpu_model_name || '-')}</strong></td>
+                        <td><strong><a class="model-link" href="/gpu/${encodeURIComponent(gpu.slug)}">${esc(gpu.gpu_model_name || '-')}</a></strong></td>
                         <td>${validatedPill(gpu.validated)}</td>
                         <td>${vendorBadge}</td>
                         <td>${esc(gpu.gpu_model || '-')}</td>
@@ -581,10 +634,19 @@
         }
 
         async function loadAllData() {
-            loadingDiv.classList.remove('hidden');
+            // Keep the server-rendered rows on screen instead of flashing a spinner over them.
+            if (tableContainer.classList.contains('hidden')) loadingDiv.classList.remove('hidden');
             const endpoint = activeTab === 'cpu' ? '/api/cpus?limit=1000' : '/api/gpus?limit=1000';
             const data = await fetchData(`${API_BASE}${endpoint}`);
             if (data) displayData(data);
+        }
+
+        function syncUrl(query) {
+            const params = new URLSearchParams();
+            if (activeTab === 'gpu') params.set('tab', 'gpu');
+            if (query && query.trim()) params.set('q', query.trim());
+            const search = params.toString();
+            history.replaceState(null, '', search ? `/?${search}` : '/');
         }
 
         async function searchData(query) {
@@ -592,6 +654,7 @@
                 clearTimeout(searchTimeout);
                 searchTimeout = null;
             }
+            syncUrl(query);
 
             if (!query || query.trim() === '') {
                 currentSortColumn = null;
@@ -684,9 +747,19 @@
         document.getElementById('pageSizeSelect').addEventListener('change', (e) => changePageSize(e.target.value));
 
         window.addEventListener('load', () => {
-            loadAllData();
+            const params = new URLSearchParams(window.location.search);
+            const initialQuery = params.get('q') || '';
             loadStats();
-            bindSortHeaders();
+            if (params.get('tab') === 'gpu') {
+                switchDataTab('gpu', !initialQuery);
+            } else {
+                bindSortHeaders();
+                if (!initialQuery) loadAllData();
+            }
+            if (initialQuery) {
+                searchInput.value = initialQuery;
+                searchData(initialQuery);
+            }
         });
     </script>
     <script src="/static/js/theme.js"></script>
