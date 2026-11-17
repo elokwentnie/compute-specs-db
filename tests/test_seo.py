@@ -1,3 +1,4 @@
+import html
 import json
 import re
 import xml.etree.ElementTree as ET
@@ -66,6 +67,8 @@ def test_sitemap_lists_every_page_and_only_pages(client):
         response = client.get(path)
         assert response.status_code == 200, path
         assert f'<link rel="canonical" href="https://computespecsdb.com{path}">' in response.text, path
+        description = html.unescape(re.search(r'<meta name="description" content="([^"]*)"', response.text).group(1))
+        assert 50 <= len(description) <= 160, (path, len(description))
 
 
 def test_favicon_is_a_real_icon(client):

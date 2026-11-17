@@ -181,17 +181,45 @@ def cpu_title(cpu: CPUSpec) -> str:
     return f"{cpu.name} Specs{': ' + facts if facts else ''}"
 
 
+DESCRIPTION_MAX = 160  # search engines cut longer snippets; Bing flags them
+
+
+def fit_description(*candidates: str) -> str:
+    """The first (most detailed) candidate that fits, else the last one cut at a word."""
+    for text in candidates:
+        if len(text) <= DESCRIPTION_MAX:
+            return text
+    return candidates[-1][:DESCRIPTION_MAX - 1].rsplit(" ", 1)[0] + "…"
+
+
+def memory_text(tb) -> str:
+    """'4 TB', or '144 GB' below one terabyte."""
+    if tb < 1:
+        return fmt(round(tb * 1000), " GB")
+    return fmt(tb, " TB")
+
+
 def cpu_description(cpu: CPUSpec) -> str:
+    cores = (f"{fmt(cpu.cores)} cores/{fmt(cpu.threads)} threads" if cpu.cores and cpu.threads
+             else fmt(cpu.cores, " cores") if cpu.cores else "")
+    turbo = fmt(cpu.max_turbo_frequency_ghz, " GHz turbo") if cpu.max_turbo_frequency_ghz else ""
+    cache = fmt(cpu.l3_cache_mb, " MB L3") if cpu.l3_cache_mb else ""
+    tdp = fmt(cpu.tdp_watts, " W TDP") if cpu.tdp_watts else ""
+    memory = f"up to {memory_text(cpu.max_memory_tb)} memory" if cpu.max_memory_tb else ""
     context = ", ".join(str(p) for p in (cpu.codename, cpu.launch_year) if p)
-    specs = ", ".join(s for s in (
-        f"{fmt(cpu.cores)} cores / {fmt(cpu.threads)} threads" if cpu.cores and cpu.threads else fmt(cpu.cores, " cores"),
-        f"up to {fmt(cpu.max_turbo_frequency_ghz)} GHz turbo" if cpu.max_turbo_frequency_ghz else "",
-        fmt(cpu.l3_cache_mb, " MB L3 cache") if cpu.l3_cache_mb else "",
-        fmt(cpu.tdp_watts, " W TDP") if cpu.tdp_watts else "",
-        f"up to {fmt(cpu.max_memory_tb)} TB memory" if cpu.max_memory_tb else "",
-    ) if s)
-    status = "Validated against manufacturer sources." if cpu.validated else "Not yet validated."
-    return f"{cpu.name}{' (' + context + ')' if context else ''} specifications: {specs}. {status}"
+    status = "Validated." if cpu.validated else "Not yet validated."
+
+    def build(spec_parts, extras):
+        specs = ", ".join(p for p in spec_parts if p)
+        text = f"{cpu.name} specs" + (f": {specs}." if specs else ".")
+        return " ".join([text, *(e for e in extras if e)])
+
+    return fit_description(
+        build((cores, turbo, cache, tdp, memory), (context + "." if context else "", status)),
+        build((cores, turbo, cache, tdp, memory), (context + "." if context else "",)),
+        build((cores, turbo, cache, tdp, memory), ()),
+        build((cores, cache, tdp), ()),
+    )
 
 
 def gpu_description(gpu: GPUSpec) -> str:
@@ -201,7 +229,8 @@ def gpu_description(gpu: GPUSpec) -> str:
         gpu.form_factor or "",
     ) if s)
     status = "Validated against manufacturer sources." if gpu.validated else "Not yet validated."
-    return f"{gpu.name} datacenter GPU specifications: {specs}. {status}"
+    lead = f"{gpu.name} datacenter GPU specifications" + (f": {specs}." if specs else ".")
+    return fit_description(f"{lead} {status}", lead)
 
 
 def similar_cpus(cpu: CPUSpec, cpus: List[CPUSpec], limit: int = 8) -> List[CPUSpec]:
