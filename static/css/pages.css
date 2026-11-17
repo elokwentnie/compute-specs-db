@@ -1,0 +1,395 @@
+/* ==========================================================================
+   Server-rendered spec and overview pages (/cpu/*, /cpus/*, /gpu/*, /gpus/*)
+   and the homepage "Browse the catalog" section.
+   ========================================================================== */
+
+/* ---------- Breadcrumbs (inside the coloured header) ---------- */
+.breadcrumbs ol {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 12px;
+    font-size: 0.9em;
+}
+
+.breadcrumbs li + li::before {
+    content: "›";
+    margin-right: 4px;
+    color: var(--text-header-subtle);
+}
+
+.breadcrumbs a,
+.breadcrumbs span {
+    color: var(--text-header-subtle);
+}
+
+.breadcrumbs a:hover {
+    color: var(--text-header);
+}
+
+header h1 {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+    /* Spec and overview pages only; the homepage keeps its own header size. */
+    body:has(.page-main) header h1 {
+        font-size: 1.6em;
+    }
+}
+
+/* ---------- Layout ---------- */
+.page-main {
+    padding: 30px;
+}
+
+.page-section + .page-section {
+    margin-top: 36px;
+}
+
+.page-main h2 {
+    font-size: 1.3em;
+    margin-bottom: 12px;
+}
+
+.page-main h3 {
+    font-size: 1.05em;
+    margin: 18px 0 8px;
+}
+
+.page-main a,
+.browse-section a {
+    color: var(--text-link);
+}
+
+.page-main a:hover,
+.browse-section a:hover {
+    color: var(--text-link-hover);
+}
+
+.lead {
+    font-size: 1.05em;
+    color: var(--text-secondary);
+    max-width: 75ch;
+    margin-bottom: 24px;
+}
+
+.spec-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+@media (max-width: 860px) {
+    .spec-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .page-main {
+        padding: 20px 16px;
+    }
+}
+
+/* ---------- Tables ---------- */
+.table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-wrap table thead {
+    position: static;
+}
+
+.spec-table {
+    width: 100%;
+}
+
+.spec-table caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+}
+
+.spec-table th {
+    width: 40%;
+    background: var(--bg-surface-raised);
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.spec-table td {
+    white-space: normal;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.spec-table td:first-child {
+    color: var(--text-primary);
+}
+
+.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+}
+
+.model-link {
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
+}
+
+.model-link:hover {
+    text-decoration-color: currentColor;
+}
+
+#tableBody .model-link {
+    color: inherit;
+}
+
+/* ---------- Side panel ---------- */
+.side-panel h2 {
+    font-size: 1.05em;
+    margin: 20px 0 8px;
+}
+
+.status-note {
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    background: var(--bg-surface-raised);
+    font-size: 0.95em;
+}
+
+.status-note.is-validated {
+    border-color: var(--success-border);
+    background: var(--success-bg);
+    color: var(--success-text);
+}
+
+.status-note.is-validated a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+.status-note p + p {
+    margin-top: 6px;
+}
+
+.plain-list {
+    list-style: none;
+}
+
+.plain-list li + li {
+    margin-top: 4px;
+}
+
+.more-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 12px;
+}
+
+/* ---------- Link lists (families, generations, vendors) ---------- */
+.link-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.link-list a {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg-surface-raised);
+    text-decoration: none;
+    font-size: 0.92em;
+}
+
+.link-list a:hover {
+    border-color: var(--accent);
+}
+
+.link-list .count {
+    color: var(--text-muted);
+    font-size: 0.85em;
+    margin-left: 2px;
+}
+
+/* ---------- Homepage browse section ---------- */
+.browse-section {
+    margin: 0 30px 30px;
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+}
+
+.browse-section h2 {
+    font-size: 1.25em;
+    margin-bottom: 8px;
+}
+
+.browse-section > p {
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.browse-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+}
+
+.browse-grid h3 {
+    font-size: 1em;
+    margin-bottom: 10px;
+}
+
+.browse-grid h4 {
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    margin: 12px 0 6px;
+}
+
+@media (max-width: 860px) {
+    .browse-section {
+        margin: 0 16px 20px;
+        padding: 16px;
+    }
+}
+
+/* ---------- "Report an error" form on spec pages ---------- */
+.report-box {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface-raised);
+    scroll-margin-top: 16px;
+}
+
+.report-box > summary {
+    cursor: pointer;
+    padding: 14px 18px;
+    font-weight: 600;
+    list-style-position: inside;
+}
+
+.report-box > summary:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 3px var(--focus-ring);
+    border-radius: var(--radius-md);
+}
+
+.report-form {
+    padding: 0 18px 18px;
+}
+
+.report-intro {
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px 20px;
+    margin-bottom: 16px;
+}
+
+.report-field.full {
+    grid-column: 1 / -1;
+}
+
+.report-form .field-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
+
+.report-form .required {
+    color: var(--error-text);
+}
+
+.report-form .optional {
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+
+.report-form textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    font: inherit;
+    font-size: 16px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    resize: vertical;
+}
+
+.report-form textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.report-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+}
+
+.report-actions .field-hint {
+    margin-top: 0;
+}
+
+/* Honeypot: kept out of view and out of the tab order. */
+.hp-field {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.report-result {
+    text-align: left;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+    border: 1px solid transparent;
+}
+
+.report-result.success {
+    background: var(--success-bg);
+    color: var(--success-text);
+    border-color: var(--success-border);
+}
+
+.report-result.error {
+    background: var(--error-bg);
+    color: var(--error-text);
+    border-color: var(--error-border);
+}
+
+.report-result a {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+}

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>Page not found — Compute Specs DB</title>
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <link rel="icon" type="image/png" href="/static/images/server-logo.png">
+    <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('compute-specs-theme');
+                if (t === 'light' || t === 'dark') {
+                    document.documentElement.setAttribute('data-theme', t);
+                } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (_) {}
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/theme.css">
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/propose.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button type="button" class="theme-toggle" aria-label="Toggle dark mode" title="Dark mode">
+                <span class="theme-toggle-icon">🌙</span>
+            </button>
+            <h1>Page not found</h1>
+            <p>This page doesn't exist or has moved.</p>
+            <a href="/" class="header-link">← Back to the data table</a>
+        </header>
+
+        <main>
+            <p class="propose-intro">
+                Compute Specs DB is a searchable catalog of server-class CPUs and GPUs.
+                Try one of these instead:
+            </p>
+            <ul>
+                <li><a href="/">Search CPU and GPU specifications</a></li>
+                <li><a href="/visualizations">Compare specs in charts</a></li>
+                <li><a href="/propose">Suggest a missing CPU or GPU</a></li>
+                <li><a href="/docs">API documentation</a></li>
+            </ul>
+        </main>
+    </div>
+
+    <footer class="site-footer">
+        <div class="site-footer-inner">
+            <div class="site-footer-top">
+                <span class="site-footer-brand">Compute Specs DB</span>
+                <nav class="site-footer-links">
+                    <a href="/">Data Table</a>
+                    <a href="/cpus">CPUs</a>
+                    <a href="/gpus">GPUs</a>
+                    <a href="/visualizations">Visualizations</a>
+                    <a href="/docs" target="_blank">API Docs</a>
+                    <a href="https://github.com/elokwentnie/compute-specs-db" target="_blank" rel="noopener">GitHub</a>
+                </nav>
+            </div>
+        </div>
+    </footer>
+    <script src="/static/js/theme.js"></script>
+</body>
+</html>

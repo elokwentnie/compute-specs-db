@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT))
 
 import github_client  # noqa: E402
 
-APP_MODULES = ("app", "database", "import_data", "llm", "auth", "csv_store", "proposals")
+APP_MODULES = ("app", "database", "import_data", "llm", "auth", "csv_store", "proposals", "pages")
 
 
 class FakeGitHub:

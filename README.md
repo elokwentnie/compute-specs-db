@@ -25,6 +25,7 @@ The API supports:
 - Accessing summary stats (including validated counts)
 - Exporting data (CSV/Excel)
 - Proposing new CPUs/GPUs (`POST /api/proposals/cpu|gpu`)
+- Reporting a wrong value (`POST /api/reports/cpu|gpu/{id}`)
 
 See the API docs link from the website.
 
@@ -47,6 +48,7 @@ Of course, it's possible I made a mistake, so if you find any inaccuracies, plea
 ```
 compute-specs-db/
 ├── app.py                      # FastAPI application
+├── pages.py                    # Server-rendered spec pages (/cpu/*, /cpus/*, /gpu/*, /gpus/*)
 ├── auth.py                     # JWT authentication helpers
 ├── database.py                 # SQLAlchemy models/config
 ├── import_data.py              # CSV import utility
@@ -64,8 +66,10 @@ compute-specs-db/
 │       ├── new-cpu-request.yml # Template for requesting new CPU entries
 │       ├── new-gpu-request.yml # Template for requesting new GPU entries
 │       └── report-data-error.yml # Template for reporting data errors
+├── templates/                  # Jinja2 templates for the spec and overview pages
 └── static/
     ├── index.html              # Public web interface
+    ├── 404.html                # Page-not-found page
     ├── propose.html            # Public "suggest a CPU/GPU" form
     ├── visualizations.html     # Charts and insights
     ├── admin.html              # Admin UI (protected)
@@ -145,7 +149,7 @@ Contributions are encouraged, especially:
 The easiest way is the **[Suggest a CPU/GPU](https://computespecsdb.com/propose)** form, which needs no GitHub account. You can also use the **[New CPU Request](https://github.com/elokwentnie/compute-specs-db/issues/new?template=new-cpu-request.yml)** or **[New GPU Request](https://github.com/elokwentnie/compute-specs-db/issues/new?template=new-gpu-request.yml)** issue templates. Fill in as many fields as you can and include a link to the official spec page or a trusted hardware database.
 
 ### Report a data error
-Use the **[Report Data Error](https://github.com/elokwentnie/compute-specs-db/issues/new?template=report-data-error.yml)** issue template. Specify which field is wrong, the current and correct values, and a source URL.
+Open the CPU or GPU's page on the website and use **Report an error in this data** below the spec table. No GitHub account is needed: the report is filed as a GitHub issue labelled `data-error`. You can also use the **[Report Data Error](https://github.com/elokwentnie/compute-specs-db/issues/new?template=report-data-error.yml)** issue template directly.
 
 ### Code contributions
 1. Fork the repository.

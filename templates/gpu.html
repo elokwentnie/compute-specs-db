@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "macros.html" import report_form, validated_pill, gpu_table, validation_note %}
+
+{% block heading %}{{ gpu.name }} specifications{% endblock %}
+{% block subheading %}<p>{{ [gpu.vendor, gpu.form_factor] | select | join(" · ") }}</p>{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <p class="lead">{{ sentences | join(" ") }}</p>
+
+    <div class="spec-layout">
+        <div class="table-wrap spec-table-wrap">
+            <table class="spec-table">
+                <caption>{{ gpu.name }} specifications</caption>
+                <tbody>
+                    <tr><th scope="row">Model</th><td>{{ gpu.name }}</td></tr>
+                    {% for label, value in specs %}
+                    <tr><th scope="row">{{ label }}</th><td>{% if label == "Vendor" and vendor_url %}<a href="{{ vendor_url }}">{{ value }}</a>{% else %}{{ value }}{% endif %}</td></tr>
+                    {% endfor %}
+                    <tr><th scope="row">Status</th><td>{{ validated_pill(gpu.validated) }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <aside class="side-panel">
+            {{ validation_note(gpu.validated) }}
+            <h2>Get this data</h2>
+            <ul class="plain-list">
+                <li><a href="/api/gpus/{{ gpu.id }}" target="_blank">JSON (API)</a></li>
+                <li><a href="/api/export/gpus/csv">All GPUs as CSV</a></li>
+                <li><a href="/?tab=gpu&amp;q={{ gpu.gpu_model | urlencode }}">Find in the data table</a></li>
+            </ul>
+        </aside>
+    </div>
+</section>
+
+{{ report_form(report, gpu.name) }}
+
+{% if similar %}
+<section class="page-section">
+    <h2>Similar GPUs</h2>
+    {{ gpu_table(similar) }}
+    <p class="more-links">
+        {% if vendor_url %}<a href="{{ vendor_url }}">All {{ gpu.vendor }} GPUs →</a>{% endif %}
+        <a href="/gpus">All datacenter GPUs →</a>
+    </p>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}<script src="/static/js/report.js?v={{ asset_version }}" defer></script>{% endblock %}

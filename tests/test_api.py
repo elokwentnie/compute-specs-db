@@ -2,7 +2,9 @@ import csv
 import re
 import difflib
 import io
+from pathlib import Path
 
+ROOT = Path(__file__).resolve().parent.parent
 CPU_PATH = "cpu_spec_validated.csv"
 GPU_PATH = "gpu_spec_validated.csv"
 
@@ -37,26 +39,37 @@ def proposal_payload(**overrides):
 
 # ---------- Validated read path ----------
 
+def csv_counts(path):
+    """(validated, unvalidated) row counts in a repo CSV, which the daily sync keeps changing."""
+    with open(ROOT / path, encoding="utf-8-sig", newline="") as f:
+        flags = [row["Validated"] == "True" for row in csv.DictReader(f)]
+    return sum(flags), len(flags) - sum(flags)
+
+
 def test_validated_exposed_in_api_and_stats(client):
+    cpu_valid, cpu_unvalid = csv_counts(CPU_PATH)
+    gpu_valid, gpu_unvalid = csv_counts(GPU_PATH)
+    assert cpu_valid and cpu_unvalid and gpu_valid and gpu_unvalid  # both states are exercised
+
     cpus = all_cpus(client)
-    assert len(cpus) == 428
+    assert len(cpus) == cpu_valid + cpu_unvalid
     assert all(isinstance(cpu["validated"], bool) for cpu in cpus)
-    assert len(all_cpus(client, validated="true")) == 212
-    assert len(all_cpus(client, validated="false")) == 216
+    assert len(all_cpus(client, validated="true")) == cpu_valid
+    assert len(all_cpus(client, validated="false")) == cpu_unvalid
 
     gpus = client.get("/api/gpus", params={"limit": 1000}).json()
-    assert len(gpus) == 35 and sum(g["validated"] for g in gpus) == 17
+    assert len(gpus) == gpu_valid + gpu_unvalid and sum(g["validated"] for g in gpus) == gpu_valid
     assert len(client.get("/api/gpus/search", params={"q": "NVIDIA", "validated": "true"}).json()) > 0
 
     stats = client.get("/api/stats").json()
-    assert (stats["validated_cpus"], stats["unvalidated_cpus"]) == (212, 216)
-    assert (stats["validated_gpus"], stats["unvalidated_gpus"]) == (17, 18)
+    assert (stats["validated_cpus"], stats["unvalidated_cpus"]) == (cpu_valid, cpu_unvalid)
+    assert (stats["validated_gpus"], stats["unvalidated_gpus"]) == (gpu_valid, gpu_unvalid)
 
 
 def test_exports_include_validated(client):
     text = client.get("/api/export/csv").text
     rows = list(csv.DictReader(io.StringIO(text), delimiter=";"))
-    assert sum(row["Validated"] == "True" for row in rows) == 212
+    assert sum(row["Validated"] == "True" for row in rows) == csv_counts(CPU_PATH)[0]
     gpu_text = client.get("/api/export/gpus/csv").text
     assert gpu_text.splitlines()[0].endswith(";Validated")
 

@@ -64,6 +64,41 @@ def render_issue(kind: str, data: dict[str, Any], source_url: str, notes: str | 
     return title, body
 
 
+REPORT_LABEL = "data-error"
+REPORT_OTHER_FIELD = "other"
+
+
+def report_fields(kind: str) -> list[tuple[str, str]]:
+    """(attr, label) pairs a visitor can report as wrong, ending with 'Other'."""
+    fields = [(attr, label) for attr, label in SCHEMAS[kind]["fields"] if attr != "validated"]
+    return [*fields, (REPORT_OTHER_FIELD, "Other / several fields")]
+
+
+def render_report(kind: str, name: str, page_url: str, field_label: str, current: Any,
+                  suggested: str, source_url: str | None, notes: str | None) -> tuple[str, str]:
+    """Return (title, body) for a data-error report sent from a spec page."""
+    schema = SCHEMAS[kind]
+    clean_name = " ".join(str(name).split())
+    title = f"[Data Error] {clean_name[:100]}: {field_label}"
+    lines = [
+        f"A data error was reported for this **{schema['label']}** via the website.",
+        "",
+        "| | |",
+        "| --- | --- |",
+        f"| {schema['label']} | {_inline(clean_name)} |",
+        f"| Page | {page_url} |",
+        f"| Field | {field_label} |",
+        f"| Current value | {_inline(current) if current not in (None, '') else '—'} |",
+        f"| Suggested value | {_inline(suggested)} |",
+        f"| Source | {_inline(source_url) if source_url else '—'} |",
+        "",
+    ]
+    if notes:
+        lines += ["**Notes:**", "", "```text", notes.replace("```", "'''"), "```", ""]
+    lines.append("_Fix the entry in the admin panel if the report is correct, then close this issue._")
+    return title, "\n".join(lines) + "\n"
+
+
 def parse_issue(issue: dict[str, Any]) -> dict[str, Any] | None:
     """Extract the proposal payload from an issue, or None if it has none."""
     match = _DATA_BLOCK.search(issue.get("body") or "")

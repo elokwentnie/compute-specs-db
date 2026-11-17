@@ -8,6 +8,8 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, i
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
+from utils import display_name, model_slug
+
 SQLALCHEMY_DATABASE_URL = "sqlite:///./cpu_database.db"
 
 engine = create_engine(
@@ -37,6 +39,14 @@ class CPUSpec(Base):
     max_memory_tb = Column(Float)
     validated = Column(Boolean, nullable=False, default=False, index=True)
 
+    @property
+    def name(self) -> str:
+        return display_name(self.cpu_model_name)
+
+    @property
+    def slug(self) -> str:
+        return model_slug(self.cpu_model_name)
+
 
 class GPUSpec(Base):
     """GPU specification database model"""
@@ -51,6 +61,14 @@ class GPUSpec(Base):
     memory_type = Column(String)
     tdp_watts = Column(Integer)
     validated = Column(Boolean, nullable=False, default=False, index=True)
+
+    @property
+    def name(self) -> str:
+        return display_name(self.gpu_model_name)
+
+    @property
+    def slug(self) -> str:
+        return model_slug(self.gpu_model_name)
 
 
 def _add_missing_validated_columns():

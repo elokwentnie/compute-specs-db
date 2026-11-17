@@ -1,0 +1,17 @@
+{% for cpu in cpus %}
+<tr>
+    <td>{{ cpu.id }}</td>
+    <td><strong><a class="model-link" href="/cpu/{{ cpu.slug }}">{{ cpu.cpu_model_name or "-" }}</a></strong></td>
+    <td>{% if cpu.validated %}<span class="validated-pill is-validated" title="Checked against official sources">✓</span>{% else %}<span class="validated-pill is-unverified" title="Not yet checked against official sources">✘</span>{% endif %}</td>
+    <td>{% if cpu.codename %}<span class="codename-badge" data-codename="{{ cpu.codename }}">{{ cpu.codename }}</span>{% else %}<span>-</span>{% endif %}</td>
+    <td>{{ cpu.family or "-" }}</td>
+    <td>{{ cpu.cpu_model or "-" }}</td>
+    <td>{{ cpu.cores if cpu.cores is not none else "-" }}</td>
+    <td>{{ cpu.threads if cpu.threads is not none else "-" }}</td>
+    <td>{{ cpu.max_turbo_frequency_ghz if cpu.max_turbo_frequency_ghz is not none else "-" }}</td>
+    <td>{{ cpu.l3_cache_mb if cpu.l3_cache_mb is not none else "-" }}</td>
+    <td>{{ cpu.tdp_watts if cpu.tdp_watts is not none else "-" }}</td>
+    <td>{{ cpu.launch_year if cpu.launch_year is not none else "-" }}</td>
+    <td>{{ cpu.max_memory_tb if cpu.max_memory_tb is not none else "-" }}</td>
+</tr>
+{% endfor %}

@@ -1,0 +1,135 @@
+{% macro validated_pill(validated) -%}
+{% if validated %}<span class="validated-pill is-validated" title="Checked against official sources">✓ Validated</span>{% else %}<span class="validated-pill is-unverified" title="Not yet checked against official sources">Unverified</span>{% endif %}
+{%- endmacro %}
+
+{% macro cpu_table(cpus, show_column="codename") -%}
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th scope="col">Model</th>
+                <th scope="col">{{ "Family" if show_column == "family" else "Generation" }}</th>
+                <th scope="col">Cores</th>
+                <th scope="col">Threads</th>
+                <th scope="col">Turbo GHz</th>
+                <th scope="col">L3 MB</th>
+                <th scope="col">TDP (W)</th>
+                <th scope="col">Year</th>
+                <th scope="col">Mem TB</th>
+                <th scope="col">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cpu in cpus %}
+            <tr>
+                <td><a class="model-link" href="/cpu/{{ cpu.slug }}">{{ cpu.name }}</a></td>
+                <td>{{ (cpu.family if show_column == "family" else cpu.codename) or "-" }}</td>
+                <td>{{ cpu.cores | fmt or "-" }}</td>
+                <td>{{ cpu.threads | fmt or "-" }}</td>
+                <td>{{ cpu.max_turbo_frequency_ghz | fmt or "-" }}</td>
+                <td>{{ cpu.l3_cache_mb | fmt or "-" }}</td>
+                <td>{{ cpu.tdp_watts | fmt or "-" }}</td>
+                <td>{{ cpu.launch_year | fmt or "-" }}</td>
+                <td>{{ cpu.max_memory_tb | fmt or "-" }}</td>
+                <td>{{ validated_pill(cpu.validated) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{%- endmacro %}
+
+{% macro gpu_table(gpus) -%}
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th scope="col">Model</th>
+                <th scope="col">Vendor</th>
+                <th scope="col">Form factor</th>
+                <th scope="col">Memory (GB)</th>
+                <th scope="col">Memory type</th>
+                <th scope="col">TDP (W)</th>
+                <th scope="col">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gpu in gpus %}
+            <tr>
+                <td><a class="model-link" href="/gpu/{{ gpu.slug }}">{{ gpu.name }}</a></td>
+                <td>{{ gpu.vendor or "-" }}</td>
+                <td>{{ gpu.form_factor or "-" }}</td>
+                <td>{{ gpu.memory_gb | fmt or "-" }}</td>
+                <td>{{ gpu.memory_type or "-" }}</td>
+                <td>{{ gpu.tdp_watts | fmt or "-" }}</td>
+                <td>{{ validated_pill(gpu.validated) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{%- endmacro %}
+
+{% macro link_list(links) -%}
+<ul class="link-list">
+    {% for link in links %}
+    <li><a href="{{ link.url }}">{{ link.label }}</a>{% if link.count %} <span class="count">{{ link.count }}</span>{% endif %}</li>
+    {% endfor %}
+</ul>
+{%- endmacro %}
+
+{% macro validation_note(validated) -%}
+<div class="status-note {{ 'is-validated' if validated else 'is-unverified' }}">
+    {% if validated %}
+    <p><strong>Validated.</strong> These specifications have been checked against official manufacturer sources and trusted hardware databases.</p>
+    {% else %}
+    <p><strong>Not yet validated.</strong> These specifications have not been checked against official sources yet, so treat them with care.</p>
+    {% endif %}
+    <p>Spotted an error? <a href="#report" data-open-report>Report it here</a>, no account needed.</p>
+</div>
+{%- endmacro %}
+
+{% macro report_form(report, name) -%}
+<section class="page-section">
+    <details id="report" class="report-box">
+        <summary>Report an error in this data</summary>
+        <form class="report-form" data-endpoint="{{ report.endpoint }}" data-fallback="{{ report.fallback_url }}" novalidate>
+            <p class="report-intro">Tell us which value is wrong for {{ name }} and we'll check it. No account needed.</p>
+            <div class="report-grid">
+                <div class="report-field">
+                    <label for="report-field">Which value is wrong? <span class="required">*</span></label>
+                    <select id="report-field" name="field" required>
+                        <option value="">Choose a field…</option>
+                        {% for field in report.fields %}
+                        <option value="{{ field.attr }}" data-current="{{ field.current }}">{{ field.label }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="field-hint" data-current-hint></span>
+                </div>
+                <div class="report-field">
+                    <label for="report-value">Correct value <span class="required">*</span></label>
+                    <input type="text" id="report-value" name="suggested_value" maxlength="200" required autocomplete="off">
+                </div>
+                <div class="report-field full">
+                    <label for="report-source">Source <span class="optional">(optional)</span></label>
+                    <input type="url" id="report-source" name="source_url" maxlength="2000" placeholder="https://…" inputmode="url">
+                    <span class="field-hint">A manufacturer spec page or trusted database helps us fix it faster.</span>
+                </div>
+                <div class="report-field full">
+                    <label for="report-notes">Notes <span class="optional">(optional)</span></label>
+                    <textarea id="report-notes" name="notes" maxlength="1000" rows="3"></textarea>
+                </div>
+                <div class="hp-field" aria-hidden="true">
+                    <label for="report-website">Leave this field empty</label>
+                    <input type="text" id="report-website" name="website" tabindex="-1" autocomplete="off">
+                </div>
+            </div>
+            <div class="report-result" role="status" aria-live="polite" hidden></div>
+            <div class="report-actions">
+                <button type="submit">Send report</button>
+                <span class="field-hint">Reports are published on our public issue tracker, so please don't include personal information.</span>
+            </div>
+        </form>
+    </details>
+</section>
+{%- endmacro %}

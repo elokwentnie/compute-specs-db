@@ -6,20 +6,26 @@
     <title>Visualizations — Compute Specs DB</title>
     <meta name="description" content="Interactive charts and comparisons of server CPU and GPU performance metrics. Compare Intel Xeon vs AMD EPYC, NVIDIA vs AMD GPUs by cores, frequency, TDP, memory, and more.">
     <link rel="canonical" href="https://computespecsdb.com/visualizations">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" href="/static/images/server-logo.png">
+    <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Compute Specs DB">
-    <meta property="og:title" content="CPU Visualizations — Compute Specs DB">
-    <meta property="og:description" content="Interactive charts and comparisons of server CPU performance metrics. Compare Intel Xeon vs AMD EPYC by cores, frequency, TDP, and more.">
+    <meta property="og:title" content="Visualizations — Compute Specs DB">
+    <meta property="og:description" content="Interactive charts and comparisons of server CPU and GPU specs. Compare Intel Xeon vs AMD EPYC and NVIDIA vs AMD GPUs by cores, frequency, TDP, memory, and more.">
     <meta property="og:url" content="https://computespecsdb.com/visualizations">
-    <meta property="og:image" content="https://computespecsdb.com/static/images/server-logo.png">
+    <meta property="og:image" content="https://computespecsdb.com/static/images/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Compute Specs DB: server CPU and GPU specifications">
 
     <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="CPU Visualizations — Compute Specs DB">
-    <meta name="twitter:description" content="Interactive charts and comparisons of server CPU performance metrics.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Visualizations — Compute Specs DB">
+    <meta name="twitter:description" content="Interactive charts and comparisons of server CPU and GPU specs.">
+    <meta name="twitter:image" content="https://computespecsdb.com/static/images/og-image.png">
 
     <script>
         (function () {
@@ -33,7 +39,8 @@
             } catch (_) {}
         })();
     </script>
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="preconnect" href="https://cdn.plot.ly" crossorigin>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" defer></script>
     <link rel="stylesheet" href="/static/css/theme.css">
     <link rel="stylesheet" href="/static/css/common.css">
     <link rel="stylesheet" href="/static/css/visualizations.css">
@@ -217,6 +224,8 @@
                 <span class="site-footer-brand">Compute Specs DB</span>
                 <nav class="site-footer-links">
                     <a href="/">Data Table</a>
+                    <a href="/cpus">CPUs</a>
+                    <a href="/gpus">GPUs</a>
                     <a href="/visualizations">Visualizations</a>
                     <a href="/docs" target="_blank">API Docs</a>
                     <a href="https://github.com/elokwentnie/compute-specs-db" target="_blank" rel="noopener">GitHub</a>
@@ -818,8 +827,11 @@
             loadData();
         });
 
-        populateAxisSelectors();
-        loadData();
+        // Plotly is loaded with defer; deferred scripts finish before DOMContentLoaded.
+        document.addEventListener('DOMContentLoaded', () => {
+            populateAxisSelectors();
+            loadData();
+        });
 
         window.addEventListener('themechange', () => {
             if (document.getElementById('chart').children.length > 0) updateChart();
