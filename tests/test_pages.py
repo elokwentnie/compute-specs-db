@@ -38,6 +38,8 @@ def test_cpu_page(client):
     assert '<a href="/cpus/codename/sapphire-rapids">Sapphire Rapids</a>' in html
     assert '<a href="/cpus/intel-xeon-platinum">Intel Xeon Platinum</a>' in html
     assert "Similar processors" in html and html.count('href="/cpu/') >= 5
+    assert ('<meta name="description" content="Intel Xeon Platinum 8480+ specs: 56 cores/112 threads, 3.8 GHz turbo, '
+            '105 MB L3, 350 W TDP, up to 4 TB memory. Sapphire Rapids, 2023. Validated.">') in html
 
     breadcrumbs = json_ld(html)[0]
     assert breadcrumbs["@type"] == "BreadcrumbList"
