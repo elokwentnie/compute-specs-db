@@ -232,7 +232,7 @@ Intel(R) Xeon(R) CPU E5-2643 @ 3.30,Intel Xeon E5/E3,E5-2643 0,Sandy Bridge-EP,4
 AMD EPYC 73F3 16-Core Processor,AMD EPYC,EPYC 73F3,Milan,16,32,4.0,256,240,2021,4.0,True
 Intel(R) Xeon(R) CPU L5420 @ 2.50,Intel Xeon 5400,L5420,Harpertown,4,4,2.5,0,50,2008,,True
 Intel(R) Xeon(R) Gold 5215L CPU @ 2.50,Intel Xeon Gold,Gold 5215L,Cascade Lake,10,20,3.4,13.75,85,2019,4.5,True
-Intel(R) Xeon(R) CPU D-1541 @ 2.10,Intel Xeon D,D-1541,Broadwell-DE,8,16,2.7,12,45,2015,0.128,False
+Intel(R) Xeon(R) CPU D-1541 @ 2.10,Intel Xeon D,D-1541,Broadwell-DE,8,16,2.7,12,45,2015,0.128,True
 Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70,Intel Xeon E5/E3,E5-2697 v2,Ivy Bridge-EP,12,24,3.5,30,130,2013,0.768,False
 Intel(R) Xeon(R) Gold 6242R CPU @ 3.10,Intel Xeon Gold,Gold 6242R,Cascade Lake,20,40,4.1,35.75,205,2020,1.0,False
 AMD EPYC 9J14 96-Core Processor,AMD EPYC,EPYC 9J14,Genoa,96,192,3.7,384,360,2023,6.0,False
