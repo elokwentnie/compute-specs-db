@@ -312,7 +312,7 @@ Intel(R) Xeon(R) Silver 4316 CPU @ 2.30,Intel Xeon Silver,Silver 4316,Ice Lake,2
 Intel(R) Xeon(R) Bronze 3408U,Intel Xeon Bronze,Bronze 3408U,Sapphire Rapids,8,8,1.9,22.5,125,2023,4.0,True
 Intel(R) Xeon(R) Bronze 3508U,Intel Xeon Bronze,Bronze 3508U,Sapphire Rapids,8,8,2.2,22.5,125,2023,4.0,True
 Intel(R) Xeon(R) Gold 5411N,Intel Xeon Gold,Gold 5411N,Sapphire Rapids,24,48,3.9,45,165,2023,4.0,True
-Intel(R) Xeon(R) Gold 5412U,Intel Xeon Gold,Gold 5412U,Sapphire Rapids,24,48,3.9,45,185,2023,4.0,False
+Intel(R) Xeon(R) Gold 5412U,Intel Xeon Gold,Gold 5412U,Sapphire Rapids,24,48,3.9,45,185,2023,4.0,True
 Intel(R) Xeon(R) Gold 5415+,Intel Xeon Gold,Gold 5415+,Sapphire Rapids,8,16,4.1,22.5,150,2023,4.0,False
 Intel(R) Xeon(R) Gold 5416S,Intel Xeon Gold,Gold 5416S,Sapphire Rapids,16,32,4,30,150,2023,4.0,False
 Intel(R) Xeon(R) Gold 5418N,Intel Xeon Gold,Gold 5418N,Sapphire Rapids,24,48,3.8,45,165,2023,4.0,False
