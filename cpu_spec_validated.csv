@@ -308,7 +308,7 @@ Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30,Intel Xeon Platinum,Platinum 8380,Ice 
 Intel(R) Xeon(R) Silver 4309Y CPU @ 2.80,Intel Xeon Silver,Silver 4309Y,Ice Lake,8,16,3.6,12,105,2021,6.0,False
 Intel(R) Xeon(R) Silver 4310 CPU @ 2.10,Intel Xeon Silver,Silver 4310,Ice Lake,12,24,3.3,18,120,2021,6.0,True
 Intel(R) Xeon(R) Silver 4310T CPU @ 2.30,Intel Xeon Silver,Silver 4310T,Ice Lake,10,20,3.4,15,105,2021,6.0,True
-Intel(R) Xeon(R) Silver 4316 CPU @ 2.30,Intel Xeon Silver,Silver 4316,Ice Lake,20,40,3.4,30,150,2021,6.0,False
+Intel(R) Xeon(R) Silver 4316 CPU @ 2.30,Intel Xeon Silver,Silver 4316,Ice Lake,20,40,3.4,30,150,2021,6.0,True
 Intel(R) Xeon(R) Bronze 3408U,Intel Xeon Bronze,Bronze 3408U,Sapphire Rapids,8,8,1.9,22.5,125,2023,4.0,False
 Intel(R) Xeon(R) Bronze 3508U,Intel Xeon Bronze,Bronze 3508U,Sapphire Rapids,8,8,2.2,22.5,125,2023,4.0,False
 Intel(R) Xeon(R) Gold 5411N,Intel Xeon Gold,Gold 5411N,Sapphire Rapids,24,48,3.9,45,165,2023,4.0,False
