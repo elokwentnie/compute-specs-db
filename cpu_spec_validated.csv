@@ -298,7 +298,7 @@ Intel(R) Xeon(R) Gold 6338T CPU @ 2.10,Intel Xeon Gold,Gold 6338T,Ice Lake,24,48
 Intel(R) Xeon(R) Gold 6346 CPU @ 3.10,Intel Xeon Gold,Gold 6346,Ice Lake,16,32,3.6,36,205,2021,6.0,True
 Intel(R) Xeon(R) Gold 6348 CPU @ 2.60,Intel Xeon Gold,Gold 6348,Ice Lake,28,56,3.5,42,235,2021,6.0,True
 Intel(R) Xeon(R) Platinum 8351N CPU @ 2.40,Intel Xeon Platinum,Platinum 8351N,Ice Lake,36,72,3.5,54,225,2021,6.0,True
-Intel(R) Xeon(R) Platinum 8352M CPU @ 2.30,Intel Xeon Platinum,Platinum 8352M,Ice Lake,32,64,3.5,48,185,2021,6.0,False
+Intel(R) Xeon(R) Platinum 8352M CPU @ 2.30,Intel Xeon Platinum,Platinum 8352M,Ice Lake,32,64,3.5,48,185,2021,6.0,True
 Intel(R) Xeon(R) Platinum 8352S CPU @ 2.20,Intel Xeon Platinum,Platinum 8352S,Ice Lake,32,64,3.4,48,205,2021,6.0,False
 Intel(R) Xeon(R) Platinum 8352V CPU @ 2.10,Intel Xeon Platinum,Platinum 8352V,Ice Lake,36,72,3.5,54,195,2021,6.0,False
 Intel(R) Xeon(R) Platinum 8358 CPU @ 2.60,Intel Xeon Platinum,Platinum 8358,Ice Lake,32,64,3.4,48,250,2021,6.0,False
