@@ -227,7 +227,7 @@ AMD EPYC 7232P 8-Core Processor,AMD EPYC,EPYC 7232P,Rome,8,16,3.2,32,120,2019,4.
 Intel(R) Xeon(R) Gold 6526Y,Intel Xeon Gold,Gold 6526Y,Emerald Rapids,16,32,3.9,37.5,195,2023,4.0,True
 Intel(R) Xeon(R) CPU E5540 @ 2.53,Intel Xeon E5/E3,E5540,Gainestown,4,8,2.8,8,80,2009,0.1,False
 Intel(R) Xeon(R) CPU L5520 @ 2.27,Intel Xeon 5600,L5520,Gainestown,4,8,2.5,8,60,2009,0.1,False
-Intel(R) Xeon(R) CPU E5-2650 @ 2.00,Intel Xeon E5/E3,E5-2650 0,Sandy Bridge-EP,8,16,2.8,20,95,2012,0.384,False
+Intel(R) Xeon(R) CPU E5-2650 @ 2.00,Intel Xeon E5/E3,E5-2650 0,Sandy Bridge-EP,8,16,2.8,20,95,2012,0.384,True
 Intel(R) Xeon(R) CPU E5-2643 @ 3.30,Intel Xeon E5/E3,E5-2643 0,Sandy Bridge-EP,4,8,3.5,10,130,2012,0.384,False
 AMD EPYC 73F3 16-Core Processor,AMD EPYC,EPYC 73F3,Milan,16,32,4.0,256,240,2021,4.0,False
 Intel(R) Xeon(R) CPU L5420 @ 2.50,Intel Xeon 5400,L5420,Harpertown,4,4,2.5,0,50,2008,not specified,False
