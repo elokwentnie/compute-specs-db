@@ -322,7 +322,7 @@ Intel(R) Xeon(R) Gold 6416H,Intel Xeon Gold,Gold 6416H,Sapphire Rapids,18,36,4.2
 Intel(R) Xeon(R) Gold 6418H,Intel Xeon Gold,Gold 6418H,Sapphire Rapids,24,48,4,60,185,2023,4.0,True
 Intel(R) Xeon(R) Gold 6421N,Intel Xeon Gold,Gold 6421N,Sapphire Rapids,32,64,3.6,60,185,2023,4.0,True
 Intel(R) Xeon(R) Gold 6426Y,Intel Xeon Gold,Gold 6426Y,Sapphire Rapids,16,32,4.1,37.5,185,2023,4.0,True
-Intel(R) Xeon(R) Gold 6428N,Intel Xeon Gold,Gold 6428N,Sapphire Rapids,32,64,3.8,60,185,2023,4.0,False
+Intel(R) Xeon(R) Gold 6428N,Intel Xeon Gold,Gold 6428N,Sapphire Rapids,32,64,3.8,60,185,2023,4.0,True
 Intel(R) Xeon(R) Gold 6434,Intel Xeon Gold,Gold 6434,Sapphire Rapids,8,16,4.1,22.5,195,2023,4.0,False
 Intel(R) Xeon(R) Gold 6434H,Intel Xeon Gold,Gold 6434H,Sapphire Rapids,8,16,4.1,22.5,195,2023,4.0,False
 Intel(R) Xeon(R) Gold 6438M,Intel Xeon Gold,Gold 6438M,Sapphire Rapids,32,64,3.9,60,205,2023,4.0,False
