@@ -216,7 +216,7 @@ Intel(R) Xeon(R) Platinum 8174 CPU @ 3.10,Intel Xeon Platinum,Platinum 8174,Skyl
 Intel(R) Xeon(R) Platinum 8280 CPU @ 2.70,Intel Xeon Platinum,Platinum 8280,Cascade Lake,28,56,4.0,38.5,205,2019,1.0,True
 Intel(R) Xeon(R) Platinum 8276 CPU @ 2.20,Intel Xeon Platinum,Platinum 8276,Cascade Lake,28,56,4.0,38.5,165,2019,1.0,True
 Intel(R) Xeon(R) Gold 6542Y,Intel Xeon Gold,Gold 6542Y,Emerald Rapids,24,48,4.1,60,250,2023,4.0,True
-Intel(R) Xeon(R) Platinum 8260 CPU @ 2.40,Intel Xeon Platinum,Platinum 8260,Cascade Lake,24,48,3.9,35.75,165,2019,1.0,False
+Intel(R) Xeon(R) Platinum 8260 CPU @ 2.40,Intel Xeon Platinum,Platinum 8260,Cascade Lake,24,48,3.9,35.75,165,2019,1.0,True
 AMD EPYC 7343 16-Core Processor,AMD EPYC,EPYC 7343,Milan,16,32,3.9,128,190,2021,4.0,False
 AMD EPYC 7502P 32-Core Processor,AMD EPYC,EPYC 7502P,Rome,32,64,3.35,128,180,2019,4.0,False
 AMD EPYC 7601 32-Core Processor,AMD EPYC,EPYC 7601,Naples,32,64,3.2,64,180,2017,2.0,False
