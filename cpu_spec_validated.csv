@@ -426,4 +426,4 @@ Intel(R) Xeon(R) 6766E,Intel Xeon 6,Xeon 6766E,Sierra Forest,144,144,2.7,108,250
 Intel(R) Xeon(R) 6780E,Intel Xeon 6,Xeon 6780E,Sierra Forest,144,144,3,108,330,2024,4.0,True
 Ampere(R) Altra(R) Processor Q80-30,Ampere Altra,Altra Q80-30,Quicksilver,80,80,3.0,32,210,2020,4.0,True
 Ampere(R) Altra(R) Max Processor M128-30,Ampere Altra Max,Altra Max M128-30,Mystique,128,128,3.0,16,250,2021,4.0,True
-NVIDIA Grace CPU,NVIDIA Grace,Grace,Grace,72,72,3.3,117,250,2023,0.48,False
+NVIDIA Grace CPU C1,NVIDIA Grace,Grace,Grace,72,72,3.1,114,250,2023,0.24,True
