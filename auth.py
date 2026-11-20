@@ -1,8 +1,4 @@
-"""
-Authentication module for Compute Specs DB API
-
-Provides token-based authentication using JWT tokens and Bearer token authentication.
-"""
+"""JWT authentication for the admin API."""
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -26,7 +22,15 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    """Create a JWT access token"""
+    """Create a signed JWT.
+
+    Args:
+        data: Claims to include.
+        expires_delta: Lifetime; defaults to ACCESS_TOKEN_EXPIRE_MINUTES.
+
+    Returns:
+        The encoded token.
+    """
     to_encode = data.copy()
 
     if expires_delta:
@@ -40,7 +44,14 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Verify authentication token"""
+    """Validate the Bearer token from the request.
+
+    Returns:
+        The token string.
+
+    Raises:
+        HTTPException: 401 if the token is invalid or expired.
+    """
     token = credentials.credentials
 
     try:
@@ -55,5 +66,5 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
 
 
 def get_current_user(token: str = Depends(verify_token)):
-    """Get current authenticated user"""
+    """FastAPI dependency that requires a valid token."""
     return {"token": token, "authenticated": True}

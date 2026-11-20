@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "macros.html" import cpu_table, link_list %}
 
-{% block subheading %}<p>{{ summary.count }} models{% if summary.years %} · {{ summary.years }}{% endif %}</p>{% endblock %}
+{% block subheading %}<p>{{ summary.count }} model{{ "s" if summary.count != 1 }}{% if summary.years %} · {{ summary.years }}{% endif %}</p>{% endblock %}
 
 {% block content %}
 <section class="page-section">
@@ -18,7 +18,7 @@
 </section>
 
 <section class="page-section">
-    <h2>All {{ group_label }} processors</h2>
+    <h2>{{ "All " if summary.count != 1 }}{{ group_label }} processor{{ "s" if summary.count != 1 }}</h2>
     {{ cpu_table(cpus, show_column) }}
 </section>
 {% endblock %}

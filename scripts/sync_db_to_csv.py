@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
-"""
-Pull the live Compute Specs DB export into the repo CSVs.
+"""Sync the live site's export into the repository CSVs.
 
-Used by .github/workflows/sync-data-csv.yml to open PRs when production
-data differs from the repo copy. The relevant GET /api/export/* endpoints
-are public; no auth.
-
-Select which dataset to sync via the ``DATASET`` env var (``cpu`` or
-``gpu``). ``CSV_PATH`` controls the destination file; ``API_BASE`` the
-upstream host.
+Run by .github/workflows/sync-data-csv.yml. Configured by the DATASET
+(``cpu`` or ``gpu``), CSV_PATH and API_BASE environment variables.
 """
 
 from __future__ import annotations
@@ -72,6 +66,11 @@ DATASETS: dict[str, dict] = {
 
 
 def get_dataset_config() -> dict:
+    """Return the settings for the dataset named by DATASET.
+
+    Raises:
+        ValueError: For an unknown dataset.
+    """
     name = os.environ.get("DATASET", "cpu").strip().lower()
     if name not in DATASETS:
         raise ValueError(
@@ -81,6 +80,7 @@ def get_dataset_config() -> dict:
 
 
 def fetch_export(export_path: str) -> bytes:
+    """Download a CSV export from the live API."""
     url = f"{API_BASE}{export_path}"
     response = requests.get(url, headers=REQUEST_HEADERS, timeout=120)
     if not response.ok:
@@ -99,7 +99,7 @@ def fetch_export(export_path: str) -> bytes:
 
 
 def existing_validated(path: str, sort_column: str) -> dict[str, bool]:
-    """Validated flags from the current repo CSV, keyed by model name."""
+    """Return the Validated flags in the current repo CSV, keyed by model name."""
     if not os.path.exists(path):
         return {}
     current = pd.read_csv(path, sep=None, engine="python", encoding="utf-8-sig")
@@ -115,6 +115,13 @@ def normalize_export(
     sort_column: str,
     previous_validated: dict[str, bool] | None = None,
 ) -> pd.DataFrame:
+    """Convert an export into the repository CSV layout.
+
+    Keeps the repo's Validated flags if the export has no Validated column.
+
+    Raises:
+        ValueError: If required columns are missing.
+    """
     df = pd.read_csv(BytesIO(raw), sep=";")
     if "ID" in df.columns:
         df = df.drop(columns=["ID"])
@@ -138,10 +145,12 @@ def normalize_export(
 
 def write_repo_csv(df: pd.DataFrame, path: str) -> None:
     # Match repo file: comma-separated with UTF-8 BOM (import_data accepts both , and ;)
+    """Write the CSV comma-separated with a UTF-8 BOM, like the repo file."""
     df.to_csv(path, index=False, sep=",", encoding="utf-8-sig")
 
 
 def main() -> int:
+    """Run the sync. Returns the process exit code."""
     try:
         cfg = get_dataset_config()
     except ValueError as exc:

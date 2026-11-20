@@ -126,12 +126,15 @@ button:disabled {
     background: #b91c1c;
 }
 
+/* Outlined: readable in both themes. */
 .btn-secondary {
-    background: var(--text-secondary);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-strong);
 }
 
 .btn-secondary:hover {
-    background: var(--border-strong);
+    background: var(--bg-table-row-hover);
 }
 
 /* ---------- Data footer ---------- */

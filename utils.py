@@ -1,15 +1,13 @@
-"""
-Utility functions for Compute Specs DB
-"""
+"""Shared helpers for names, slugs and CPU generations."""
 
 import re
 
 
 def display_name(model_name: str) -> str:
-    """Readable product name from a raw model string.
+    """Strip trademark symbols and suffixes from a model name.
 
-    "Intel(R) Xeon(R) Gold 6330 CPU @ 2.00" -> "Intel Xeon Gold 6330"
-    "AMD EPYC 9654 96-Core Processor"      -> "AMD EPYC 9654"
+    Example:
+        ``"Intel(R) Xeon(R) Gold 6330 CPU @ 2.00"`` -> ``"Intel Xeon Gold 6330"``
     """
     name = re.sub(r"\s*\((?:R|TM)\)", "", model_name or "", flags=re.IGNORECASE)
     name = re.sub(r"\s*@\s*[\d.]+\s*(?:GHz)?\s*$", "", name, flags=re.IGNORECASE)
@@ -19,31 +17,26 @@ def display_name(model_name: str) -> str:
 
 
 def slugify(text: str) -> str:
-    """URL slug: lowercase ASCII words joined by hyphens ("8480+" -> "8480-plus")."""
+    """Convert text to a URL slug, e.g. ``8480+`` -> ``8480-plus``."""
     text = (text or "").lower().replace("+", " plus")
     return re.sub(r"[^a-z0-9]+", "-", text).strip("-")
 
 
 def model_slug(model_name: str) -> str:
-    """Stable URL slug for a CPU or GPU, derived from its model name."""
+    """Return the URL slug for a CPU or GPU model name."""
     return slugify(display_name(model_name))
 
 
 def determine_cpu_generation(cpu_model: str, launch_year: int, family: str = None) -> str:
-    """
-    Determine CPU generation codename based on model number and launch year.
-    Supports both AMD EPYC and Intel Xeon processors.
-    
+    """Guess the generation codename of an AMD EPYC or Intel Xeon CPU.
+
     Args:
-        cpu_model: CPU model string (e.g., "EPYC 7301", "Gold 6240")
-        launch_year: Launch year (integer)
-        family: CPU family (e.g., "AMD EPYC", "Intel Xeon Gold")
-    
+        cpu_model: Model string, e.g. ``"EPYC 7301"`` or ``"Gold 6240"``.
+        launch_year: Launch year.
+        family: CPU family, e.g. ``"AMD EPYC"``.
+
     Returns:
-        Generation codename: 
-        - AMD: "Naples", "Rome", "Milan", "Genoa", "Bergamo", "Siena"
-        - Intel: "Skylake", "Cascade Lake", "Ice Lake", "Sapphire Rapids", "Emerald Rapids"
-        - Empty string if cannot determine
+        Codename such as ``"Rome"`` or ``"Sapphire Rapids"``, or ``""`` if unknown.
     """
     if not cpu_model or not launch_year:
         return ""
@@ -165,6 +158,6 @@ def determine_cpu_generation(cpu_model: str, launch_year: int, family: str = Non
 
 # Alias for backward compatibility
 def determine_epyc_generation(cpu_model: str, launch_year: int, family: str = None) -> str:
-    """Alias for determine_cpu_generation (backward compatibility)"""
+    """Deprecated alias of ``determine_cpu_generation``."""
     return determine_cpu_generation(cpu_model, launch_year, family)
 

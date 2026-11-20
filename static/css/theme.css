@@ -326,7 +326,6 @@ header p,
 [data-theme="dark"] .browse-description,
 [data-theme="dark"] .browse-status-text,
 [data-theme="dark"] .auth-description,
-[data-theme="dark"] .auth-note,
 [data-theme="dark"] .import-description,
 [data-theme="dark"] .import-option-hint {
     color: var(--text-secondary);

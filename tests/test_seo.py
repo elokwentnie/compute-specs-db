@@ -95,3 +95,43 @@ def test_structured_data_is_valid_and_downloads_exist(client):
     for download in dataset["distribution"]:
         url = download["contentUrl"].replace("https://computespecsdb.com", "")
         assert client.get(url).status_code == 200, url
+
+
+def page_title(html_text):
+    return html.unescape(re.search(r"<title>(.*?)</title>", html_text, re.S).group(1))
+
+
+def test_titles_are_unique_and_fit_in_search_results(client):
+    titles = {}
+    for path in sitemap_paths(client)[3:]:
+        title = page_title(client.get(path).text)
+        assert len(title) <= 60, (path, title)
+        assert title not in titles, (path, titles.get(title))
+        titles[title] = path
+    # Short titles keep the site name.
+    assert page_title(client.get("/gpus/amd").text) == "AMD Datacenter GPU List: Specs of All 9 Models"
+    assert page_title(client.get("/cpus/codename/genoa").text).endswith(" — Compute Specs DB")
+
+
+def test_codename_page_identical_to_a_family_page_points_to_it(client):
+    paths = sitemap_paths(client)
+    assert "/cpus/codename/grace" not in paths and "/cpus/nvidia-grace" in paths
+    duplicate = client.get("/cpus/codename/grace")
+    assert duplicate.status_code == 200
+    assert '<link rel="canonical" href="https://computespecsdb.com/cpus/nvidia-grace">' in duplicate.text
+    # A codename spanning several families keeps its own page.
+    assert "/cpus/codename/sapphire-rapids" in paths
+
+
+def test_one_model_groups_use_singular_wording(client):
+    for path in ("/cpus/nvidia-grace", "/gpus/intel"):
+        text = client.get(path).text
+        assert "1 models" not in text and "All 1 " not in text and "1 NVIDIA Grace processors" not in text, path
+    assert "Specifications of 1 NVIDIA Grace processor (" in client.get("/cpus/nvidia-grace").text
+
+
+def test_trailing_slash_redirect_is_permanent_and_relative(client):
+    response = client.get("/cpus/", follow_redirects=False)
+    assert response.status_code == 308
+    assert response.headers["location"] == "/cpus"
+    assert client.get("/cpus/").url.path == "/cpus"

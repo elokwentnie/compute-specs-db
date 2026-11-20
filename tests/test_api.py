@@ -98,6 +98,90 @@ def test_toggle_validated_commits_one_line(client, fake_github):
     assert client.get(f"/api/cpus/{cpu['id']}").json()["validated"] is False
 
 
+def test_batch_validated_is_one_commit(client, fake_github):
+    cpus = all_cpus(client, validated="false")[:3]
+    assert len(cpus) == 3
+    before = fake_github.files[CPU_PATH]
+    commits = len(fake_github.commits)
+
+    response = client.post(
+        "/api/cpus/batch",
+        json={"items": [{"id": c["id"], "changes": {"validated": True}} for c in cpus]},
+        headers=client.admin_headers,
+    )
+
+    assert response.status_code == 200
+    assert all(item["validated"] is True for item in response.json())
+    assert len(fake_github.commits) == commits + 1
+    message = fake_github.commits[-1]
+    subject = message.split("\n", 1)[0]
+    assert subject == "Mark 3 CPUs validated [skip render] [skip ci]"
+    assert all(c["cpu_model_name"] in message for c in cpus)
+    assert len(changed_lines(before, fake_github.files[CPU_PATH])) == 6
+    for c in cpus:
+        assert client.get(f"/api/cpus/{c['id']}").json()["validated"] is True
+
+
+def test_batch_mixed_edits(client, fake_github):
+    a, b = all_cpus(client)[:2]
+    response = client.post(
+        "/api/cpus/batch",
+        json={"items": [
+            {"id": a["id"], "changes": {"tdp_watts": 321}},
+            {"id": b["id"], "changes": {"validated": not b["validated"]}},
+        ]},
+        headers=client.admin_headers,
+    )
+    assert response.status_code == 200
+    assert fake_github.commits[-1].startswith("Update 2 CPUs [skip render]")
+    assert client.get(f"/api/cpus/{a['id']}").json()["tdp_watts"] == 321
+
+
+def test_batch_rejects_duplicate_names_without_commit(client, fake_github):
+    a, b, c = all_cpus(client)[:3]
+    commits = len(fake_github.commits)
+    response = client.post(
+        "/api/cpus/batch",
+        json={"items": [
+            {"id": a["id"], "changes": {"cpu_model_name": "Same New Name"}},
+            {"id": b["id"], "changes": {"cpu_model_name": "same new name"}},
+        ]},
+        headers=client.admin_headers,
+    )
+    assert response.status_code == 409
+    response = client.post(
+        "/api/cpus/batch",
+        json={"items": [{"id": a["id"], "changes": {"cpu_model_name": c["cpu_model_name"]}}]},
+        headers=client.admin_headers,
+    )
+    assert response.status_code == 409
+    assert len(fake_github.commits) == commits
+
+
+def test_batch_github_failure_leaves_database_unchanged(client, fake_github):
+    cpus = all_cpus(client, validated="false")[:2]
+    fake_github.fail = True
+    response = client.post(
+        "/api/cpus/batch",
+        json={"items": [{"id": c["id"], "changes": {"validated": True}} for c in cpus]},
+        headers=client.admin_headers,
+    )
+    assert response.status_code == 502
+    assert all(client.get(f"/api/cpus/{c['id']}").json()["validated"] is False for c in cpus)
+
+
+def test_batch_gpu_and_auth(client, fake_github):
+    assert client.post("/api/gpus/batch", json={"items": [{"id": 1, "changes": {"validated": True}}]}).status_code in (401, 403)
+    gpus = client.get("/api/gpus", params={"limit": 1000}).json()[:2]
+    response = client.post(
+        "/api/gpus/batch",
+        json={"items": [{"id": g["id"], "changes": {"validated": False}} for g in gpus]},
+        headers=client.admin_headers,
+    )
+    assert response.status_code == 200
+    assert all(item["validated"] is False for item in response.json())
+
+
 def test_edit_and_rename_gpu(client, fake_github):
     gpu = client.get("/api/gpus", params={"limit": 1000}).json()[2]
     before = fake_github.files[GPU_PATH]
@@ -236,3 +320,12 @@ def test_pages_version_static_assets(client):
         assert re.search(r'href="/static/css/common\.css\?v=\w+"', html), page
         assert re.search(r'src="/static/js/theme\.js\?v=\w+"', html), page
         assert 'href="/static/images/server-logo.png"' in html  # images untouched
+
+
+def test_tdp_per_thread_is_derived(client):
+    cpus = all_cpus(client)
+    with_both = next(c for c in cpus if c["tdp_watts"] and c["threads"])
+    assert with_both["tdp_per_thread_w"] == round(with_both["tdp_watts"] / with_both["threads"], 2)
+    assert all(c["tdp_per_thread_w"] is None for c in cpus if not (c["tdp_watts"] and c["threads"]))
+    home = client.get("/").text
+    assert 'data-sort="tdp_per_thread_w"' in home and 'class="col-tdp-per-thread"' in home

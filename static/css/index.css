@@ -441,6 +441,17 @@ tbody tr:last-child td {
     color: var(--text-secondary);
 }
 
+.table-toggles {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+}
+
+#cpuTable.hide-max-memory .col-max-memory,
+#cpuTable.hide-tdp-per-thread .col-tdp-per-thread {
+    display: none;
+}
+
 .validated-filter {
     display: inline-flex;
     align-items: center;

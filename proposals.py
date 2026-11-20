@@ -1,8 +1,7 @@
-"""
-Public CPU/GPU proposals, stored as GitHub issues.
+"""Public proposals and data-error reports, stored as GitHub issues.
 
-Each issue carries a human-readable summary plus a fenced JSON block holding
-the exact submitted values, which the admin panel parses back out.
+Each issue contains a fenced JSON block with the submitted values, which the
+admin panel parses back.
 """
 
 from __future__ import annotations
@@ -25,7 +24,7 @@ _DATA_BLOCK = re.compile(
 
 
 def _inline(value: Any) -> str:
-    """Render a value as an inline code span, so it can't trigger @mentions or markup."""
+    """Wrap a value in a code span so it cannot trigger @mentions or markup."""
     text = " ".join(str(value).split()).replace("`", "'")
     return f"`{text}`"
 
@@ -69,14 +68,14 @@ REPORT_OTHER_FIELD = "other"
 
 
 def report_fields(kind: str) -> list[tuple[str, str]]:
-    """(attr, label) pairs a visitor can report as wrong, ending with 'Other'."""
+    """Return the (attr, label) pairs a visitor can report, ending with 'Other'."""
     fields = [(attr, label) for attr, label in SCHEMAS[kind]["fields"] if attr != "validated"]
     return [*fields, (REPORT_OTHER_FIELD, "Other / several fields")]
 
 
 def render_report(kind: str, name: str, page_url: str, field_label: str, current: Any,
                   suggested: str, source_url: str | None, notes: str | None) -> tuple[str, str]:
-    """Return (title, body) for a data-error report sent from a spec page."""
+    """Return (title, body) for a data-error report issue."""
     schema = SCHEMAS[kind]
     clean_name = " ".join(str(name).split())
     title = f"[Data Error] {clean_name[:100]}: {field_label}"
@@ -117,7 +116,7 @@ _TRADEMARKS = re.compile(r"\((r|tm)\)|[®™]", re.IGNORECASE)
 
 
 def model_tokens(name: str) -> set[str]:
-    """Tokens that identify a model number, e.g. {'6980p'} for 'Intel(R) Xeon(R) 6980P'."""
+    """Return the model-number tokens of a name, e.g. ``{'6980p'}``."""
     text = _TRADEMARKS.sub(" ", name or "").lower()
     tokens = re.findall(r"[a-z0-9]+(?:[-.][a-z0-9]+)*", text)
     return {
@@ -130,7 +129,7 @@ def model_tokens(name: str) -> set[str]:
 
 
 def find_similar(name: str, candidates: list[tuple[int, str, bool]], limit: int = 3) -> list[dict[str, Any]]:
-    """Existing entries whose name contains all of the proposal's model-number tokens."""
+    """Return existing entries whose name contains all model tokens of ``name``."""
     wanted = model_tokens(name)
     if not wanted:
         return []
@@ -147,6 +146,7 @@ def find_similar(name: str, candidates: list[tuple[int, str, bool]], limit: int 
 
 
 def issue_kind(issue: dict[str, Any]) -> str | None:
+    """Return ``'cpu'`` or ``'gpu'`` from the issue labels, or None."""
     labels = {label["name"] for label in issue.get("labels", [])}
     for kind in SCHEMAS:
         if kind in labels:
@@ -155,5 +155,6 @@ def issue_kind(issue: dict[str, Any]) -> str | None:
 
 
 def is_open_proposal(issue: dict[str, Any]) -> bool:
+    """Return True if the issue is open and labelled as a proposal."""
     labels = {label["name"] for label in issue.get("labels", [])}
     return issue.get("state") == "open" and PROPOSAL_LABEL in labels

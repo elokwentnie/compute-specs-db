@@ -33,7 +33,7 @@ def test_every_model_has_a_unique_slug(client):
 
 def test_cpu_page(client):
     html = client.get("/cpu/intel-xeon-platinum-8480-plus").text
-    assert "<title>Intel Xeon Platinum 8480+ Specs: 56 Cores, 105 MB L3, 350 W — Compute Specs DB</title>" in html
+    assert "<title>Intel Xeon Platinum 8480+ Specs: 56 Cores, 105 MB L3, 350 W</title>" in html
     assert "<h1>Intel Xeon Platinum 8480+ specifications</h1>" in html
     assert '<a href="/cpus/codename/sapphire-rapids">Sapphire Rapids</a>' in html
     assert '<a href="/cpus/intel-xeon-platinum">Intel Xeon Platinum</a>' in html

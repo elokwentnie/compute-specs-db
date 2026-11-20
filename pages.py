@@ -1,9 +1,6 @@
-"""
-Server-rendered, crawlable HTML pages.
+"""Server-rendered HTML pages for CPUs, GPUs and their groups.
 
-One page per CPU and GPU, plus overview pages per CPU family, CPU codename
-(generation) and GPU vendor. Everything is built from the database on each
-request, so pages always match the API and the CSVs.
+Pages are built from the database on each request.
 """
 
 import json
@@ -30,7 +27,7 @@ router = APIRouter()
 # ---------- Formatting ----------
 
 def fmt(value, unit: str = "") -> str:
-    """Number without a trailing ".0", plus an optional unit; "" when missing."""
+    """Format a number without a trailing ``.0``, plus ``unit``; ``""`` if missing."""
     if value is None or value == "":
         return ""
     if isinstance(value, float) and value.is_integer():
@@ -39,7 +36,7 @@ def fmt(value, unit: str = "") -> str:
 
 
 def span(values: Iterable, unit: str = "") -> str:
-    """"8–60 W" for a range, "60 W" when all values are equal, "" when none."""
+    """Format a range like ``8–60 W``, a single value, or ``""`` if none."""
     present = sorted(v for v in values if v is not None)
     if not present:
         return ""
@@ -52,12 +49,13 @@ templates.env.globals["site_url"] = SITE_URL
 
 
 def json_ld(data) -> str:
-    """JSON-LD safe to embed in a <script> element."""
+    """Serialize data as JSON-LD that is safe inside a ``<script>`` tag."""
     text = json.dumps(data, ensure_ascii=False)
     return text.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
 
 
 def breadcrumb_ld(crumbs) -> dict:
+    """Build a schema.org BreadcrumbList from ``(label, url)`` pairs."""
     return {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
@@ -68,8 +66,41 @@ def breadcrumb_ld(crumbs) -> dict:
     }
 
 
-def render(request: Request, template: str, crumbs, **context):
-    context.update(request=request, crumbs=crumbs, breadcrumb_ld=json_ld(breadcrumb_ld(crumbs)))
+TITLE_SUFFIX = " — Compute Specs DB"
+TITLE_MAX = 60  # Google truncates longer titles
+
+
+def fit_title(*candidates: str) -> str:
+    """Pick the first title that fits in TITLE_MAX.
+
+    Each candidate is tried with TITLE_SUFFIX first, then without it.
+
+    Args:
+        *candidates: Titles from most to least detailed.
+
+    Returns:
+        The chosen title, or the last candidate if none fits.
+    """
+    for text in candidates:
+        if len(text) + len(TITLE_SUFFIX) <= TITLE_MAX:
+            return text + TITLE_SUFFIX
+        if len(text) <= TITLE_MAX:
+            return text
+    return candidates[-1]
+
+
+def render(request: Request, template: str, crumbs, title_fallbacks=(), **context):
+    """Render a page template.
+
+    Args:
+        request: Incoming request.
+        template: Template file name.
+        crumbs: ``(label, url)`` breadcrumb pairs.
+        title_fallbacks: Shorter titles for ``fit_title`` if ``context["title"]`` is too long.
+        **context: Template variables; must include ``title``.
+    """
+    context.update(request=request, crumbs=crumbs, breadcrumb_ld=json_ld(breadcrumb_ld(crumbs)),
+                   page_title=fit_title(context["title"], *title_fallbacks))
     return templates.TemplateResponse(template, context, headers={"Cache-Control": PAGE_CACHE})
 
 
@@ -95,22 +126,27 @@ GPU_SPECS = (
 
 
 def cpu_vendor(cpu: CPUSpec) -> str:
+    """Return the vendor (first word of the name)."""
     return cpu.name.split(" ", 1)[0]
 
 
 def all_cpus(db: Session) -> List[CPUSpec]:
+    """Return all CPUs ordered by id."""
     return db.query(CPUSpec).order_by(CPUSpec.id).all()
 
 
 def all_gpus(db: Session) -> List[GPUSpec]:
+    """Return all GPUs ordered by id."""
     return db.query(GPUSpec).order_by(GPUSpec.id).all()
 
 
 def newest_first(items):
+    """Sort by launch year, then core count, both descending."""
     return sorted(items, key=lambda c: (-(c.launch_year or 0), -(c.cores or 0), c.name))
 
 
 def group_by(items, attr):
+    """Group items by an attribute, skipping empty values."""
     groups = defaultdict(list)
     for item in items:
         value = getattr(item, attr)
@@ -120,6 +156,7 @@ def group_by(items, attr):
 
 
 def cpu_group_summary(cpus: List[CPUSpec]) -> dict:
+    """Summarize a group of CPUs: count, ranges and largest L3."""
     return {
         "count": len(cpus),
         "validated": sum(c.validated for c in cpus),
@@ -132,7 +169,7 @@ def cpu_group_summary(cpus: List[CPUSpec]) -> dict:
 
 
 def cpu_sentences(cpu: CPUSpec) -> List[str]:
-    """A short plain-language description built only from the values we have."""
+    """Describe a CPU in plain sentences, using only known values."""
     parts = []
     shape = ", ".join(p for p in (
         f"{fmt(cpu.cores)}-core" if cpu.cores else "",
@@ -158,6 +195,7 @@ def cpu_sentences(cpu: CPUSpec) -> List[str]:
 
 
 def gpu_sentences(gpu: GPUSpec) -> List[str]:
+    """Describe a GPU in plain sentences, using only known values."""
     first = f"The {gpu.name} is a datacenter accelerator"
     if gpu.vendor:
         first += f" from {gpu.vendor}"
@@ -172,20 +210,58 @@ def gpu_sentences(gpu: GPUSpec) -> List[str]:
     return parts
 
 
-def cpu_title(cpu: CPUSpec) -> str:
-    facts = ", ".join(f for f in (
-        fmt(cpu.cores, " Cores") if cpu.cores else "",
-        fmt(cpu.l3_cache_mb, " MB L3") if cpu.l3_cache_mb else "",
-        fmt(cpu.tdp_watts, " W") if cpu.tdp_watts else "",
-    ) if f)
-    return f"{cpu.name} Specs{': ' + facts if facts else ''}"
+def cpu_titles(cpu: CPUSpec) -> List[str]:
+    """Return candidate page titles for ``fit_title``, most detailed first."""
+    cores = fmt(cpu.cores, " Cores") if cpu.cores else ""
+    l3 = fmt(cpu.l3_cache_mb, " MB L3") if cpu.l3_cache_mb else ""
+    tdp = fmt(cpu.tdp_watts, " W") if cpu.tdp_watts else ""
+    titles = []
+    for parts in ((cores, l3, tdp), (cores, l3), (cores,), ()):
+        facts = ", ".join(p for p in parts if p)
+        title = f"{cpu.name} Specs{': ' + facts if facts else ''}"
+        if title not in titles:
+            titles.append(title)
+    return titles
+
+
+def plural(count: int, word: str) -> str:
+    """Format a count with a noun, e.g. "1 model" or "3 models"."""
+    return f"{count} {word}{'' if count == 1 else 's'}"
+
+
+def group_title(group: str, kind: str, members) -> str:
+    """Title for a group page; names the model when the group has only one."""
+    if len(members) == 1:
+        return f"{group} {kind}: {members[0].name} Specs"
+    return f"{group} {kind} List: Specs of All {len(members)} Models"
+
+
+def group_title_fallbacks(group: str, kind: str, members) -> tuple:
+    """Shorter versions of ``group_title`` for ``fit_title``."""
+    return (f"{group} {kind} List: {plural(len(members), 'Model')}", f"{group} {kind} Specs")
+
+
+def duplicate_codenames(cpus: List[CPUSpec]) -> dict:
+    """Find codenames whose CPUs are exactly the CPUs of one family.
+
+    Their pages duplicate the family page, so they are canonicalized to it
+    and left out of the sitemap.
+
+    Returns:
+        Mapping of codename to family slug.
+    """
+    families = {frozenset(c.id for c in members): slugify(family)
+                for family, members in group_by(cpus, "family").items()}
+    return {codename: families[ids]
+            for codename, members in group_by(cpus, "codename").items()
+            if (ids := frozenset(c.id for c in members)) in families}
 
 
 DESCRIPTION_MAX = 160  # search engines cut longer snippets; Bing flags them
 
 
 def fit_description(*candidates: str) -> str:
-    """The first (most detailed) candidate that fits, else the last one cut at a word."""
+    """Return the first candidate within DESCRIPTION_MAX, else the last one truncated."""
     for text in candidates:
         if len(text) <= DESCRIPTION_MAX:
             return text
@@ -193,13 +269,14 @@ def fit_description(*candidates: str) -> str:
 
 
 def memory_text(tb) -> str:
-    """'4 TB', or '144 GB' below one terabyte."""
+    """Format memory in TB, or in GB below 1 TB."""
     if tb < 1:
         return fmt(round(tb * 1000), " GB")
     return fmt(tb, " TB")
 
 
 def cpu_description(cpu: CPUSpec) -> str:
+    """Build the meta description for a CPU page."""
     cores = (f"{fmt(cpu.cores)} cores/{fmt(cpu.threads)} threads" if cpu.cores and cpu.threads
              else fmt(cpu.cores, " cores") if cpu.cores else "")
     turbo = fmt(cpu.max_turbo_frequency_ghz, " GHz turbo") if cpu.max_turbo_frequency_ghz else ""
@@ -210,6 +287,7 @@ def cpu_description(cpu: CPUSpec) -> str:
     status = "Validated." if cpu.validated else "Not yet validated."
 
     def build(spec_parts, extras):
+        """Join the name, spec parts and extra sentences."""
         specs = ", ".join(p for p in spec_parts if p)
         text = f"{cpu.name} specs" + (f": {specs}." if specs else ".")
         return " ".join([text, *(e for e in extras if e)])
@@ -223,6 +301,7 @@ def cpu_description(cpu: CPUSpec) -> str:
 
 
 def gpu_description(gpu: GPUSpec) -> str:
+    """Build the meta description for a GPU page."""
     specs = ", ".join(s for s in (
         " ".join(p for p in (fmt(gpu.memory_gb, " GB"), gpu.memory_type or "") if p),
         fmt(gpu.tdp_watts, " W TDP") if gpu.tdp_watts else "",
@@ -234,7 +313,7 @@ def gpu_description(gpu: GPUSpec) -> str:
 
 
 def similar_cpus(cpu: CPUSpec, cpus: List[CPUSpec], limit: int = 8) -> List[CPUSpec]:
-    """Same generation first (closest core count), then the same family (closest launch year)."""
+    """Return CPUs of the same generation, then the same family, closest first."""
     others = [c for c in cpus if c.id != cpu.id]
     same_gen = sorted((c for c in others if cpu.codename and c.codename == cpu.codename),
                       key=lambda c: (abs((c.cores or 0) - (cpu.cores or 0)), c.name))
@@ -249,12 +328,14 @@ def similar_cpus(cpu: CPUSpec, cpus: List[CPUSpec], limit: int = 8) -> List[CPUS
 
 
 def similar_gpus(gpu: GPUSpec, gpus: List[GPUSpec], limit: int = 6) -> List[GPUSpec]:
+    """Return GPUs of the same vendor first, closest in memory size."""
     others = [g for g in gpus if g.id != gpu.id]
     return sorted(others, key=lambda g: (g.vendor != gpu.vendor,
                                          abs((g.memory_gb or 0) - (gpu.memory_gb or 0)), g.name))[:limit]
 
 
 def find_by_slug(items, slug: str):
+    """Return the item with ``slug``, or raise a 404."""
     for item in items:
         if item.slug == slug:
             return item
@@ -262,6 +343,7 @@ def find_by_slug(items, slug: str):
 
 
 def find_group(groups: dict, slug: str):
+    """Return ``(key, members)`` for the group with ``slug``, or raise a 404."""
     for key, members in groups.items():
         if slugify(key) == slug:
             return key, members
@@ -269,12 +351,13 @@ def find_group(groups: dict, slug: str):
 
 
 def report_url(name: str) -> str:
+    """Return the GitHub URL for a prefilled data-error issue."""
     title = quote(f"Data error: {name}")
     return f"https://github.com/elokwentnie/compute-specs-db/issues/new?template=report-data-error.yml&title={title}"
 
 
 def report_form(kind: str, item) -> dict:
-    """Context for the on-page "Report an error" form."""
+    """Return template context for the 'Report an error' form."""
     fields = []
     for attr, label in proposals.report_fields(kind):
         current = getattr(item, attr, None) if attr != proposals.REPORT_OTHER_FIELD else None
@@ -289,7 +372,7 @@ def report_form(kind: str, item) -> dict:
 # ---------- Shared pieces for the homepage and sitemap ----------
 
 def browse_links(db: Session) -> dict:
-    """Family, codename and vendor links used on the homepage and /cpus."""
+    """Return family, codename and vendor links for the homepage and /cpus."""
     cpus = all_cpus(db)
     gpus = all_gpus(db)
     families = group_by(cpus, "family")
@@ -324,7 +407,7 @@ def browse_links(db: Session) -> dict:
 
 
 def render_home_fragments(db: Session, rows: int = 25) -> dict:
-    """HTML for the homepage's first table page and browse section, for crawlers without JS."""
+    """Render homepage HTML fragments for crawlers without JavaScript."""
     first_rows = all_cpus(db)[:rows]
     return {
         "<!--SSR:CPU_ROWS-->": templates.get_template("partials/home_rows.html").render(cpus=first_rows),
@@ -333,11 +416,13 @@ def render_home_fragments(db: Session, rows: int = 25) -> dict:
 
 
 def sitemap_paths(db: Session) -> List[str]:
+    """Return all spec and group page paths for the sitemap."""
     cpus = all_cpus(db)
     gpus = all_gpus(db)
     paths = ["/cpus", "/gpus"]
     paths += sorted(f"/cpus/{slugify(f)}" for f in group_by(cpus, "family"))
-    paths += sorted(f"/cpus/codename/{slugify(c)}" for c in group_by(cpus, "codename"))
+    duplicates = duplicate_codenames(cpus)
+    paths += sorted(f"/cpus/codename/{slugify(c)}" for c in group_by(cpus, "codename") if c not in duplicates)
     paths += sorted(f"/gpus/{slugify(v)}" for v in group_by(gpus, "vendor"))
     paths += sorted(f"/cpu/{c.slug}" for c in cpus)
     paths += sorted(f"/gpu/{g.slug}" for g in gpus)
@@ -348,6 +433,7 @@ def sitemap_paths(db: Session) -> List[str]:
 
 @router.get("/cpus", include_in_schema=False)
 async def cpus_index(request: Request, db: Session = Depends(get_db)):
+    """CPU overview page."""
     links = browse_links(db)
     cpus = all_cpus(db)
     return render(
@@ -364,18 +450,22 @@ async def cpus_index(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/cpus/codename/{slug}", include_in_schema=False)
 async def cpu_codename_page(slug: str, request: Request, db: Session = Depends(get_db)):
-    codename, members = find_group(group_by(all_cpus(db), "codename"), slug)
+    """Page listing the CPUs of one generation."""
+    cpus = all_cpus(db)
+    codename, members = find_group(group_by(cpus, "codename"), slug)
     summary = cpu_group_summary(members)
     families = sorted(group_by(members, "family").items(), key=lambda kv: -len(kv[1]))
     vendor = cpu_vendor(members[0])
+    same_as_family = duplicate_codenames(cpus).get(codename)
     return render(
         request, "cpu_group.html",
         crumbs=[("Home", "/"), ("CPUs", "/cpus"), (codename, f"/cpus/codename/{slug}")],
-        title=f"{codename} CPU List: Specs of All {summary['count']} {vendor} Models",
-        description=(f"Specifications of {summary['count']} {vendor} {codename} processors"
+        title=group_title(codename, "CPU", members),
+        title_fallbacks=group_title_fallbacks(codename, "CPU", members),
+        description=(f"Specifications of {plural(summary['count'], vendor + ' ' + codename + ' processor')}"
                      f"{' (' + summary['years'] + ')' if summary['years'] else ''}: cores, threads, turbo frequency, "
                      "L3 cache, TDP and memory."),
-        canonical=f"/cpus/codename/{slug}",
+        canonical=f"/cpus/{same_as_family}" if same_as_family else f"/cpus/codename/{slug}",
         heading=f"{codename} processors",
         group_label=f"{vendor} {codename}",
         summary=summary,
@@ -388,6 +478,7 @@ async def cpu_codename_page(slug: str, request: Request, db: Session = Depends(g
 
 @router.get("/cpus/{slug}", include_in_schema=False)
 async def cpu_family_page(slug: str, request: Request, db: Session = Depends(get_db)):
+    """Page listing the CPUs of one family."""
     family, members = find_group(group_by(all_cpus(db), "family"), slug)
     summary = cpu_group_summary(members)
     codenames = sorted(group_by(members, "codename").items(),
@@ -395,8 +486,9 @@ async def cpu_family_page(slug: str, request: Request, db: Session = Depends(get
     return render(
         request, "cpu_group.html",
         crumbs=[("Home", "/"), ("CPUs", "/cpus"), (family, f"/cpus/{slug}")],
-        title=f"{family} CPU List: Specs of All {summary['count']} Models",
-        description=(f"Specifications of {summary['count']} {family} processors"
+        title=group_title(family, "CPU", members),
+        title_fallbacks=group_title_fallbacks(family, "CPU", members),
+        description=(f"Specifications of {plural(summary['count'], family + ' processor')}"
                      f"{' (' + summary['years'] + ')' if summary['years'] else ''}: cores, threads, turbo frequency, "
                      "L3 cache, TDP and memory."),
         canonical=f"/cpus/{slug}",
@@ -413,6 +505,7 @@ async def cpu_family_page(slug: str, request: Request, db: Session = Depends(get
 
 @router.get("/cpu/{slug}", include_in_schema=False)
 async def cpu_page(slug: str, request: Request, db: Session = Depends(get_db)):
+    """Spec page for one CPU."""
     cpus = all_cpus(db)
     cpu = find_by_slug(cpus, slug)
     crumbs = [("Home", "/"), ("CPUs", "/cpus")]
@@ -425,7 +518,8 @@ async def cpu_page(slug: str, request: Request, db: Session = Depends(get_db)):
     return render(
         request, "cpu.html",
         crumbs=crumbs,
-        title=cpu_title(cpu),
+        title=cpu_titles(cpu)[0],
+        title_fallbacks=cpu_titles(cpu)[1:],
         description=cpu_description(cpu),
         canonical=f"/cpu/{cpu.slug}",
         cpu=cpu,
@@ -441,10 +535,12 @@ async def cpu_page(slug: str, request: Request, db: Session = Depends(get_db)):
 # ---------- GPU pages ----------
 
 def _gpu_group(request: Request, gpus, crumbs, canonical: str, heading: str, title: str, description: str,
-               vendors: Optional[list] = None):
+               vendors: Optional[list] = None, title_fallbacks=()):
+    """Render a GPU list page."""
     return render(
         request, "gpu_group.html",
-        crumbs=crumbs, title=title, description=description, canonical=canonical, heading=heading,
+        crumbs=crumbs, title=title, title_fallbacks=title_fallbacks, description=description,
+        canonical=canonical, heading=heading,
         gpus=sorted(gpus, key=lambda g: (g.vendor or "", -(g.memory_gb or 0), g.name)),
         validated=sum(g.validated for g in gpus),
         memory=span((g.memory_gb for g in gpus), " GB"),
@@ -455,13 +551,14 @@ def _gpu_group(request: Request, gpus, crumbs, canonical: str, heading: str, tit
 
 @router.get("/gpus", include_in_schema=False)
 async def gpus_index(request: Request, db: Session = Depends(get_db)):
+    """GPU overview page."""
     gpus = all_gpus(db)
     return _gpu_group(
         request, gpus,
         crumbs=[("Home", "/"), ("GPUs", "/gpus")],
         canonical="/gpus",
         heading="Datacenter GPU specifications",
-        title="Datacenter GPU Specifications: NVIDIA, AMD Instinct and Intel",
+        title="Datacenter GPU Specs: NVIDIA, AMD Instinct, Intel",
         description=(f"Specifications for {len(gpus)} datacenter GPUs and accelerators: memory size and type, "
                      "TDP and form factor for NVIDIA, AMD Instinct and Intel."),
         vendors=browse_links(db)["gpu_vendors"],
@@ -470,20 +567,23 @@ async def gpus_index(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/gpus/{slug}", include_in_schema=False)
 async def gpu_vendor_page(slug: str, request: Request, db: Session = Depends(get_db)):
+    """Page listing one vendor's GPUs."""
     vendor, members = find_group(group_by(all_gpus(db), "vendor"), slug)
     return _gpu_group(
         request, members,
         crumbs=[("Home", "/"), ("GPUs", "/gpus"), (vendor, f"/gpus/{slug}")],
         canonical=f"/gpus/{slug}",
         heading=f"{vendor} datacenter GPUs",
-        title=f"{vendor} Datacenter GPU List: Specs of All {len(members)} Models",
-        description=(f"Specifications of {len(members)} {vendor} datacenter GPUs and accelerators: "
-                     "memory size and type, TDP and form factor."),
+        title=group_title(f"{vendor} Datacenter", "GPU", members),
+        title_fallbacks=group_title_fallbacks(f"{vendor} Datacenter", "GPU", members),
+        description=(f"Specifications of {plural(len(members), vendor + ' datacenter GPU')}"
+                     f"{'' if len(members) == 1 else ' and accelerators'}: memory size and type, TDP and form factor."),
     )
 
 
 @router.get("/gpu/{slug}", include_in_schema=False)
 async def gpu_page(slug: str, request: Request, db: Session = Depends(get_db)):
+    """Spec page for one GPU."""
     gpus = all_gpus(db)
     gpu = find_by_slug(gpus, slug)
     crumbs = [("Home", "/"), ("GPUs", "/gpus")]
@@ -491,14 +591,15 @@ async def gpu_page(slug: str, request: Request, db: Session = Depends(get_db)):
         crumbs.append((gpu.vendor, f"/gpus/{slugify(gpu.vendor)}"))
     crumbs.append((gpu.name, f"/gpu/{gpu.slug}"))
     specs = [(label, fmt(getattr(gpu, attr), unit)) for label, attr, unit in GPU_SPECS]
-    title_facts = ", ".join(f for f in (
-        " ".join(p for p in (fmt(gpu.memory_gb, " GB"), gpu.memory_type or "") if p),
-        fmt(gpu.tdp_watts, " W") if gpu.tdp_watts else "",
-    ) if f)
+    memory = " ".join(p for p in (fmt(gpu.memory_gb, " GB"), gpu.memory_type or "") if p)
+    tdp = fmt(gpu.tdp_watts, " W") if gpu.tdp_watts else ""
+    titles = [f"{gpu.name} Specs{': ' + facts if facts else ''}"
+              for facts in (", ".join(f for f in (memory, tdp) if f), memory)]
     return render(
         request, "gpu.html",
         crumbs=crumbs,
-        title=f"{gpu.name} Specs{': ' + title_facts if title_facts else ''}",
+        title=titles[0],
+        title_fallbacks=(*titles[1:], f"{gpu.name} Specs"),
         description=gpu_description(gpu),
         canonical=f"/gpu/{gpu.slug}",
         gpu=gpu,

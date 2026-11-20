@@ -1,9 +1,4 @@
-"""
-LLM-powered Q&A for Compute Specs DB.
-
-Uses Groq tool calling to ground answers in SQLite data via search, stats, and
-read-only SQL queries.
-"""
+"""Answer natural-language questions with Groq tool calls over the database."""
 
 import json
 import logging
@@ -149,7 +144,7 @@ _TEXT_TOOL_CALL_ALT = re.compile(
 
 
 def _get_live_schema_context(db: Session) -> str:
-    """Inject actual column values so the model does not guess filters."""
+    """Describe the actual column values, so the model does not guess filters."""
     families = [
         row[0]
         for row in db.query(CPUSpec.family).distinct().order_by(CPUSpec.family).all()
@@ -168,10 +163,12 @@ def _get_live_schema_context(db: Session) -> str:
 
 
 def _build_system_prompt(db: Session) -> str:
+    """Return the system prompt, including the live schema context."""
     return SYSTEM_PROMPT + _get_live_schema_context(db)
 
 
 def _cpu_to_dict(cpu: CPUSpec) -> dict[str, Any]:
+    """Convert a CPU row to a tool-result dict."""
     return {
         "type": "cpu",
         "id": cpu.id,
@@ -191,6 +188,7 @@ def _cpu_to_dict(cpu: CPUSpec) -> dict[str, Any]:
 
 
 def _gpu_to_dict(gpu: GPUSpec) -> dict[str, Any]:
+    """Convert a GPU row to a tool-result dict."""
     return {
         "type": "gpu",
         "id": gpu.id,
@@ -206,7 +204,7 @@ def _gpu_to_dict(gpu: GPUSpec) -> dict[str, Any]:
 
 
 def _normalize_sql(query: str) -> str:
-    """Fix common LLM mistakes before executing SQL."""
+    """Fix common LLM mistakes in a SQL query."""
     normalized = query.strip()
     # family = 'AMD' never matches; families are 'AMD EPYC', 'AMD Opteron', etc.
     normalized = re.sub(
@@ -251,6 +249,7 @@ def _normalize_sql(query: str) -> str:
 
 
 def _sql_result_is_empty(rows: list[dict[str, Any]]) -> bool:
+    """Return True for no rows, or a single row of NULLs."""
     if not rows:
         return True
     if len(rows) == 1:
@@ -259,7 +258,7 @@ def _sql_result_is_empty(rows: list[dict[str, Any]]) -> bool:
 
 
 def _vendor_fallback_sql(query: str) -> str | None:
-    """Build a safe fallback when the model's filter matched zero rows."""
+    """Build a broader query when the model's filter matched nothing, or None."""
     lower = query.lower()
     year_match = re.search(
         r"launch_year\s+between\s+(\d{4})\s+and\s+(\d{4})",
@@ -289,6 +288,11 @@ def _vendor_fallback_sql(query: str) -> str | None:
 
 
 def _validate_sql(query: str) -> str:
+    """Normalize a query and check that it is a single read-only SELECT.
+
+    Raises:
+        ValueError: If the query is not allowed.
+    """
     normalized = _normalize_sql(query).rstrip(";").strip()
     if not normalized:
         raise ValueError("Empty SQL query")
@@ -306,6 +310,7 @@ def _validate_sql(query: str) -> str:
 
 
 def _search_cpus(db: Session, q: str) -> list[dict[str, Any]]:
+    """Search CPUs by name, family, model or codename."""
     search_filter = or_(
         CPUSpec.cpu_model_name.ilike(f"%{q}%"),
         CPUSpec.family.ilike(f"%{q}%"),
@@ -317,6 +322,7 @@ def _search_cpus(db: Session, q: str) -> list[dict[str, Any]]:
 
 
 def _search_gpus(db: Session, q: str) -> list[dict[str, Any]]:
+    """Search GPUs by name, vendor, model, form factor or memory type."""
     search_filter = or_(
         GPUSpec.gpu_model_name.ilike(f"%{q}%"),
         GPUSpec.vendor.ilike(f"%{q}%"),
@@ -329,6 +335,7 @@ def _search_gpus(db: Session, q: str) -> list[dict[str, Any]]:
 
 
 def _get_stats(db: Session) -> dict[str, Any]:
+    """Return summary statistics for CPUs and GPUs."""
     total = db.query(CPUSpec).count()
 
     families = db.query(CPUSpec.family).distinct().all()
@@ -382,6 +389,11 @@ def _get_stats(db: Session) -> dict[str, Any]:
 
 
 def _run_sql(db: Session, query: str) -> list[dict[str, Any]]:
+    """Run a validated SELECT, with a broader fallback if it returns nothing.
+
+    Raises:
+        ValueError: If the query is invalid or returns more than MAX_SQL_ROWS rows.
+    """
     safe_query = _validate_sql(query)
     logger.info("Running SQL: %s", safe_query)
     result = db.execute(text(safe_query))
@@ -403,6 +415,11 @@ def _run_sql(db: Session, query: str) -> list[dict[str, Any]]:
 
 
 def execute_tool(name: str, args: dict[str, Any], db: Session) -> Any:
+    """Run a tool requested by the model.
+
+    Raises:
+        ValueError: For an unknown tool name.
+    """
     if name == "search_cpus":
         return _search_cpus(db, args.get("q", ""))
     if name == "search_gpus":
@@ -415,6 +432,7 @@ def execute_tool(name: str, args: dict[str, Any], db: Session) -> Any:
 
 
 def _extract_sources(tool_results: list[Any]) -> list[dict[str, Any]]:
+    """Collect up to 10 unique CPU/GPU rows from tool results."""
     sources: list[dict[str, Any]] = []
     seen: set[tuple[str, int]] = set()
 
@@ -458,6 +476,7 @@ class LLMTimeoutError(LLMError):
 
 
 def _looks_like_tool_call_text(text: str) -> bool:
+    """Return True if the text contains a tool call written as text."""
     if not text:
         return False
     return bool(
@@ -468,7 +487,7 @@ def _looks_like_tool_call_text(text: str) -> bool:
 
 
 def _parse_text_tool_calls(content: str) -> list[dict[str, Any]]:
-    """Parse tool calls embedded in model text (Llama fallback format)."""
+    """Parse tool calls written in the message text (Llama fallback format)."""
     parsed: list[dict[str, Any]] = []
     for pattern in (_TEXT_TOOL_CALL, _TEXT_TOOL_CALL_ALT):
         for index, (name, args_json) in enumerate(pattern.findall(content)):
@@ -498,6 +517,7 @@ def _run_tool_calls(
     all_tool_results: list[Any],
     tools_used: list[str],
 ) -> None:
+    """Execute tool calls and append their results to ``messages``."""
     for tool_call in tool_calls:
         if hasattr(tool_call, "function"):
             tool_id = tool_call.id
@@ -532,7 +552,7 @@ def _run_tool_calls(
 
 
 def _synthesize_answer(client: Groq, messages: list[dict[str, Any]]) -> str:
-    """Force a natural-language answer after tool results (no more tool calls)."""
+    """Ask the model for a final answer from the tool results, without tools."""
     synthesis_messages = messages + [
         {
             "role": "user",
@@ -554,6 +574,7 @@ def _synthesize_answer(client: Groq, messages: list[dict[str, Any]]) -> str:
 
 
 def _answer_claims_no_data(text: str) -> bool:
+    """Return True if the answer says the data is not available."""
     lower = text.lower()
     return any(
         phrase in lower
@@ -571,6 +592,14 @@ def _answer_claims_no_data(text: str) -> bool:
 
 
 def ask_question(question: str, db: Session) -> dict[str, Any]:
+    """Answer a question about the specs in the database.
+
+    Returns:
+        Dict with ``answer``, ``sources`` and ``tools_used``.
+
+    Raises:
+        LLMError: If GROQ_API_KEY is missing or the provider fails.
+    """
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
         raise LLMError("GROQ_API_KEY is not configured")

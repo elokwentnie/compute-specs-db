@@ -44,9 +44,6 @@
                 </div>
                 
                 <button onclick="authenticate()">Login</button>
-                <p class="auth-note">
-                    <strong>Note:</strong> Password is set via ADMIN_PASSWORD environment variable on the server.
-                </p>
             </div>
         </div>
 
@@ -83,26 +80,28 @@
             <div id="browseTab" class="tab-content">
                 <h2>Browse & Edit CPUs</h2>
                 <p class="browse-description">Search and click Edit to change any CPU. No need to look up IDs.</p>
-                <div class="form-group browse-search-group">
-                    <label for="browseSearch">Search</label>
-                    <input type="text" id="browseSearch" placeholder="Search by name, family, codename...">
+                <div class="browse-toolbar">
+                    <div class="form-group browse-search-group">
+                        <label for="browseSearch">Search</label>
+                        <input type="text" id="browseSearch" placeholder="Search by name, family, codename...">
+                    </div>
+                    <details class="column-picker">
+                        <summary>Columns</summary>
+                        <div class="column-picker-menu" id="cpuColumnMenu"></div>
+                    </details>
+                    <label class="switch batch-switch" title="Collect changes and save them to GitHub as one commit">
+                        <input type="checkbox" class="batch-mode-toggle" onchange="setBatchMode(this.checked)">
+                        <span class="switch-track"></span>
+                        <span>Batch mode</span>
+                    </label>
+                    <button type="button" class="btn-secondary batch-only hidden" onclick="queueShownValidated('cpu')">Mark all shown validated</button>
                 </div>
+                <p class="browse-description batch-only hidden">
+                    Batch mode is on: validated toggles and edits are collected below and saved to GitHub as one commit when you click <strong>Save as one commit</strong>.
+                </p>
                 <div id="browseTableContainer" class="overflow-x-auto">
                     <table class="browse-table" id="browseTable">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>CPU Model Name</th>
-                                <th>Codename</th>
-                                <th>Cores</th>
-                                <th>Threads</th>
-                                <th>L3 (MB)</th>
-                                <th>TDP (W)</th>
-                                <th>Year</th>
-                                <th>Validated</th>
-                                <th></th>
-                            </tr>
-                        </thead>
+                        <thead id="browseTableHead"></thead>
                         <tbody id="browseTableBody"></tbody>
                     </table>
                 </div>
@@ -140,11 +139,11 @@
                         </div>
                         <div class="form-group">
                             <label for="create_max_turbo">Max Turbo (GHz)</label>
-                            <input type="number" step="0.1" id="create_max_turbo">
+                            <input type="number" step="any" id="create_max_turbo">
                         </div>
                         <div class="form-group">
                             <label for="create_l3_cache">L3 Cache (MB)</label>
-                            <input type="number" step="0.1" id="create_l3_cache">
+                            <input type="number" step="any" id="create_l3_cache">
                         </div>
                         <div class="form-group">
                             <label for="create_tdp">TDP (W)</label>
@@ -156,7 +155,7 @@
                         </div>
                         <div class="form-group">
                             <label for="create_max_memory">Max Memory (TB)</label>
-                            <input type="number" step="0.1" id="create_max_memory">
+                            <input type="number" step="any" id="create_max_memory">
                         </div>
                         <div class="form-group switch-group">
                             <label class="switch" for="create_validated">
@@ -174,7 +173,10 @@
             </div>
 
             <div id="editTab" class="tab-content">
-                <h2>Edit CPU</h2>
+                <div class="edit-header">
+                    <button type="button" class="btn-secondary back-btn" onclick="goBackToList('cpu')">← Back to list</button>
+                    <h2>Edit CPU</h2>
+                </div>
                 <div class="form-group">
                     <label for="edit_cpu_id">CPU ID</label>
                     <input type="number" id="edit_cpu_id" placeholder="Enter CPU ID to edit">
@@ -208,11 +210,11 @@
                         </div>
                         <div class="form-group">
                             <label for="edit_max_turbo">Max Turbo (GHz)</label>
-                            <input type="number" step="0.1" id="edit_max_turbo">
+                            <input type="number" step="any" id="edit_max_turbo">
                         </div>
                         <div class="form-group">
                             <label for="edit_l3_cache">L3 Cache (MB)</label>
-                            <input type="number" step="0.1" id="edit_l3_cache">
+                            <input type="number" step="any" id="edit_l3_cache">
                         </div>
                         <div class="form-group">
                             <label for="edit_tdp">TDP (W)</label>
@@ -224,7 +226,7 @@
                         </div>
                         <div class="form-group">
                             <label for="edit_max_memory">Max Memory (TB)</label>
-                            <input type="number" step="0.1" id="edit_max_memory">
+                            <input type="number" step="any" id="edit_max_memory">
                         </div>
                         <div class="form-group switch-group">
                             <label class="switch" for="edit_validated">
@@ -235,7 +237,7 @@
                         </div>
                     </div>
                     <div class="form-actions">
-                        <button type="submit">Update CPU</button>
+                        <button type="submit" id="editSubmitBtn">Update CPU</button>
                         <button type="button" class="btn-secondary" onclick="cancelEdit()">Cancel</button>
                     </div>
                 </form>
@@ -255,25 +257,28 @@
             <div id="browseGpuTab" class="tab-content">
                 <h2>Browse & Edit GPUs</h2>
                 <p class="browse-description">Search and click Edit to change any GPU.</p>
-                <div class="form-group browse-search-group">
-                    <label for="browseGpuSearch">Search</label>
-                    <input type="text" id="browseGpuSearch" placeholder="Search by name, vendor, memory type...">
+                <div class="browse-toolbar">
+                    <div class="form-group browse-search-group">
+                        <label for="browseGpuSearch">Search</label>
+                        <input type="text" id="browseGpuSearch" placeholder="Search by name, vendor, memory type...">
+                    </div>
+                    <details class="column-picker">
+                        <summary>Columns</summary>
+                        <div class="column-picker-menu" id="gpuColumnMenu"></div>
+                    </details>
+                    <label class="switch batch-switch" title="Collect changes and save them to GitHub as one commit">
+                        <input type="checkbox" class="batch-mode-toggle" onchange="setBatchMode(this.checked)">
+                        <span class="switch-track"></span>
+                        <span>Batch mode</span>
+                    </label>
+                    <button type="button" class="btn-secondary batch-only hidden" onclick="queueShownValidated('gpu')">Mark all shown validated</button>
                 </div>
+                <p class="browse-description batch-only hidden">
+                    Batch mode is on: validated toggles and edits are collected below and saved to GitHub as one commit when you click <strong>Save as one commit</strong>.
+                </p>
                 <div id="browseGpuTableContainer" class="overflow-x-auto">
                     <table class="browse-table" id="browseGpuTable">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>GPU Model Name</th>
-                                <th>Vendor</th>
-                                <th>Form Factor</th>
-                                <th>Memory (GB)</th>
-                                <th>Memory Type</th>
-                                <th>TDP (W)</th>
-                                <th>Validated</th>
-                                <th></th>
-                            </tr>
-                        </thead>
+                        <thead id="browseGpuTableHead"></thead>
                         <tbody id="browseGpuTableBody"></tbody>
                     </table>
                 </div>
@@ -329,7 +334,10 @@
             </div>
 
             <div id="editGpuTab" class="tab-content">
-                <h2>Edit GPU</h2>
+                <div class="edit-header">
+                    <button type="button" class="btn-secondary back-btn" onclick="goBackToList('gpu')">← Back to list</button>
+                    <h2>Edit GPU</h2>
+                </div>
                 <div class="form-group">
                     <label for="edit_gpu_id">GPU ID</label>
                     <input type="number" id="edit_gpu_id" placeholder="Enter GPU ID to edit">
@@ -374,7 +382,7 @@
                         </div>
                     </div>
                     <div class="form-actions">
-                        <button type="submit">Update GPU</button>
+                        <button type="submit" id="editGpuSubmitBtn">Update GPU</button>
                         <button type="button" class="btn-secondary" onclick="cancelGpuEdit()">Cancel</button>
                     </div>
                 </form>
@@ -449,6 +457,19 @@
             </div>
         </div>
         </main>
+    </div>
+
+    <div id="batchBar" class="batch-bar hidden" role="region" aria-label="Pending batch changes">
+        <div class="batch-bar-inner">
+            <details class="batch-review">
+                <summary id="batchSummary"></summary>
+                <ul id="batchList" class="batch-list"></ul>
+            </details>
+            <div class="batch-actions">
+                <button type="button" id="batchSaveBtn" onclick="saveBatch()">Save as one commit</button>
+                <button type="button" class="btn-secondary" onclick="discardBatch()">Discard</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -620,7 +641,10 @@
                 document.getElementById('adminPanel').classList.add('active');
                 showMessage('Login successful!', 'success');
                 await loadSyncInfo();
-                loadProposals();
+                if (!proposalsLoaded) loadProposals();
+                // Open the tab from the URL hash, e.g. #edit/42.
+                history.replaceState({ ...(history.state || {}), route: location.hash.slice(1) }, '');
+                applyRoute();
             } catch (error) {
                 showMessage('Error: ' + error.message, 'error');
                 authToken = null;
@@ -644,17 +668,218 @@
             }
         }
 
-        function switchTab(tabName) {
+        // ---------- Tabs and browser history ----------
+        // Each tab gets a #hash history entry so browser Back works.
+
+        const TAB_NAMES = ['proposals', 'browse', 'create', 'edit', 'delete',
+            'browseGpu', 'createGpu', 'editGpu', 'deleteGpu', 'import'];
+        try { history.scrollRestoration = 'manual'; } catch (_) {}
+
+        function switchTab(tabName, opts = {}) {
+            // Read before hiding the tab, which resets scroll.
+            const scrollY = window.scrollY;
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             const tabBtn = document.querySelector(`.tab[data-tab="${tabName}"]`);
             if (tabBtn) tabBtn.classList.add('active');
             const content = document.getElementById(tabName + 'Tab');
             if (content) content.classList.add('active');
-            if (tabName === 'browse') loadBrowseDataIfNeeded();
-            if (tabName === 'browseGpu') loadBrowseGpuDataIfNeeded();
+
+            if (opts.push !== false) {
+                const route = opts.id ? `${tabName}/${opts.id}` : tabName;
+                if (location.hash.slice(1) !== route) {
+                    // Saved so Back restores the scroll position.
+                    history.replaceState({ ...(history.state || {}), scrollY }, '');
+                    history.pushState({ route, fromList: Boolean(opts.fromList) }, '', '#' + route);
+                }
+            }
+
+            let ready = Promise.resolve();
+            if (tabName === 'browse') ready = loadBrowse('cpu');
+            if (tabName === 'browseGpu') ready = loadBrowse('gpu');
             // Load once; Refresh reloads explicitly so in-progress edits aren't wiped.
             if (tabName === 'proposals' && !proposalsLoaded) loadProposals();
+            return ready;
+        }
+
+        async function applyRoute(scrollY) {
+            if (!authToken) return;
+            const [tab, rawId] = location.hash.slice(1).split('/');
+            const name = TAB_NAMES.includes(tab) ? tab : 'create';
+            const id = Number(rawId);
+            const kind = name === 'edit' ? 'cpu' : name === 'editGpu' ? 'gpu' : null;
+            if (kind && id && (!editOriginal[kind] || editOriginal[kind].id !== id)) {
+                try {
+                    const known = getList(kind).find(x => x.id === id);
+                    openEditForm(kind, known || await apiFetch(`/api/${kind}s/${id}`));
+                } catch (err) {
+                    showMessage(`Error loading ${BROWSE[kind].label}: ${err.message}`, 'error');
+                }
+            }
+            await switchTab(name, { push: false });
+            window.scrollTo(0, scrollY || 0);
+        }
+
+        window.addEventListener('popstate', (event) => {
+            applyRoute(event.state && event.state.scrollY);
+        });
+
+        function goBackToList(kind) {
+            if (history.state && history.state.fromList) history.back();
+            else switchTab(BROWSE[kind].tab);
+        }
+
+        // ---------- Browse tables (shared by CPUs and GPUs) ----------
+
+        const BROWSE = {
+            cpu: {
+                label: 'CPU', tab: 'browse', editTab: 'edit',
+                searchId: 'browseSearch', headId: 'browseTableHead', bodyId: 'browseTableBody',
+                containerId: 'browseTableContainer', loadingId: 'browseLoading', emptyId: 'browseEmpty',
+                columns: [
+                    { key: 'id', label: 'ID', default: true },
+                    { key: 'cpu_model_name', label: 'CPU Model Name', always: true, strong: true },
+                    { key: 'family', label: 'Family' },
+                    { key: 'cpu_model', label: 'CPU Model' },
+                    { key: 'codename', label: 'Codename', default: true },
+                    { key: 'cores', label: 'Cores', default: true },
+                    { key: 'threads', label: 'Threads', default: true },
+                    { key: 'max_turbo_frequency_ghz', label: 'Max Turbo (GHz)' },
+                    { key: 'l3_cache_mb', label: 'L3 (MB)', default: true },
+                    { key: 'tdp_watts', label: 'TDP (W)', default: true },
+                    { key: 'tdp_per_thread_w', label: 'TDP/Thread (W)' },
+                    { key: 'launch_year', label: 'Year', default: true },
+                    { key: 'max_memory_tb', label: 'Max Memory (TB)' },
+                    { key: 'validated', label: 'Validated', default: true },
+                ],
+            },
+            gpu: {
+                label: 'GPU', tab: 'browseGpu', editTab: 'editGpu',
+                searchId: 'browseGpuSearch', headId: 'browseGpuTableHead', bodyId: 'browseGpuTableBody',
+                containerId: 'browseGpuTableContainer', loadingId: 'browseGpuLoading', emptyId: 'browseGpuEmpty',
+                columns: [
+                    { key: 'id', label: 'ID', default: true },
+                    { key: 'gpu_model_name', label: 'GPU Model Name', always: true, strong: true },
+                    { key: 'vendor', label: 'Vendor', default: true },
+                    { key: 'gpu_model', label: 'GPU Model' },
+                    { key: 'form_factor', label: 'Form Factor', default: true },
+                    { key: 'memory_gb', label: 'Memory (GB)', default: true },
+                    { key: 'memory_type', label: 'Memory Type', default: true },
+                    { key: 'tdp_watts', label: 'TDP (W)', default: true },
+                    { key: 'validated', label: 'Validated', default: true },
+                ],
+            },
+        };
+
+        function getList(kind) { return kind === 'cpu' ? browseCpus : browseGpus; }
+        function setList(kind, list) { if (kind === 'cpu') browseCpus = list; else browseGpus = list; }
+
+        function storageGet(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
+        function storageSet(key, value) { try { localStorage.setItem(key, value); } catch (_) {} }
+
+        function defaultColumns(kind) {
+            return BROWSE[kind].columns.filter(c => c.default).map(c => c.key);
+        }
+
+        function visibleColumns(kind) {
+            let keys = null;
+            try { keys = JSON.parse(storageGet(`admin-columns-${kind}`)); } catch (_) {}
+            if (!Array.isArray(keys)) keys = defaultColumns(kind);
+            return BROWSE[kind].columns.filter(c => c.always || keys.includes(c.key));
+        }
+
+        function saveColumns(kind, keys) {
+            storageSet(`admin-columns-${kind}`, JSON.stringify(keys));
+            if (getList(kind).length) renderBrowse(kind);
+        }
+
+        function setVisibleColumns(kind, keys) {
+            saveColumns(kind, keys);
+            renderColumnMenu(kind);
+        }
+
+        function toggleColumn(kind, key, on) {
+            const keys = visibleColumns(kind).filter(c => !c.always && c.key !== key).map(c => c.key);
+            if (on) keys.push(key);
+            saveColumns(kind, keys);
+        }
+
+        function renderColumnMenu(kind) {
+            const shown = new Set(visibleColumns(kind).map(c => c.key));
+            const options = BROWSE[kind].columns.filter(c => !c.always).map(c => `
+                <label><input type="checkbox" ${shown.has(c.key) ? 'checked' : ''}
+                    onchange="toggleColumn('${kind}', '${c.key}', this.checked)"> ${escapeHtml(c.label)}</label>`).join('');
+            document.getElementById(`${kind}ColumnMenu`).innerHTML = options + `
+                <div class="column-picker-actions">
+                    <button type="button" class="btn-secondary" onclick="setVisibleColumns('${kind}', BROWSE.${kind}.columns.map(c => c.key))">Show all</button>
+                    <button type="button" class="btn-secondary" onclick="setVisibleColumns('${kind}', defaultColumns('${kind}'))">Default</button>
+                </div>`;
+        }
+
+        async function loadBrowse(kind) {
+            const cfg = BROWSE[kind];
+            const container = document.getElementById(cfg.containerId);
+            const loadingEl = document.getElementById(cfg.loadingId);
+            const emptyEl = document.getElementById(cfg.emptyId);
+            if (getList(kind).length) {
+                renderBrowse(kind);
+                return;
+            }
+            loadingEl.classList.remove('hidden');
+            container.classList.add('hidden');
+            emptyEl.classList.add('hidden');
+            try {
+                setList(kind, await apiFetch(`/api/${kind}s?limit=1000`));
+                loadingEl.classList.add('hidden');
+                renderBrowse(kind);
+            } catch (err) {
+                loadingEl.classList.add('hidden');
+                emptyEl.textContent = `Error loading ${cfg.label}s: ${err.message}`;
+                emptyEl.classList.remove('hidden');
+            }
+        }
+
+        function renderCell(kind, col, item, changes) {
+            const cls = changes && col.key in changes ? ' class="cell-pending"' : '';
+            if (col.key === 'validated') return `<td${cls}>${validatedSwitch(kind, item)}</td>`;
+            const value = item[col.key];
+            const text = value === null || value === undefined || value === '' ? '-' : escapeHtml(String(value));
+            return `<td${cls}>${col.strong ? `<strong>${text}</strong>` : text}</td>`;
+        }
+
+        function renderBrowse(kind) {
+            const cfg = BROWSE[kind];
+            const cols = visibleColumns(kind);
+            const searchText = (document.getElementById(cfg.searchId).value || '').trim().toLowerCase();
+            const textKeys = SPEC_FIELDS[kind].filter(f => f.type === 'text').map(f => f.key);
+            const list = getList(kind);
+            const filtered = searchText
+                ? list.filter(item => textKeys.some(k => String(item[k] || '').toLowerCase().includes(searchText)))
+                : list;
+            cfg.shown = filtered;
+
+            const container = document.getElementById(cfg.containerId);
+            const emptyEl = document.getElementById(cfg.emptyId);
+            document.getElementById(cfg.headId).innerHTML =
+                `<tr>${cols.map(c => `<th>${escapeHtml(c.label)}</th>`).join('')}<th></th></tr>`;
+            const tbody = document.getElementById(cfg.bodyId);
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                container.classList.add('hidden');
+                emptyEl.textContent = `No ${cfg.label}s match your search.`;
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
+            tbody.innerHTML = filtered.map(original => {
+                const entry = pending[kind].get(original.id);
+                const item = entry ? { ...original, ...entry.changes } : original;
+                return `<tr${entry ? ' class="row-pending"' : ''}>
+                    ${cols.map(c => renderCell(kind, c, item, entry && entry.changes)).join('')}
+                    <td><button type="button" class="edit-btn" onclick="startEditFromBrowse('${kind}', ${item.id})">Edit</button></td>
+                </tr>`;
+            }).join('');
         }
 
         // ---------- Validated toggle ----------
@@ -672,6 +897,14 @@
         async function toggleValidated(kind, id, input) {
             const validated = input.checked;
             const text = input.parentElement.querySelector('.switch-text');
+            if (batchMode) {
+                queueChanges(kind, id, { validated });
+                const entry = pending[kind].get(id);
+                text.textContent = validated ? 'Validated' : 'Unverified';
+                input.closest('tr').classList.toggle('row-pending', Boolean(entry));
+                input.closest('td').classList.toggle('cell-pending', Boolean(entry && 'validated' in entry.changes));
+                return;
+            }
             input.disabled = true;
             text.textContent = 'Saving…';
             try {
@@ -680,7 +913,8 @@
                     headers: getAuthHeaders(),
                     body: JSON.stringify({ validated })
                 });
-                upsertLocal(kind === 'cpu' ? browseCpus : browseGpus, updated);
+                upsertLocal(getList(kind), updated);
+                dropPendingField(kind, id, 'validated');
                 text.textContent = validated ? 'Validated' : 'Unverified';
                 const name = updated.cpu_model_name || updated.gpu_model_name;
                 showMessage(savedMessage(`${name} marked ${validated ? 'validated' : 'unverified'}.`), 'success');
@@ -693,80 +927,267 @@
             }
         }
 
-        // ---------- CPUs ----------
+        // ---------- Batch mode ----------
+        // Queued changes are saved via /api/<kind>s/batch as one commit.
 
-        async function loadBrowseDataIfNeeded() {
-            const container = document.getElementById('browseTableContainer');
-            const loadingEl = document.getElementById('browseLoading');
-            const emptyEl = document.getElementById('browseEmpty');
-            if (browseCpus.length === 0) {
-                loadingEl.classList.remove('hidden');
-                container.classList.add('hidden');
-                emptyEl.classList.add('hidden');
-                try {
-                    browseCpus = await apiFetch('/api/cpus?limit=1000');
-                    loadingEl.classList.add('hidden');
-                    container.classList.remove('hidden');
-                    renderBrowseTable(browseCpus);
-                } catch (err) {
-                    loadingEl.classList.add('hidden');
-                    emptyEl.textContent = 'Error loading CPUs: ' + err.message;
-                    emptyEl.classList.remove('hidden');
-                }
-            } else {
-                renderBrowseTable(browseCpus);
-            }
+        let batchMode = false;
+        const pending = { cpu: new Map(), gpu: new Map() };  // id -> { original, changes }
+
+        function fieldLabel(kind, key) {
+            if (key === 'validated') return 'Validated';
+            const field = SPEC_FIELDS[kind].find(f => f.key === key);
+            return field ? field.label : key;
         }
 
-        function renderBrowseTable(cpus) {
-            const searchText = (document.getElementById('browseSearch').value || '').trim().toLowerCase();
-            const filtered = searchText
-                ? cpus.filter(c => {
-                    const name = (c.cpu_model_name || '').toLowerCase();
-                    const family = (c.family || '').toLowerCase();
-                    const codename = (c.codename || '').toLowerCase();
-                    const model = (c.cpu_model || '').toLowerCase();
-                    return name.includes(searchText) || family.includes(searchText) || codename.includes(searchText) || model.includes(searchText);
-                })
-                : cpus;
-            const tbody = document.getElementById('browseTableBody');
-            const container = document.getElementById('browseTableContainer');
-            const emptyEl = document.getElementById('browseEmpty');
-            tbody.innerHTML = '';
-            if (filtered.length === 0) {
-                container.classList.add('hidden');
-                emptyEl.textContent = 'No CPUs match your search.';
-                emptyEl.classList.remove('hidden');
+        function sameValue(a, b) {
+            const norm = v => (v === '' || v === undefined) ? null : v;
+            a = norm(a);
+            b = norm(b);
+            if (a === null || b === null) return a === b;
+            if (typeof a === 'number' || typeof b === 'number') return Number(a) === Number(b);
+            return a === b;
+        }
+
+        function originalItem(kind, id) {
+            const entry = pending[kind].get(id);
+            if (entry) return entry.original;
+            const fromList = getList(kind).find(x => x.id === id);
+            if (fromList) return fromList;
+            return editOriginal[kind] && editOriginal[kind].id === id ? editOriginal[kind] : null;
+        }
+
+        function queueChanges(kind, id, fields) {
+            const original = originalItem(kind, id);
+            if (!original) return;
+            const changes = { ...((pending[kind].get(id) || {}).changes || {}), ...fields };
+            for (const key of Object.keys(changes)) {
+                if (sameValue(original[key], changes[key])) delete changes[key];
+            }
+            if (Object.keys(changes).length) pending[kind].set(id, { original, changes });
+            else pending[kind].delete(id);
+            updateBatchBar();
+        }
+
+        function dropPendingField(kind, id, key) {
+            const entry = pending[kind].get(id);
+            if (!entry) return;
+            delete entry.changes[key];
+            if (!Object.keys(entry.changes).length) pending[kind].delete(id);
+            updateBatchBar();
+        }
+
+        function pendingTotal() {
+            return pending.cpu.size + pending.gpu.size;
+        }
+
+        function setBatchMode(on) {
+            batchMode = on;
+            storageSet('admin-batch-mode', on ? '1' : '0');
+            document.querySelectorAll('.batch-mode-toggle').forEach(el => { el.checked = on; });
+            document.querySelectorAll('.batch-only').forEach(el => el.classList.toggle('hidden', !on));
+            document.getElementById('editSubmitBtn').textContent = on ? 'Add to batch' : 'Update CPU';
+            document.getElementById('editGpuSubmitBtn').textContent = on ? 'Add to batch' : 'Update GPU';
+        }
+
+        function queueShownValidated(kind) {
+            const shown = (BROWSE[kind].shown || []).filter(item => {
+                const entry = pending[kind].get(item.id);
+                return !(entry && 'validated' in entry.changes ? entry.changes.validated : item.validated);
+            });
+            if (!shown.length) {
+                showMessage(`Every ${BROWSE[kind].label} shown is already validated.`, 'success');
                 return;
             }
-            container.classList.remove('hidden');
-            emptyEl.classList.add('hidden');
-            filtered.forEach(cpu => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${cpu.id}</td>
-                    <td><strong>${escapeHtml(cpu.cpu_model_name || '-')}</strong></td>
-                    <td>${escapeHtml(cpu.codename || '-')}</td>
-                    <td>${cpu.cores ?? '-'}</td>
-                    <td>${cpu.threads ?? '-'}</td>
-                    <td>${cpu.l3_cache_mb ?? '-'}</td>
-                    <td>${cpu.tdp_watts ?? '-'}</td>
-                    <td>${cpu.launch_year ?? '-'}</td>
-                    <td>${validatedSwitch('cpu', cpu)}</td>
-                    <td><button type="button" class="edit-btn" onclick="startEditFromBrowse(${cpu.id})">Edit</button></td>
-                `;
-                tbody.appendChild(tr);
-            });
+            shown.forEach(item => queueChanges(kind, item.id, { validated: true }));
+            renderBrowse(kind);
+            showMessage(`Added ${shown.length} ${BROWSE[kind].label}${shown.length === 1 ? '' : 's'} to the batch as validated. Review and save them from the bar at the bottom.`, 'success');
         }
 
-        function startEditFromBrowse(cpuId) {
-            const cpu = browseCpus.find(c => c.id === cpuId);
-            if (!cpu) return;
-            document.getElementById('edit_cpu_id').value = cpu.id;
-            fillForm(FORM_IDS.editCpu, cpu);
-            document.getElementById('editForm').classList.remove('hidden');
-            switchTab('edit');
+        function describeChange(kind, key, from, to) {
+            const show = v => (v === null || v === undefined || v === '') ? '—'
+                : typeof v === 'boolean' ? (v ? 'yes' : 'no') : String(v);
+            return `${escapeHtml(fieldLabel(kind, key))}: ${escapeHtml(show(from))} → ${escapeHtml(show(to))}`;
         }
+
+        function updateBatchBar() {
+            const total = pendingTotal();
+            document.getElementById('batchBar').classList.toggle('hidden', total === 0);
+            document.body.classList.toggle('has-batch-bar', total > 0);
+            if (!total) return;
+            const kinds = ['cpu', 'gpu'].filter(k => pending[k].size);
+            document.getElementById('batchSummary').textContent = kinds
+                .map(k => `${pending[k].size} ${BROWSE[k].label}${pending[k].size === 1 ? '' : 's'}`)
+                .join(' and ') + ' with unsaved changes';
+            document.getElementById('batchList').innerHTML = kinds.flatMap(kind =>
+                [...pending[kind]].map(([id, { original, changes }]) => `<li>
+                    <span class="kind-badge">${BROWSE[kind].label}</span>
+                    <strong>${escapeHtml(original.cpu_model_name || original.gpu_model_name)}</strong>
+                    <span class="batch-change">${Object.entries(changes).map(([k, v]) => describeChange(kind, k, original[k], v)).join('; ')}</span>
+                    <button type="button" class="btn-secondary batch-remove" onclick="unqueue('${kind}', ${id})" aria-label="Remove from batch">Remove</button>
+                </li>`)).join('');
+            document.getElementById('batchSaveBtn').textContent =
+                kinds.length > 1 ? 'Save (one commit per CSV)' : 'Save as one commit';
+        }
+
+        function rerenderLoaded() {
+            ['cpu', 'gpu'].forEach(kind => { if (getList(kind).length) renderBrowse(kind); });
+        }
+
+        function unqueue(kind, id) {
+            pending[kind].delete(id);
+            updateBatchBar();
+            rerenderLoaded();
+        }
+
+        function discardBatch() {
+            if (!confirm(`Discard ${pendingTotal()} unsaved change(s)?`)) return;
+            pending.cpu.clear();
+            pending.gpu.clear();
+            updateBatchBar();
+            rerenderLoaded();
+        }
+
+        async function saveBatch() {
+            const btn = document.getElementById('batchSaveBtn');
+            btn.disabled = true;
+            const saved = [];
+            try {
+                for (const kind of ['cpu', 'gpu']) {
+                    if (!pending[kind].size) continue;
+                    const items = [...pending[kind]].map(([id, entry]) => ({ id, changes: entry.changes }));
+                    try {
+                        const updated = await apiFetch(`/api/${kind}s/batch`, {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({ items })
+                        });
+                        updated.forEach(item => {
+                            upsertLocal(getList(kind), item);
+                            if (editOriginal[kind] && editOriginal[kind].id === item.id) editOriginal[kind] = item;
+                        });
+                        pending[kind].clear();
+                        saved.push(`${updated.length} ${BROWSE[kind].label}${updated.length === 1 ? '' : 's'}`);
+                    } catch (err) {
+                        const before = saved.length ? `Saved ${saved.join(' and ')}, but c` : 'C';
+                        showMessage(`${before}ould not save the ${BROWSE[kind].label} batch: ${err.message}`, 'error');
+                        return;
+                    }
+                }
+                const perCsv = saved.length > 1 ? ' (one commit per CSV)' : ' in one commit';
+                showMessage(savedMessage(`Updated ${saved.join(' and ')}${perCsv}.`), 'success');
+            } finally {
+                btn.disabled = false;
+                updateBatchBar();
+                rerenderLoaded();
+            }
+        }
+
+        window.addEventListener('beforeunload', (event) => {
+            if (pendingTotal() > 0) {
+                event.preventDefault();
+                event.returnValue = '';
+            }
+        });
+
+        // ---------- Edit forms (shared by CPUs and GPUs) ----------
+
+        const editOriginal = { cpu: null, gpu: null };
+        const EDIT = {
+            cpu: { idInput: 'edit_cpu_id', form: 'editForm', ids: FORM_IDS.editCpu },
+            gpu: { idInput: 'edit_gpu_id', form: 'editGpuForm', ids: FORM_IDS.editGpu },
+        };
+
+        function openEditForm(kind, original) {
+            editOriginal[kind] = original;
+            const entry = pending[kind].get(original.id);
+            document.getElementById(EDIT[kind].idInput).value = original.id;
+            fillForm(EDIT[kind].ids, entry ? { ...original, ...entry.changes } : original);
+            document.getElementById(EDIT[kind].form).classList.remove('hidden');
+        }
+
+        function startEditFromBrowse(kind, id) {
+            const item = getList(kind).find(x => x.id === id);
+            if (!item) return;
+            openEditForm(kind, item);
+            switchTab(BROWSE[kind].editTab, { id, fromList: true });
+            window.scrollTo(0, 0);
+        }
+
+        async function loadForEdit(kind) {
+            const id = Number(document.getElementById(EDIT[kind].idInput).value);
+            if (!id) {
+                showMessage(`Please enter a ${BROWSE[kind].label} ID`, 'error');
+                return;
+            }
+            try {
+                openEditForm(kind, await apiFetch(`/api/${kind}s/${id}`));
+                const route = `${BROWSE[kind].editTab}/${id}`;
+                if (location.hash.slice(1) !== route) history.replaceState({ route }, '', '#' + route);
+            } catch (error) {
+                showMessage(`Error loading ${BROWSE[kind].label}: ${error.message}`, 'error');
+            }
+        }
+
+        // Returns true if the edit was queued (batch mode) instead of saved.
+        function queueEdit(kind, id, data) {
+            if (!batchMode) return false;
+            if (!editOriginal[kind] || editOriginal[kind].id !== id) {
+                showMessage(`Load the ${BROWSE[kind].label} first.`, 'error');
+                return true;
+            }
+            const key = SPEC_FIELDS[kind][0].key;
+            if (!data[key]) {
+                showMessage(`${fieldLabel(kind, key)} cannot be empty.`, 'error');
+                return true;
+            }
+            queueChanges(kind, id, data);
+            rerenderLoaded();
+            const queued = pending[kind].has(id);
+            showMessage(queued
+                ? `Added to the batch (${pendingTotal()} pending). Save them from the bar at the bottom.`
+                : 'No changes compared to the saved values.', 'success');
+            goBackToList(kind);
+            return true;
+        }
+
+        async function saveEdit(kind, event) {
+            event.preventDefault();
+            const id = Number(document.getElementById(EDIT[kind].idInput).value);
+            const data = readForm(kind, EDIT[kind].ids);
+            if (queueEdit(kind, id, data)) return;
+            try {
+                const updated = await apiFetch(`/api/${kind}s/${id}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(data)
+                });
+                upsertLocal(getList(kind), updated);
+                editOriginal[kind] = updated;
+                // The form included queued values, so they are saved too.
+                pending[kind].delete(id);
+                updateBatchBar();
+                const name = updated.cpu_model_name || updated.gpu_model_name;
+                showMessage(savedMessage(`${BROWSE[kind].label} "${name}" updated.`), 'success');
+            } catch (error) {
+                showMessage(`Error updating ${BROWSE[kind].label}: ${error.message}`, 'error');
+            }
+        }
+
+        function cancelEditForm(kind) {
+            document.getElementById(EDIT[kind].form).classList.add('hidden');
+            document.getElementById(EDIT[kind].idInput).value = '';
+            editOriginal[kind] = null;
+            if (history.state && history.state.fromList) history.back();
+        }
+
+        function loadCPUForEdit() { return loadForEdit('cpu'); }
+        function loadGPUForEdit() { return loadForEdit('gpu'); }
+        function updateCPU(event) { return saveEdit('cpu', event); }
+        function updateGPU(event) { return saveEdit('gpu', event); }
+        function cancelEdit() { cancelEditForm('cpu'); }
+        function cancelGpuEdit() { cancelEditForm('gpu'); }
+
+        // ---------- CPUs ----------
 
         async function createCPU(event) {
             event.preventDefault();
@@ -789,43 +1210,6 @@
             document.getElementById('createForm').reset();
         }
 
-        async function loadCPUForEdit() {
-            const cpuId = document.getElementById('edit_cpu_id').value;
-            if (!cpuId) {
-                showMessage('Please enter a CPU ID', 'error');
-                return;
-            }
-            try {
-                const cpu = await apiFetch(`/api/cpus/${cpuId}`);
-                fillForm(FORM_IDS.editCpu, cpu);
-                document.getElementById('editForm').classList.remove('hidden');
-            } catch (error) {
-                showMessage('Error loading CPU: ' + error.message, 'error');
-            }
-        }
-
-        async function updateCPU(event) {
-            event.preventDefault();
-            const cpuId = document.getElementById('edit_cpu_id').value;
-            const data = readForm('cpu', FORM_IDS.editCpu);
-            try {
-                const updated = await apiFetch(`/api/cpus/${cpuId}`, {
-                    method: 'PUT',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify(data)
-                });
-                upsertLocal(browseCpus, updated);
-                showMessage(savedMessage(`CPU "${updated.cpu_model_name}" updated.`), 'success');
-            } catch (error) {
-                showMessage('Error updating CPU: ' + error.message, 'error');
-            }
-        }
-
-        function cancelEdit() {
-            document.getElementById('editForm').classList.add('hidden');
-            document.getElementById('edit_cpu_id').value = '';
-        }
-
         async function deleteCPU() {
             const cpuId = document.getElementById('delete_cpu_id').value;
             if (!cpuId) {
@@ -838,6 +1222,8 @@
             try {
                 await apiFetch(`/api/cpus/${cpuId}`, { method: 'DELETE', headers: getAuthHeaders() });
                 browseCpus = browseCpus.filter(c => c.id !== Number(cpuId));
+                pending.cpu.delete(Number(cpuId));
+                updateBatchBar();
                 showMessage(savedMessage(`CPU #${cpuId} deleted.`), 'success');
                 document.getElementById('delete_cpu_id').value = '';
             } catch (error) {
@@ -849,87 +1235,15 @@
             if (e.key === 'Enter') authenticate();
         });
 
-        document.getElementById('browseSearch').addEventListener('input', () => {
-            if (browseCpus.length) renderBrowseTable(browseCpus);
+        ['cpu', 'gpu'].forEach(kind => {
+            document.getElementById(BROWSE[kind].searchId).addEventListener('input', () => {
+                if (getList(kind).length) renderBrowse(kind);
+            });
+            renderColumnMenu(kind);
         });
+        setBatchMode(storageGet('admin-batch-mode') === '1');
 
         // ---------- GPUs ----------
-
-        async function loadBrowseGpuDataIfNeeded() {
-            const container = document.getElementById('browseGpuTableContainer');
-            const loadingEl = document.getElementById('browseGpuLoading');
-            const emptyEl = document.getElementById('browseGpuEmpty');
-            if (browseGpus.length === 0) {
-                loadingEl.classList.remove('hidden');
-                container.classList.add('hidden');
-                emptyEl.classList.add('hidden');
-                try {
-                    browseGpus = await apiFetch('/api/gpus?limit=1000');
-                    loadingEl.classList.add('hidden');
-                    container.classList.remove('hidden');
-                    renderBrowseGpuTable(browseGpus);
-                } catch (err) {
-                    loadingEl.classList.add('hidden');
-                    emptyEl.textContent = 'Error loading GPUs: ' + err.message;
-                    emptyEl.classList.remove('hidden');
-                }
-            } else {
-                renderBrowseGpuTable(browseGpus);
-            }
-        }
-
-        function renderBrowseGpuTable(gpus) {
-            const searchText = (document.getElementById('browseGpuSearch').value || '').trim().toLowerCase();
-            const filtered = searchText
-                ? gpus.filter(g => {
-                    return (g.gpu_model_name || '').toLowerCase().includes(searchText)
-                        || (g.vendor || '').toLowerCase().includes(searchText)
-                        || (g.gpu_model || '').toLowerCase().includes(searchText)
-                        || (g.memory_type || '').toLowerCase().includes(searchText)
-                        || (g.form_factor || '').toLowerCase().includes(searchText);
-                })
-                : gpus;
-            const tbody = document.getElementById('browseGpuTableBody');
-            const container = document.getElementById('browseGpuTableContainer');
-            const emptyEl = document.getElementById('browseGpuEmpty');
-            tbody.innerHTML = '';
-            if (filtered.length === 0) {
-                container.classList.add('hidden');
-                emptyEl.textContent = 'No GPUs match your search.';
-                emptyEl.classList.remove('hidden');
-                return;
-            }
-            container.classList.remove('hidden');
-            emptyEl.classList.add('hidden');
-            filtered.forEach(gpu => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${gpu.id}</td>
-                    <td><strong>${escapeHtml(gpu.gpu_model_name || '-')}</strong></td>
-                    <td>${escapeHtml(gpu.vendor || '-')}</td>
-                    <td>${escapeHtml(gpu.form_factor || '-')}</td>
-                    <td>${gpu.memory_gb ?? '-'}</td>
-                    <td>${escapeHtml(gpu.memory_type || '-')}</td>
-                    <td>${gpu.tdp_watts ?? '-'}</td>
-                    <td>${validatedSwitch('gpu', gpu)}</td>
-                    <td><button type="button" class="edit-btn" onclick="startEditGpuFromBrowse(${gpu.id})">Edit</button></td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        document.getElementById('browseGpuSearch').addEventListener('input', () => {
-            if (browseGpus.length) renderBrowseGpuTable(browseGpus);
-        });
-
-        function startEditGpuFromBrowse(gpuId) {
-            const gpu = browseGpus.find(g => g.id === gpuId);
-            if (!gpu) return;
-            document.getElementById('edit_gpu_id').value = gpu.id;
-            fillForm(FORM_IDS.editGpu, gpu);
-            document.getElementById('editGpuForm').classList.remove('hidden');
-            switchTab('editGpu');
-        }
 
         async function createGPU(event) {
             event.preventDefault();
@@ -948,40 +1262,6 @@
             }
         }
 
-        async function loadGPUForEdit() {
-            const gpuId = document.getElementById('edit_gpu_id').value;
-            if (!gpuId) { showMessage('Please enter a GPU ID', 'error'); return; }
-            try {
-                const gpu = await apiFetch(`/api/gpus/${gpuId}`);
-                fillForm(FORM_IDS.editGpu, gpu);
-                document.getElementById('editGpuForm').classList.remove('hidden');
-            } catch (err) {
-                showMessage('Error loading GPU: ' + err.message, 'error');
-            }
-        }
-
-        async function updateGPU(event) {
-            event.preventDefault();
-            const gpuId = document.getElementById('edit_gpu_id').value;
-            const data = readForm('gpu', FORM_IDS.editGpu);
-            try {
-                const updated = await apiFetch(`/api/gpus/${gpuId}`, {
-                    method: 'PUT',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify(data)
-                });
-                upsertLocal(browseGpus, updated);
-                showMessage(savedMessage(`GPU "${updated.gpu_model_name}" updated.`), 'success');
-            } catch (err) {
-                showMessage('Error updating GPU: ' + err.message, 'error');
-            }
-        }
-
-        function cancelGpuEdit() {
-            document.getElementById('editGpuForm').classList.add('hidden');
-            document.getElementById('edit_gpu_id').value = '';
-        }
-
         async function deleteGPU() {
             const gpuId = document.getElementById('delete_gpu_id').value;
             if (!gpuId) { showMessage('Please enter a GPU ID', 'error'); return; }
@@ -989,6 +1269,8 @@
             try {
                 await apiFetch(`/api/gpus/${gpuId}`, { method: 'DELETE', headers: getAuthHeaders() });
                 browseGpus = browseGpus.filter(g => g.id !== Number(gpuId));
+                pending.gpu.delete(Number(gpuId));
+                updateBatchBar();
                 showMessage(savedMessage(`GPU #${gpuId} deleted.`), 'success');
                 document.getElementById('delete_gpu_id').value = '';
             } catch (err) {
@@ -1171,6 +1453,7 @@
                     headers: getAuthHeaders()
                 });
                 browseCpus = [];
+                if (clearExisting) { pending.cpu.clear(); updateBatchBar(); }
                 if (data.errors && data.total_errors > 0) {
                     showMessage(`Imported ${data.imported} CPUs. ${data.total_errors} errors occurred.`, 'error');
                 } else {
@@ -1190,6 +1473,7 @@
                     headers: getAuthHeaders()
                 });
                 browseGpus = [];
+                if (clearExisting) { pending.gpu.clear(); updateBatchBar(); }
                 if (data.errors && data.total_errors > 0) {
                     showMessage(`Imported ${data.imported} GPUs. ${data.total_errors} errors occurred.`, 'error');
                 } else {
@@ -1220,6 +1504,7 @@
                     body: formData
                 });
                 browseCpus = [];
+                if (clearExisting) { pending.cpu.clear(); updateBatchBar(); }
                 if (data.errors && data.total_errors > 0) {
                     showMessage(`Imported ${data.imported} CPUs. ${data.total_errors} errors occurred.`, 'error');
                 } else {

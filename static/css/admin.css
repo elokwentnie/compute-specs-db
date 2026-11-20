@@ -55,12 +55,6 @@ header h1 {
     color: var(--text-secondary);
 }
 
-.auth-note {
-    margin-top: 15px;
-    font-size: 0.9em;
-    color: var(--text-secondary);
-}
-
 /* ---------- Form ---------- */
 .form-group {
     margin-bottom: 20px;
@@ -473,6 +467,195 @@ header h1 {
     margin-top: 10px;
 }
 
+.edit-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.edit-header h2 {
+    margin: 0;
+}
+
+.back-btn {
+    padding: 8px 14px;
+    font-size: 14px;
+}
+
+/* ---------- Browse toolbar ---------- */
+.browse-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px 20px;
+    margin-bottom: 15px;
+}
+
+.browse-toolbar .browse-search-group {
+    flex: 1 1 260px;
+    margin-bottom: 0;
+}
+
+.browse-toolbar .batch-switch {
+    padding-bottom: 10px;
+}
+
+.column-picker {
+    position: relative;
+    padding-bottom: 2px;
+}
+
+.column-picker summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    user-select: none;
+}
+
+.column-picker summary::-webkit-details-marker {
+    display: none;
+}
+
+.column-picker summary::after {
+    content: " ▾";
+    color: var(--text-secondary);
+}
+
+.column-picker-menu {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 220px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface-raised);
+    box-shadow: var(--shadow-lg);
+}
+
+.column-picker-menu label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    margin: 0;
+    font-weight: 400;
+    color: var(--text-primary);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.column-picker-menu input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.column-picker-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.column-picker-actions button {
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+/* ---------- Batch mode ---------- */
+.browse-table tbody tr.row-pending,
+.browse-table tbody tr.row-pending:nth-child(even) {
+    background: var(--accent-subtle);
+}
+
+.browse-table td.cell-pending {
+    box-shadow: inset 3px 0 0 var(--accent);
+    font-weight: 600;
+}
+
+.batch-bar {
+    position: fixed;
+    z-index: 30;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-top: 1px solid var(--border-strong);
+    background: var(--bg-surface-raised);
+    box-shadow: var(--shadow-lg);
+}
+
+.batch-bar-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 12px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.batch-review {
+    flex: 1 1 320px;
+    min-width: 0;
+}
+
+.batch-review summary {
+    cursor: pointer;
+    padding: 8px 0;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.batch-list {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+.batch-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.batch-change {
+    flex: 1 1 200px;
+    color: var(--text-secondary);
+}
+
+.batch-remove {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+.batch-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+body.has-batch-bar {
+    padding-bottom: 96px;
+}
+
 @media (max-width: 768px) {
     header {
         flex-direction: column;
@@ -480,4 +663,10 @@ header h1 {
         gap: 12px;
         padding: 20px 50px 20px 20px;
     }
+}
+
+.browse-toolbar .btn-secondary {
+    padding: 10px 14px;
+    font-size: 14px;
+    margin-bottom: 2px;
 }

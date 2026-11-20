@@ -286,6 +286,7 @@
 
         const cpuAxisOptions = [
             { value: 'tdp_watts', label: 'TDP (W)' },
+            { value: 'tdp_per_thread_w', label: 'TDP per Thread (W)' },
             { value: 'max_turbo_frequency_ghz', label: 'Max Turbo Frequency (GHz)' },
             { value: 'cores', label: 'Cores' },
             { value: 'threads', label: 'Threads' },
@@ -613,6 +614,8 @@
                 };
             }
 
+            // Drop a "No data" message left from an earlier render.
+            document.querySelectorAll('#chart > .error').forEach(el => el.remove());
             Plotly.newPlot('chart', traces, layout, {
                 responsive: true,
                 displayModeBar: !isMobile,
@@ -692,6 +695,7 @@
                     { key: 'max_turbo_frequency_ghz', label: 'Max Turbo Frequency', type: 'number', higher: 'better', unit: 'GHz', format: v => v ? v.toFixed(2) : '-' },
                     { key: 'l3_cache_mb', label: 'L3 Cache', type: 'number', higher: 'better', unit: 'MB', format: v => v ? v.toFixed(1) : '-' },
                     { key: 'tdp_watts', label: 'TDP', type: 'number', higher: 'worse', unit: 'W', format: v => v || '-' },
+                    { key: 'tdp_per_thread_w', label: 'TDP per Thread', type: 'number', higher: 'worse', unit: 'W', format: v => v != null ? v.toFixed(2) : '-' },
                     { key: 'launch_year', label: 'Launch Year', type: 'number', higher: 'better', format: v => v || '-' },
                     { key: 'max_memory_tb', label: 'Max Memory', type: 'number', higher: 'better', unit: 'TB', format: v => v ? v.toFixed(2) : '-' }
                 ];

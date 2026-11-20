@@ -1,13 +1,7 @@
-"""
-Minimal GitHub REST client for Compute Specs DB.
+"""Minimal GitHub REST client.
 
-Used to keep the repository CSVs (the source of truth) in sync with admin
-edits, and to store public proposals as GitHub issues.
-
-Configuration (environment variables, read at call time):
-  GITHUB_TOKEN   fine-grained PAT with Contents + Issues read/write on the repo
-  GITHUB_REPO    owner/name (default: elokwentnie/compute-specs-db)
-  GITHUB_BRANCH  branch the CSVs live on (default: main)
+Used to commit CSV edits and to store proposals as issues. Configured by the
+GITHUB_TOKEN, GITHUB_REPO and GITHUB_BRANCH environment variables.
 """
 
 from __future__ import annotations
@@ -39,18 +33,27 @@ class GitHubConflict(GitHubError):
 
 
 def is_configured() -> bool:
+    """Return True if GITHUB_TOKEN is set."""
     return bool(os.environ.get("GITHUB_TOKEN"))
 
 
 def repo() -> str:
+    """Return the ``owner/name`` of the target repository."""
     return os.environ.get("GITHUB_REPO", "elokwentnie/compute-specs-db")
 
 
 def branch() -> str:
+    """Return the branch the CSVs live on."""
     return os.environ.get("GITHUB_BRANCH", "main")
 
 
 def _request(method: str, path: str, **kwargs) -> requests.Response:
+    """Send an authenticated GitHub API request.
+
+    Raises:
+        GitHubConflict: On HTTP 409.
+        GitHubError: On any other error status or network failure.
+    """
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
         raise GitHubError("GITHUB_TOKEN is not configured")
@@ -80,7 +83,11 @@ def _request(method: str, path: str, **kwargs) -> requests.Response:
 # ---------- Repository files ----------
 
 def get_file(path: str) -> tuple[str, str]:
-    """Return (text, sha) of a file on the configured branch."""
+    """Read a file from the configured branch.
+
+    Returns:
+        Tuple of (text, sha).
+    """
     response = _request("GET", f"/repos/{repo()}/contents/{path}", params={"ref": branch()})
     data = response.json()
     content = data.get("content")
@@ -96,7 +103,11 @@ def get_file(path: str) -> tuple[str, str]:
 
 
 def put_file(path: str, text: str, sha: str, message: str) -> dict:
-    """Commit new file contents. Raises GitHubConflict if sha is stale."""
+    """Commit new contents for a file.
+
+    Raises:
+        GitHubConflict: If ``sha`` is stale.
+    """
     payload = {
         "message": message,
         "content": base64.b64encode(text.encode("utf-8")).decode("ascii"),
@@ -115,7 +126,7 @@ def put_file(path: str, text: str, sha: str, message: str) -> dict:
 # ---------- Issues ----------
 
 def ensure_labels(labels: list[str]) -> None:
-    """Create any labels that do not exist yet (cached per process)."""
+    """Create any missing issue labels (cached per process)."""
     for label in labels:
         if label in _known_labels:
             continue
@@ -133,6 +144,7 @@ def ensure_labels(labels: list[str]) -> None:
 
 
 def create_issue(title: str, body: str, labels: list[str]) -> dict:
+    """Open an issue and return the GitHub response."""
     ensure_labels(labels)
     return _request(
         "POST",
@@ -142,11 +154,12 @@ def create_issue(title: str, body: str, labels: list[str]) -> dict:
 
 
 def get_issue(number: int) -> dict:
+    """Fetch an issue by number."""
     return _request("GET", f"/repos/{repo()}/issues/{number}").json()
 
 
 def list_issues(labels: list[str], state: str = "open") -> list[dict]:
-    """List issues (not pull requests) carrying all of the given labels."""
+    """List issues (not pull requests) that carry all of ``labels``."""
     issues: list[dict] = []
     page = 1
     while True:
@@ -169,6 +182,7 @@ def list_issues(labels: list[str], state: str = "open") -> list[dict]:
 
 
 def comment(number: int, body: str) -> dict:
+    """Post a comment on an issue."""
     return _request(
         "POST",
         f"/repos/{repo()}/issues/{number}/comments",
@@ -177,7 +191,13 @@ def comment(number: int, body: str) -> dict:
 
 
 def close_issue(number: int, add_labels: list[str], reason: str = "completed") -> dict:
-    """Close an issue with the given state_reason ("completed" or "not_planned")."""
+    """Close an issue, optionally adding labels first.
+
+    Args:
+        number: Issue number.
+        add_labels: Labels to add before closing.
+        reason: ``"completed"`` or ``"not_planned"``.
+    """
     if add_labels:
         ensure_labels(add_labels)
         _request(

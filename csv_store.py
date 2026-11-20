@@ -1,12 +1,7 @@
-"""
-CSV store: the repository CSVs on GitHub are the source of truth.
+"""Write admin edits to the repository CSVs on GitHub.
 
-Admin edits are written here first (as a one-line commit on GitHub) and only
-then applied to the SQLite database, which is rebuilt from these CSVs on every
-start (see auto_import_if_empty in app.py).
-
-Parsing keeps each file's dialect (delimiter, BOM, line endings) and leaves
-untouched rows byte-for-byte identical, so every commit is a minimal diff.
+The CSVs are the source of truth: each edit is committed first, then applied
+to SQLite. Untouched rows are kept byte-for-byte so commits stay minimal.
 """
 
 from __future__ import annotations
@@ -78,6 +73,7 @@ class DuplicateRowError(CsvStoreError):
 
 @dataclass
 class CsvDoc:
+    """A parsed CSV file, including the details needed to write it back unchanged."""
     header: list[str]
     rows: list[list[str]]
     delimiter: str = ","
@@ -91,6 +87,7 @@ class CsvDoc:
 # ---------- Parsing / serializing ----------
 
 def parse(text: str) -> CsvDoc:
+    """Parse CSV text, keeping its delimiter, BOM and line endings."""
     bom = text.startswith("﻿")
     if bom:
         text = text[1:]
@@ -115,12 +112,14 @@ def parse(text: str) -> CsvDoc:
 
 
 def _format_line(cells: list[str], delimiter: str) -> str:
+    """Format one CSV line without a line terminator."""
     buffer = io.StringIO()
     csv.writer(buffer, delimiter=delimiter, lineterminator="").writerow(cells)
     return buffer.getvalue()
 
 
 def serialize(doc: CsvDoc) -> str:
+    """Write a CsvDoc back to text; unchanged rows keep their original text."""
     header_line = _format_line(doc.header, doc.delimiter)
     lines = [header_line]
     for index, cells in enumerate(doc.rows):
@@ -135,6 +134,7 @@ def serialize(doc: CsvDoc) -> str:
 # ---------- Value conversion ----------
 
 def format_value(value: Any) -> str:
+    """Format a Python value as a CSV cell."""
     if value is None:
         return ""
     if isinstance(value, bool):
@@ -146,7 +146,7 @@ def format_value(value: Any) -> str:
 
 
 def _same_value(cell: str, value: Any) -> bool:
-    """True if an existing cell already represents value (e.g. '64' vs 64.0)."""
+    """Return True if ``cell`` already represents ``value`` (e.g. '64' and 64.0)."""
     if cell == format_value(value):
         return True
     if value is None:
@@ -162,10 +162,12 @@ def _same_value(cell: str, value: Any) -> bool:
 
 
 def values_from_orm(kind: str, obj: Any) -> dict[str, Any]:
+    """Return the CSV fields of an ORM row as a dict."""
     return {attr: getattr(obj, attr) for attr, _ in SCHEMAS[kind]["fields"]}
 
 
 def _key_index(doc: CsvDoc, kind: str) -> int:
+    """Return the column index of the model-name column."""
     schema = SCHEMAS[kind]
     key_header = dict(schema["fields"])[schema["key_attr"]]
     try:
@@ -175,6 +177,7 @@ def _key_index(doc: CsvDoc, kind: str) -> int:
 
 
 def _find_row(doc: CsvDoc, kind: str, name: str) -> int | None:
+    """Return the row index for ``name`` (exact, then case-insensitive), or None."""
     key = _key_index(doc, kind)
     target = name.strip()
     for index, cells in enumerate(doc.rows):
@@ -188,6 +191,7 @@ def _find_row(doc: CsvDoc, kind: str, name: str) -> int | None:
 
 
 def _merge_cells(doc: CsvDoc, kind: str, old_cells: list[str] | None, values: dict[str, Any]) -> list[str]:
+    """Return ``old_cells`` with ``values`` applied, leaving equal cells as they are."""
     header_for_attr = dict(SCHEMAS[kind]["fields"])
     attr_for_header = {header: attr for attr, header in header_for_attr.items()}
     cells = list(old_cells) if old_cells else [""] * len(doc.header)
@@ -204,7 +208,7 @@ def _merge_cells(doc: CsvDoc, kind: str, old_cells: list[str] | None, values: di
 # ---------- Pure row operations ----------
 
 def upsert(doc: CsvDoc, kind: str, old_name: str | None, values: dict[str, Any]) -> CsvDoc:
-    """Replace the row named old_name (or append when old_name is None/missing)."""
+    """Replace the row named ``old_name``, or append a new row."""
     key_attr = SCHEMAS[kind]["key_attr"]
     new_name = str(values[key_attr]).strip()
 
@@ -227,6 +231,7 @@ def upsert(doc: CsvDoc, kind: str, old_name: str | None, values: dict[str, Any])
 
 
 def remove(doc: CsvDoc, kind: str, name: str) -> CsvDoc:
+    """Delete the row named ``name`` if present."""
     index = _find_row(doc, kind, name)
     if index is None:
         logger.warning("%s '%s' not found in CSV; nothing to remove", kind, name)
@@ -238,10 +243,19 @@ def remove(doc: CsvDoc, kind: str, name: str) -> CsvDoc:
 
 # ---------- GitHub write-through ----------
 
-def _commit(kind: str, mutate: Callable[[CsvDoc], CsvDoc], message: str) -> str | None:
-    """Apply mutate to the CSV on GitHub.
+def _with_suffix(message: str) -> str:
+    """Append COMMIT_SUFFIX to the first line of ``message``."""
+    subject, sep, body = message.partition("\n")
+    return subject + COMMIT_SUFFIX + sep + body
 
-    Returns the commit URL, or None if the CSV already matched (no commit).
+
+def _commit(kind: str, mutate: Callable[[CsvDoc], CsvDoc], message: str) -> str | None:
+    """Apply ``mutate`` to the CSV on GitHub and commit it.
+
+    Retries once if the file changed on GitHub meanwhile.
+
+    Returns:
+        The commit URL, or None if nothing changed.
     """
     path = SCHEMAS[kind]["path"]
     with _write_lock:
@@ -251,7 +265,7 @@ def _commit(kind: str, mutate: Callable[[CsvDoc], CsvDoc], message: str) -> str 
             if new_text == text:
                 return None
             try:
-                result = github_client.put_file(path, new_text, sha, message + COMMIT_SUFFIX)
+                result = github_client.put_file(path, new_text, sha, _with_suffix(message))
                 return (result.get("commit") or {}).get("html_url", "")
             except github_client.GitHubConflict:
                 if attempt == 1:
@@ -261,15 +275,37 @@ def _commit(kind: str, mutate: Callable[[CsvDoc], CsvDoc], message: str) -> str 
 
 
 def commit_upsert(kind: str, old_name: str | None, values: dict[str, Any], message: str) -> str | None:
+    """Commit an upsert of one row. Returns the commit URL or None."""
     return _commit(kind, lambda doc: upsert(doc, kind, old_name, values), message)
 
 
+def commit_upsert_many(
+    kind: str, updates: list[tuple[str | None, dict[str, Any]]], message: str
+) -> str | None:
+    """Apply several upserts in one commit.
+
+    Args:
+        kind: "cpu" or "gpu".
+        updates: ``(old_name, values)`` pairs, applied in order.
+        message: Commit message.
+
+    Returns:
+        The commit URL, or None if the CSV did not change.
+    """
+    def mutate(doc: CsvDoc) -> CsvDoc:
+        for old_name, values in updates:
+            doc = upsert(doc, kind, old_name, values)
+        return doc
+    return _commit(kind, mutate, message)
+
+
 def commit_remove(kind: str, name: str, message: str) -> str | None:
+    """Commit the removal of one row. Returns the commit URL or None."""
     return _commit(kind, lambda doc: remove(doc, kind, name), message)
 
 
 def load_text(kind: str) -> str | None:
-    """CSV text from GitHub when configured, else from the bundled file."""
+    """Return CSV text from GitHub if configured, else from the bundled file."""
     path = SCHEMAS[kind]["path"]
     if github_client.is_configured():
         try:

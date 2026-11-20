@@ -206,10 +206,20 @@
 
             <div class="table-section" id="tableSection">
                 <div class="table-toolbar">
-                    <label class="validated-filter" for="validatedOnly">
-                        <input type="checkbox" id="validatedOnly">
-                        Validated only
-                    </label>
+                    <div class="table-toggles">
+                        <label class="validated-filter" for="validatedOnly">
+                            <input type="checkbox" id="validatedOnly">
+                            Validated only
+                        </label>
+                        <label class="validated-filter cpu-only-toggle" for="showTdpPerThread">
+                            <input type="checkbox" id="showTdpPerThread" data-column="tdp-per-thread">
+                            Show TDP per thread
+                        </label>
+                        <label class="validated-filter cpu-only-toggle" for="showMaxMemory">
+                            <input type="checkbox" id="showMaxMemory" data-column="max-memory">
+                            Show max memory
+                        </label>
+                    </div>
                     <span id="validatedSummary"></span>
                 </div>
 
@@ -224,7 +234,7 @@
                 </div>
 
                 <div id="tableContainer">
-                    <table id="cpuTable">
+                    <table id="cpuTable" class="hide-max-memory hide-tdp-per-thread">
                     <thead id="cpuTableHead">
                         <tr>
                             <th class="sortable" data-sort="id">ID</th>
@@ -238,8 +248,9 @@
                             <th class="sortable" data-sort="max_turbo_frequency_ghz">Turbo GHz</th>
                             <th class="sortable" data-sort="l3_cache_mb">L3 MB</th>
                             <th class="sortable" data-sort="tdp_watts">TDP (W)</th>
+                            <th class="sortable col-tdp-per-thread" data-sort="tdp_per_thread_w" title="TDP divided by threads">W/Thread</th>
                             <th class="sortable" data-sort="launch_year">Year</th>
-                            <th class="sortable" data-sort="max_memory_tb">Mem TB</th>
+                            <th class="sortable col-max-memory" data-sort="max_memory_tb">Mem TB</th>
                         </tr>
                     </thead>
                     <thead id="gpuTableHead" class="hidden">
@@ -355,6 +366,12 @@
         let activeTab = 'cpu';
         let fetchedItems = [];
         const validatedOnly = document.getElementById('validatedOnly');
+        // Optional CPU columns, hidden unless the visitor turns them on.
+        const columnToggles = document.querySelectorAll('input[data-column]');
+
+        function applyOptionalColumn(input) {
+            document.getElementById('cpuTable').classList.toggle(`hide-${input.dataset.column}`, !input.checked);
+        }
 
         function esc(value) {
             return String(value)
@@ -397,6 +414,7 @@
 
             document.getElementById('cpuTableHead').classList.toggle('hidden', tab !== 'cpu');
             document.getElementById('gpuTableHead').classList.toggle('hidden', tab !== 'gpu');
+            document.querySelectorAll('.cpu-only-toggle').forEach(el => el.classList.toggle('hidden', tab !== 'cpu'));
 
             searchInput.placeholder = tab === 'cpu'
                 ? 'Search by model, family, codename, or CPU model (e.g., Milan, EPYC, Xeon)...'
@@ -504,8 +522,9 @@
                         <td>${cpu.max_turbo_frequency_ghz ?? '-'}</td>
                         <td>${cpu.l3_cache_mb ?? '-'}</td>
                         <td>${cpu.tdp_watts ?? '-'}</td>
+                        <td class="col-tdp-per-thread">${cpu.tdp_per_thread_w ?? '-'}</td>
                         <td>${cpu.launch_year ?? '-'}</td>
-                        <td>${cpu.max_memory_tb ?? '-'}</td>
+                        <td class="col-max-memory">${cpu.max_memory_tb ?? '-'}</td>
                     `;
                     tableBody.appendChild(row);
                 });
@@ -727,6 +746,16 @@
         searchInput.addEventListener('input', (e) => debouncedSearch(e.target.value));
 
         validatedOnly.addEventListener('change', () => displayData(fetchedItems));
+
+        columnToggles.forEach(input => {
+            const key = `compute-specs-show-${input.dataset.column}`;
+            try { input.checked = localStorage.getItem(key) === '1'; } catch (_) {}
+            applyOptionalColumn(input);
+            input.addEventListener('change', () => {
+                try { localStorage.setItem(key, input.checked ? '1' : '0'); } catch (_) {}
+                applyOptionalColumn(input);
+            });
+        });
 
         searchButton.addEventListener('click', () => {
             if (searchTimeout) { clearTimeout(searchTimeout); searchTimeout = null; }

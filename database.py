@@ -1,8 +1,6 @@
-"""
-Database models and configuration for Compute Specs DB
+"""SQLAlchemy models and SQLite session setup."""
 
-Uses SQLAlchemy ORM with SQLite database for storing compute specification data.
-"""
+from typing import Optional
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
@@ -22,7 +20,7 @@ Base = declarative_base()
 
 
 class CPUSpec(Base):
-    """Compute specification database model"""
+    """A CPU row."""
     __tablename__ = "cpu_specs"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -41,15 +39,24 @@ class CPUSpec(Base):
 
     @property
     def name(self) -> str:
+        """Display name without trademark symbols and clock suffixes."""
         return display_name(self.cpu_model_name)
 
     @property
     def slug(self) -> str:
+        """URL slug for the CPU's spec page."""
         return model_slug(self.cpu_model_name)
+
+    @property
+    def tdp_per_thread_w(self) -> Optional[float]:
+        """TDP divided by thread count, in watts; None if either is missing."""
+        if not self.tdp_watts or not self.threads:
+            return None
+        return round(self.tdp_watts / self.threads, 2)
 
 
 class GPUSpec(Base):
-    """GPU specification database model"""
+    """A GPU row."""
     __tablename__ = "gpu_specs"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -64,15 +71,17 @@ class GPUSpec(Base):
 
     @property
     def name(self) -> str:
+        """Display name."""
         return display_name(self.gpu_model_name)
 
     @property
     def slug(self) -> str:
+        """URL slug for the GPU's spec page."""
         return model_slug(self.gpu_model_name)
 
 
 def _add_missing_validated_columns():
-    """Add the validated column to tables created before it existed."""
+    """Add the ``validated`` column to tables created before it existed."""
     inspector = inspect(engine)
     with engine.begin() as conn:
         for table in ("cpu_specs", "gpu_specs"):
@@ -84,13 +93,13 @@ def _add_missing_validated_columns():
 
 
 def init_db():
-    """Initialize database tables"""
+    """Create tables and apply small schema upgrades."""
     Base.metadata.create_all(bind=engine)
     _add_missing_validated_columns()
 
 
 def get_db():
-    """Database session dependency for FastAPI"""
+    """FastAPI dependency yielding a database session."""
     db = SessionLocal()
     try:
         yield db

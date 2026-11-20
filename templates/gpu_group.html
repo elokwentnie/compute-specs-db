@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% from "macros.html" import gpu_table, link_list %}
 
-{% block subheading %}<p>{{ gpus | length }} models</p>{% endblock %}
+{% block subheading %}<p>{{ gpus | length }} model{{ "s" if gpus | length != 1 }}</p>{% endblock %}
 
 {% block content %}
 <section class="page-section">
     <p class="lead">
-        Compute Specs DB lists {{ gpus | length }} datacenter GPU{{ "s" if gpus | length != 1 }} and accelerators{% if memory %} with {{ memory }} of memory{% endif %}{% if tdp %} and a TDP of {{ tdp }}{% endif %}.
+        Compute Specs DB lists {{ gpus | length }} {{ "datacenter GPUs and accelerators" if gpus | length != 1 else "datacenter GPU" }}{% if memory %} with {{ memory }} of memory{% endif %}{% if tdp %} and a TDP of {{ tdp }}{% endif %}.
         {{ validated }} of {{ gpus | length }} entries have been validated against manufacturer sources.
     </p>
 
@@ -17,7 +17,7 @@
 </section>
 
 <section class="page-section">
-    <h2>All models</h2>
+    <h2>{{ "All models" if gpus | length != 1 else "Model" }}</h2>
     {{ gpu_table(gpus) }}
     <p class="more-links"><a href="/cpus">Browse server CPUs →</a></p>
 </section>

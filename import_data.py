@@ -1,9 +1,4 @@
-"""
-CSV Import Script
-
-Imports compute specifications from CSV file into the database.
-Useful for initial data import or batch updates.
-"""
+"""Import CPU and GPU CSVs into the database."""
 
 import csv
 import io
@@ -12,7 +7,7 @@ from utils import determine_cpu_generation
 
 
 def clean_number(value, default=None):
-    """Clean numeric values from CSV (handles European decimal format)"""
+    """Parse a CSV number, accepting a comma as decimal separator."""
     if not value or value.strip() == "":
         return default
 
@@ -26,7 +21,7 @@ def clean_number(value, default=None):
 
 
 def parse_bool(value, default=False):
-    """Parse a CSV boolean such as True/False, 1/0, yes/no."""
+    """Parse a CSV boolean such as True/False, 1/0 or yes/no."""
     if value is None:
         return default
     value = str(value).strip().lower()
@@ -38,7 +33,7 @@ def parse_bool(value, default=False):
 
 
 def _dict_reader(text):
-    """Build a DictReader for CSV text, detecting ; or , from the header line."""
+    """Return a DictReader for CSV text, detecting ``;`` or ``,``."""
     text = text.lstrip('﻿')
     header = text.split('\n', 1)[0]
     delimiter = ';' if ';' in header else ','
@@ -46,7 +41,7 @@ def _dict_reader(text):
 
 
 def cpu_from_csv_row(row):
-    """Build a CPUSpec from a CSV row dict, or None if the row has no model name."""
+    """Build a CPUSpec from a CSV row, or None if it has no model name."""
     cpu_model_name = (row.get('CPU Model Name') or '').strip()
     if not cpu_model_name:
         return None
@@ -77,7 +72,7 @@ def cpu_from_csv_row(row):
 
 
 def gpu_from_csv_row(row):
-    """Build a GPUSpec from a CSV row dict, or None if the row has no model name."""
+    """Build a GPUSpec from a CSV row, or None if it has no model name."""
     gpu_model_name = (row.get('GPU Model Name') or '').strip()
     if not gpu_model_name:
         return None
@@ -95,6 +90,16 @@ def gpu_from_csv_row(row):
 
 
 def _import_rows(text, build_row, label):
+    """Insert rows from CSV text into the database.
+
+    Args:
+        text: CSV text.
+        build_row: Converts a row dict into a model, or None to skip it.
+        label: Plural name used in log messages.
+
+    Returns:
+        Number of imported rows.
+    """
     init_db()
     db = SessionLocal()
 
@@ -125,16 +130,17 @@ def _import_rows(text, build_row, label):
 
 
 def import_cpu_text_to_db(text):
-    """Import CPU rows from CSV text into the database."""
+    """Import CPU rows from CSV text. Returns the number imported."""
     return _import_rows(text, cpu_from_csv_row, "CPUs")
 
 
 def import_gpu_text_to_db(text):
-    """Import GPU rows from CSV text into the database."""
+    """Import GPU rows from CSV text. Returns the number imported."""
     return _import_rows(text, gpu_from_csv_row, "GPUs")
 
 
 def _read_file(csv_file_path):
+    """Read a CSV file, or return None if it does not exist."""
     try:
         with open(csv_file_path, 'r', encoding='utf-8-sig', newline='') as file:
             return file.read()
@@ -145,24 +151,14 @@ def _read_file(csv_file_path):
 
 
 def import_csv_to_db(csv_file_path="cpu_spec_validated.csv"):
-    """
-    Import CPU data from CSV file to database
-
-    Args:
-        csv_file_path: Path to the CSV file to import
-    """
+    """Import CPUs from a CSV file."""
     text = _read_file(csv_file_path)
     if text is not None:
         import_cpu_text_to_db(text)
 
 
 def import_gpu_csv_to_db(csv_file_path="gpu_spec_validated.csv"):
-    """
-    Import GPU data from CSV file to database
-
-    Args:
-        csv_file_path: Path to the CSV file to import
-    """
+    """Import GPUs from a CSV file."""
     text = _read_file(csv_file_path)
     if text is not None:
         import_gpu_text_to_db(text)

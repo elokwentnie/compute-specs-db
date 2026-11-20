@@ -11,7 +11,8 @@
     <td>{{ cpu.max_turbo_frequency_ghz if cpu.max_turbo_frequency_ghz is not none else "-" }}</td>
     <td>{{ cpu.l3_cache_mb if cpu.l3_cache_mb is not none else "-" }}</td>
     <td>{{ cpu.tdp_watts if cpu.tdp_watts is not none else "-" }}</td>
+    <td class="col-tdp-per-thread">{{ cpu.tdp_per_thread_w if cpu.tdp_per_thread_w is not none else "-" }}</td>
     <td>{{ cpu.launch_year if cpu.launch_year is not none else "-" }}</td>
-    <td>{{ cpu.max_memory_tb if cpu.max_memory_tb is not none else "-" }}</td>
+    <td class="col-max-memory">{{ cpu.max_memory_tb if cpu.max_memory_tb is not none else "-" }}</td>
 </tr>
 {% endfor %}
