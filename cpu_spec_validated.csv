@@ -405,25 +405,25 @@ Intel(R) Xeon(R) 6760P,Intel Xeon 6,Xeon 6760P,Granite Rapids,64,128,3.8,320,330
 Intel(R) Xeon(R) 6761P,Intel Xeon 6,Xeon 6761P,Granite Rapids,64,128,3.9,336,350,2025,4.0,True
 Intel(R) Xeon(R) 6762P,Intel Xeon 6,Xeon 6762P,Granite Rapids,64,128,3.9,320,350,2025,4.0,True
 Intel(R) Xeon(R) 6768P,Intel Xeon 6,Xeon 6768P,Granite Rapids,64,128,3.9,336,330,2025,4.0,True
-Intel(R) Xeon(R) 6774P,Intel Xeon 6,Xeon 6774P,Granite Rapids,64,128,3.9,336,350,2025,4.0,False
-Intel(R) Xeon(R) 6776P,Intel Xeon 6,Xeon 6776P,Granite Rapids,64,128,3.9,336,350,2025,4.0,False
-Intel(R) Xeon(R) 6781P,Intel Xeon 6,Xeon 6781P,Granite Rapids,80,160,3.8,336,350,2025,4.0,False
-Intel(R) Xeon(R) 6787P,Intel Xeon 6,Xeon 6787P,Granite Rapids,86,172,3.8,336,350,2025,4.0,False
-Intel(R) Xeon(R) 6788P,Intel Xeon 6,Xeon 6788P,Granite Rapids,86,172,3.8,336,350,2025,4.0,False
-Intel(R) Xeon(R) 6944P,Intel Xeon 6,Xeon 6944P,Granite Rapids,72,144,3.9,432,350,2024,3.0,False
-Intel(R) Xeon(R) 6952P,Intel Xeon 6,Xeon 6952P,Granite Rapids,96,192,3.9,480,400,2024,3.0,False
-Intel(R) Xeon(R) 6960P,Intel Xeon 6,Xeon 6960P,Granite Rapids,72,144,3.9,432,500,2024,3.0,False
-Intel(R) Xeon(R) 6962P,Intel Xeon 6,Xeon 6962P,Granite Rapids,72,144,3.9,432,500,2024,3.0,False
-Intel(R) Xeon(R) 6972P,Intel Xeon 6,Xeon 6972P,Granite Rapids,96,192,3.9,480,500,2024,3.0,False
-Intel(R) Xeon(R) 6979P,Intel Xeon 6,Xeon 6979P,Granite Rapids,120,240,3.9,504,500,2024,3.0,False
-Intel(R) Xeon(R) 6980P,Intel Xeon 6,Xeon 6980P,Granite Rapids,128,256,3.9,504,500,2024,3.0,False
-Intel(R) Xeon(R) 6710E,Intel Xeon 6,Xeon 6710E,Sierra Forest,64,64,3.2,96,205,2024,4.0,False
-Intel(R) Xeon(R) 6731E,Intel Xeon 6,Xeon 6731E,Sierra Forest,96,96,3.1,96,250,2024,4.0,False
-Intel(R) Xeon(R) 6740E,Intel Xeon 6,Xeon 6740E,Sierra Forest,96,96,3.2,96,250,2024,4.0,False
-Intel(R) Xeon(R) 6746E,Intel Xeon 6,Xeon 6746E,Sierra Forest,112,112,2.7,96,250,2024,4.0,False
-Intel(R) Xeon(R) 6756E,Intel Xeon 6,Xeon 6756E,Sierra Forest,128,128,2.6,96,225,2024,4.0,False
-Intel(R) Xeon(R) 6766E,Intel Xeon 6,Xeon 6766E,Sierra Forest,144,144,2.7,108,250,2024,4.0,False
-Intel(R) Xeon(R) 6780E,Intel Xeon 6,Xeon 6780E,Sierra Forest,144,144,3,108,330,2024,4.0,False
-Ampere(R) Altra(R) Processor Q80-30,Ampere Altra,Altra Q80-30,Quicksilver,80,80,3.0,32,210,2020,4.0,False
-Ampere(R) Altra(R) Max Processor M128-30,Ampere Altra Max,Altra Max M128-30,Mystique,128,128,3.0,16,250,2021,4.0,False
+Intel(R) Xeon(R) 6774P,Intel Xeon 6,Xeon 6774P,Granite Rapids,64,128,3.9,336,350,2025,4.0,True
+Intel(R) Xeon(R) 6776P,Intel Xeon 6,Xeon 6776P,Granite Rapids,64,128,3.9,336,350,2025,4.0,True
+Intel(R) Xeon(R) 6781P,Intel Xeon 6,Xeon 6781P,Granite Rapids,80,160,3.8,336,350,2025,4.0,True
+Intel(R) Xeon(R) 6787P,Intel Xeon 6,Xeon 6787P,Granite Rapids,86,172,3.8,336,350,2025,4.0,True
+Intel(R) Xeon(R) 6788P,Intel Xeon 6,Xeon 6788P,Granite Rapids,86,172,3.8,336,350,2025,4.0,True
+Intel(R) Xeon(R) 6944P,Intel Xeon 6,Xeon 6944P,Granite Rapids,72,144,3.9,432,350,2025,3.0,True
+Intel(R) Xeon(R) 6952P,Intel Xeon 6,Xeon 6952P,Granite Rapids,96,192,3.9,480,400,2024,3.0,True
+Intel(R) Xeon(R) 6960P,Intel Xeon 6,Xeon 6960P,Granite Rapids,72,144,3.9,432,500,2024,3.0,True
+Intel(R) Xeon(R) 6962P,Intel Xeon 6,Xeon 6962P,Granite Rapids,72,144,3.9,432,500,2025,3.0,True
+Intel(R) Xeon(R) 6972P,Intel Xeon 6,Xeon 6972P,Granite Rapids,96,192,3.9,480,500,2024,3.0,True
+Intel(R) Xeon(R) 6979P,Intel Xeon 6,Xeon 6979P,Granite Rapids,120,240,3.9,504,500,2024,3.0,True
+Intel(R) Xeon(R) 6980P,Intel Xeon 6,Xeon 6980P,Granite Rapids,128,256,3.9,504,500,2024,3.0,True
+Intel(R) Xeon(R) 6710E,Intel Xeon 6,Xeon 6710E,Sierra Forest,64,64,3.2,96,205,2024,4.0,True
+Intel(R) Xeon(R) 6731E,Intel Xeon 6,Xeon 6731E,Sierra Forest,96,96,3.1,96,250,2024,4.0,True
+Intel(R) Xeon(R) 6740E,Intel Xeon 6,Xeon 6740E,Sierra Forest,96,96,3.2,96,250,2024,4.0,True
+Intel(R) Xeon(R) 6746E,Intel Xeon 6,Xeon 6746E,Sierra Forest,112,112,2.7,96,250,2024,4.0,True
+Intel(R) Xeon(R) 6756E,Intel Xeon 6,Xeon 6756E,Sierra Forest,128,128,2.6,96,225,2024,4.0,True
+Intel(R) Xeon(R) 6766E,Intel Xeon 6,Xeon 6766E,Sierra Forest,144,144,2.7,108,250,2024,4.0,True
+Intel(R) Xeon(R) 6780E,Intel Xeon 6,Xeon 6780E,Sierra Forest,144,144,3,108,330,2024,4.0,True
+Ampere(R) Altra(R) Processor Q80-30,Ampere Altra,Altra Q80-30,Quicksilver,80,80,3.0,32,210,2020,4.0,True
+Ampere(R) Altra(R) Max Processor M128-30,Ampere Altra Max,Altra Max M128-30,Mystique,128,128,3.0,16,250,2021,4.0,True
 NVIDIA Grace CPU,NVIDIA Grace,Grace,Grace,72,72,3.3,117,250,2023,0.48,False
