@@ -1,5 +1,5 @@
 ﻿CPU Model Name,Family,CPU Model,Codename,Cores,Threads,Max Turbo Frequency (GHz),L3 Cache (MB),TDP (W),Launch Year,Max Memory (TB),Validated
-AMD EPYC 4564P 16-Core Processor,AMD EPYC,EPYC 4564P,Raphael,16,32,5.7,64,170,2024,1.0,True
+AMD EPYC 4564P 16-Core Processor,AMD EPYC,EPYC 4564P,Raphael,16,32,5.7,64,170,2024,0.192,True
 AMD EPYC 7262 8-Core Processor,AMD EPYC,EPYC 7262,Rome,8,16,3.4,128,155,2019,4.0,True
 AMD EPYC 7282 16-Core Processor,AMD EPYC,EPYC 7282,Rome,16,32,3.2,64,120,2019,4.0,True
 AMD EPYC 7301 16-Core Processor,AMD EPYC,EPYC 7301,Naples,16,32,2.7,64,170,2017,4.0,True
