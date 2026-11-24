@@ -46,9 +46,12 @@
             <tr>
                 <th scope="col">Model</th>
                 <th scope="col">Vendor</th>
+                <th scope="col">Architecture</th>
+                <th scope="col">Year</th>
                 <th scope="col">Form factor</th>
                 <th scope="col">Memory (GB)</th>
                 <th scope="col">Memory type</th>
+                <th scope="col">Bandwidth (TB/s)</th>
                 <th scope="col">TDP (W)</th>
                 <th scope="col">Status</th>
             </tr>
@@ -58,9 +61,12 @@
             <tr>
                 <td><a class="model-link" href="/gpu/{{ gpu.slug }}">{{ gpu.name }}</a></td>
                 <td>{{ gpu.vendor or "-" }}</td>
+                <td>{{ gpu.architecture or "-" }}</td>
+                <td>{{ gpu.launch_year | fmt or "-" }}</td>
                 <td>{{ gpu.form_factor or "-" }}</td>
                 <td>{{ gpu.memory_gb | fmt or "-" }}</td>
                 <td>{{ gpu.memory_type or "-" }}</td>
+                <td>{{ gpu.memory_bandwidth_tbs | fmt or "-" }}</td>
                 <td>{{ gpu.tdp_watts | fmt or "-" }}</td>
                 <td>{{ validated_pill(gpu.validated) }}</td>
             </tr>

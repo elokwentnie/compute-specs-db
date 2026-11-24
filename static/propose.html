@@ -152,6 +152,50 @@
                             <label for="gpu_tdp_watts">TDP (W)</label>
                             <input type="number" id="gpu_tdp_watts" min="0" placeholder="e.g. 600">
                         </div>
+                        <div class="form-group">
+                            <label for="gpu_architecture">Architecture</label>
+                            <input type="text" id="gpu_architecture" maxlength="200" placeholder="e.g. Blackwell, Hopper, CDNA 3">
+                        </div>
+                        <div class="form-group">
+                            <label for="gpu_launch_year">Launch Year</label>
+                            <input type="number" id="gpu_launch_year" min="0" placeholder="e.g. 2024">
+                        </div>
+                        <div class="form-group">
+                            <label for="gpu_memory_bandwidth_tbs">Memory Bandwidth (TB/s)</label>
+                            <input type="number" id="gpu_memory_bandwidth_tbs" min="0" step="any" placeholder="e.g. 4.8">
+                        </div>
+                        <div class="form-group">
+                            <label for="gpu_fp64_tflops">FP64 vector (TFLOPS)</label>
+                            <input type="number" id="gpu_fp64_tflops" min="0" step="any" placeholder="e.g. 34">
+                        </div>
+                        <div class="form-group">
+                            <label for="gpu_fp32_tflops">FP32 vector (TFLOPS)</label>
+                            <input type="number" id="gpu_fp32_tflops" min="0" step="any" placeholder="e.g. 67">
+                        </div>
+                        <div class="form-group">
+                            <label for="gpu_fp16_bf16_tensor_tflops">FP16/BF16 Tensor, dense (TFLOPS)</label>
+                            <input type="number" id="gpu_fp16_bf16_tensor_tflops" min="0" step="any" placeholder="e.g. 989">
+                        </div>
+                        <div class="form-group">
+                            <label for="gpu_fp8_tensor_tflops">FP8 Tensor, dense (TFLOPS)</label>
+                            <input type="number" id="gpu_fp8_tensor_tflops" min="0" step="any" placeholder="e.g. 1979">
+                        </div>
+                        <div class="form-group">
+                            <label for="gpu_fp4_tensor_tflops">FP4 Tensor, dense (TFLOPS)</label>
+                            <input type="number" id="gpu_fp4_tensor_tflops" min="0" step="any" placeholder="e.g. 9000">
+                        </div>
+                        <div class="form-group">
+                            <label for="gpu_interconnect">Interconnect</label>
+                            <input type="text" id="gpu_interconnect" maxlength="200" placeholder="e.g. NVLink 5, Infinity Fabric">
+                        </div>
+                        <div class="form-group">
+                            <label for="gpu_interconnect_bandwidth_gbs">Interconnect Bandwidth (GB/s)</label>
+                            <input type="number" id="gpu_interconnect_bandwidth_gbs" min="0" step="any" placeholder="e.g. 1800">
+                        </div>
+                        <div class="form-group">
+                            <label for="gpu_pcie_interface">PCIe Interface</label>
+                            <input type="text" id="gpu_pcie_interface" maxlength="200" placeholder="e.g. PCIe 5.0 x16">
+                        </div>
                     </div>
                 </fieldset>
 
@@ -209,14 +253,16 @@
                 name: 'cpu_model_name',
             },
             gpu: {
-                text: ['gpu_model_name', 'vendor', 'gpu_model', 'form_factor', 'memory_type'],
-                int: ['memory_gb', 'tdp_watts'],
-                float: [],
+                text: ['gpu_model_name', 'vendor', 'gpu_model', 'form_factor', 'memory_type',
+                       'architecture', 'interconnect', 'pcie_interface'],
+                int: ['memory_gb', 'tdp_watts', 'launch_year'],
+                float: ['memory_bandwidth_tbs', 'fp64_tflops', 'fp32_tflops', 'fp16_bf16_tensor_tflops',
+                        'fp8_tensor_tflops', 'fp4_tensor_tflops', 'interconnect_bandwidth_gbs'],
                 name: 'gpu_model_name',
             },
         };
         // Element ids that differ from the API field name.
-        const ELEMENT_IDS = { gpu: { tdp_watts: 'gpu_tdp_watts' } };
+        const ELEMENT_IDS = { gpu: { tdp_watts: 'gpu_tdp_watts', architecture: 'gpu_architecture', launch_year: 'gpu_launch_year', memory_bandwidth_tbs: 'gpu_memory_bandwidth_tbs', fp64_tflops: 'gpu_fp64_tflops', fp32_tflops: 'gpu_fp32_tflops', fp16_bf16_tensor_tflops: 'gpu_fp16_bf16_tensor_tflops', fp8_tensor_tflops: 'gpu_fp8_tensor_tflops', fp4_tensor_tflops: 'gpu_fp4_tensor_tflops', interconnect: 'gpu_interconnect', interconnect_bandwidth_gbs: 'gpu_interconnect_bandwidth_gbs', pcie_interface: 'gpu_pcie_interface' } };
         const GITHUB_FALLBACK = 'https://github.com/elokwentnie/compute-specs-db/issues/new/choose';
 
         const form = document.getElementById('proposeForm');

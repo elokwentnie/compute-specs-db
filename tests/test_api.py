@@ -196,7 +196,7 @@ def test_edit_and_rename_gpu(client, fake_github):
     assert fake_github.commits[-1].startswith("Rename GPU:")
     diff = changed_lines(before, fake_github.files[GPU_PATH])
     assert len(diff) == 2
-    assert diff[1].startswith("+" + gpu["gpu_model_name"] + " Rev2,") and diff[1].endswith(",999,True")
+    assert diff[1].startswith("+" + gpu["gpu_model_name"] + " Rev2,") and ",999," in diff[1] and diff[1].endswith(",True")
 
 
 def test_create_and_delete_cpu(client, fake_github):
@@ -329,3 +329,14 @@ def test_tdp_per_thread_is_derived(client):
     assert all(c["tdp_per_thread_w"] is None for c in cpus if not (c["tdp_watts"] and c["threads"]))
     home = client.get("/").text
     assert 'data-sort="tdp_per_thread_w"' in home and 'class="col-tdp-per-thread"' in home
+
+
+def test_gpu_performance_columns_round_trip(client):
+    gpus = client.get("/api/gpus", params={"limit": 1000}).json()
+    h100 = next(g for g in gpus if g["gpu_model_name"] == "NVIDIA H100 SXM")
+    assert h100["architecture"] == "Hopper" and h100["launch_year"] == 2022
+    assert h100["memory_bandwidth_tbs"] == 3.35 and h100["fp8_tensor_tflops"] == 1979
+    assert h100["interconnect"] == "NVLink 4" and h100["interconnect_bandwidth_gbs"] == 900
+
+    exported = client.get("/api/export/gpus/csv").text.splitlines()
+    assert "Memory Bandwidth (TB/s)" in exported[0] and "FP4 Tensor (TFLOPS)" in exported[0]

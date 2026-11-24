@@ -52,6 +52,7 @@ def test_gpu_page(client):
     assert "<h1>NVIDIA H100 SXM specifications</h1>" in html
     assert "80 GB" in html and "HBM3" in html and "700 W" in html
     assert '<a href="/gpus/nvidia">NVIDIA</a>' in html
+    assert "Hopper" in html and "3.35 TB/s" in html and "1979 TFLOPS" in html and "PCIe 5.0 x16" in html
 
 
 def test_overview_pages_link_to_every_member(client):

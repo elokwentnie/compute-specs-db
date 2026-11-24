@@ -2,6 +2,9 @@
 
 import csv
 import io
+from sqlalchemy import Float, Integer
+
+from csv_store import SCHEMAS
 from database import SessionLocal, CPUSpec, GPUSpec, init_db
 from utils import determine_cpu_generation
 
@@ -71,22 +74,35 @@ def cpu_from_csv_row(row):
     )
 
 
+def gpu_values(get, number=None):
+    """Read every GPU field from a row.
+
+    Args:
+        get: Returns the raw cell for a CSV header (or None if absent).
+        number: Number parser; defaults to ``clean_number``.
+
+    Returns:
+        A dict of GPUSpec attribute values.
+    """
+    number = number or clean_number
+    values = {}
+    for attr, header in SCHEMAS["gpu"]["fields"]:
+        raw = get(header)
+        if attr == "validated":
+            values[attr] = parse_bool(raw)
+        elif isinstance(GPUSpec.__table__.columns[attr].type, (Integer, Float)):
+            values[attr] = number(raw)
+        else:
+            values[attr] = ("" if raw is None else str(raw)).strip() or None
+    return values
+
+
 def gpu_from_csv_row(row):
     """Build a GPUSpec from a CSV row, or None if it has no model name."""
-    gpu_model_name = (row.get('GPU Model Name') or '').strip()
-    if not gpu_model_name:
+    values = gpu_values(lambda header: row.get(header))
+    if not values["gpu_model_name"]:
         return None
-
-    return GPUSpec(
-        gpu_model_name=gpu_model_name,
-        vendor=(row.get('Vendor') or '').strip() or None,
-        gpu_model=(row.get('GPU Model') or '').strip() or None,
-        form_factor=(row.get('Form Factor') or '').strip() or None,
-        memory_gb=clean_number(row.get('Memory (GB)'), default=None),
-        memory_type=(row.get('Memory Type') or '').strip() or None,
-        tdp_watts=clean_number(row.get('TDP (W)'), default=None),
-        validated=parse_bool(row.get('Validated')),
-    )
+    return GPUSpec(**values)
 
 
 def _import_rows(text, build_row, label):
