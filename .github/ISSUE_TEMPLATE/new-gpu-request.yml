@@ -58,6 +58,72 @@ body:
       placeholder: e.g. 600
 
   - type: input
+    id: architecture
+    attributes:
+      label: Architecture
+      placeholder: e.g. Blackwell, Hopper, CDNA 3
+
+  - type: input
+    id: launch_year
+    attributes:
+      label: Launch Year
+      placeholder: e.g. 2024
+
+  - type: input
+    id: memory_bandwidth_tbs
+    attributes:
+      label: Memory Bandwidth (TB/s)
+      placeholder: e.g. 4.8
+
+  - type: input
+    id: fp64_tflops
+    attributes:
+      label: FP64 vector (TFLOPS)
+      placeholder: e.g. 34
+
+  - type: input
+    id: fp32_tflops
+    attributes:
+      label: FP32 vector (TFLOPS)
+      placeholder: e.g. 67
+
+  - type: input
+    id: fp16_bf16_tensor_tflops
+    attributes:
+      label: FP16/BF16 Tensor, dense (TFLOPS)
+      placeholder: e.g. 989
+
+  - type: input
+    id: fp8_tensor_tflops
+    attributes:
+      label: FP8 Tensor, dense (TFLOPS)
+      placeholder: e.g. 1979
+
+  - type: input
+    id: fp4_tensor_tflops
+    attributes:
+      label: FP4 Tensor, dense (TFLOPS)
+      placeholder: e.g. 9000
+
+  - type: input
+    id: interconnect
+    attributes:
+      label: Interconnect
+      placeholder: e.g. NVLink 5, Infinity Fabric
+
+  - type: input
+    id: interconnect_bandwidth_gbs
+    attributes:
+      label: Interconnect Bandwidth (GB/s)
+      placeholder: e.g. 1800
+
+  - type: input
+    id: pcie_interface
+    attributes:
+      label: PCIe Interface
+      placeholder: e.g. PCIe 5.0 x16
+
+  - type: input
     id: source_url
     attributes:
       label: Source URL

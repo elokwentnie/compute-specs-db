@@ -118,10 +118,21 @@ CPU_SPECS = (
 
 GPU_SPECS = (
     ("Vendor", "vendor", ""),
+    ("Architecture", "architecture", ""),
+    ("Launch year", "launch_year", ""),
     ("Form factor", "form_factor", ""),
     ("Memory", "memory_gb", " GB"),
     ("Memory type", "memory_type", ""),
+    ("Memory bandwidth", "memory_bandwidth_tbs", " TB/s"),
     ("TDP", "tdp_watts", " W"),
+    ("FP64 (vector)", "fp64_tflops", " TFLOPS"),
+    ("FP32 (vector)", "fp32_tflops", " TFLOPS"),
+    ("FP16/BF16 Tensor (dense)", "fp16_bf16_tensor_tflops", " TFLOPS"),
+    ("FP8 Tensor (dense)", "fp8_tensor_tflops", " TFLOPS"),
+    ("FP4 Tensor (dense)", "fp4_tensor_tflops", " TFLOPS"),
+    ("Interconnect", "interconnect", ""),
+    ("Interconnect bandwidth", "interconnect_bandwidth_gbs", " GB/s"),
+    ("Host interface", "pcie_interface", ""),
 )
 
 
@@ -205,6 +216,24 @@ def gpu_sentences(gpu: GPUSpec) -> List[str]:
     if gpu.tdp_watts:
         first += f" and a {fmt(gpu.tdp_watts)} W TDP" if gpu.memory_gb else f" with a {fmt(gpu.tdp_watts)} W TDP"
     parts = [first + "."]
+    origin = " ".join(p for p in (
+        f"on the {gpu.architecture} architecture" if gpu.architecture else "",
+        f"in {gpu.launch_year}" if gpu.launch_year else "",
+    ) if p)
+    if origin:
+        parts.append(f"It was introduced {origin}.")
+    perf = [f"{fmt(value, ' TFLOPS')} {label}" for label, value in (
+        ("FP64", gpu.fp64_tflops),
+        ("FP32", gpu.fp32_tflops),
+        ("dense FP16/BF16 tensor", gpu.fp16_bf16_tensor_tflops),
+        ("dense FP8 tensor", gpu.fp8_tensor_tflops),
+        ("dense FP4 tensor", gpu.fp4_tensor_tflops),
+    ) if value]
+    if gpu.memory_bandwidth_tbs:
+        perf.insert(0, f"{fmt(gpu.memory_bandwidth_tbs, ' TB/s')} memory bandwidth")
+    if perf:
+        joined = perf[0] if len(perf) == 1 else ", ".join(perf[:-1]) + " and " + perf[-1]
+        parts.append(f"Peak figures: {joined}.")
     if gpu.form_factor:
         parts.append(f"Form factor: {gpu.form_factor}.")
     return parts
@@ -303,7 +332,10 @@ def cpu_description(cpu: CPUSpec) -> str:
 def gpu_description(gpu: GPUSpec) -> str:
     """Build the meta description for a GPU page."""
     specs = ", ".join(s for s in (
+        gpu.architecture or "",
         " ".join(p for p in (fmt(gpu.memory_gb, " GB"), gpu.memory_type or "") if p),
+        fmt(gpu.memory_bandwidth_tbs, " TB/s") if gpu.memory_bandwidth_tbs else "",
+        fmt(gpu.fp8_tensor_tflops, " TFLOPS FP8") if gpu.fp8_tensor_tflops else "",
         fmt(gpu.tdp_watts, " W TDP") if gpu.tdp_watts else "",
         gpu.form_factor or "",
     ) if s)

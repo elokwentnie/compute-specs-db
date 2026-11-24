@@ -34,7 +34,7 @@ from auth import (
 )
 from utils import determine_cpu_generation, model_slug
 from llm import ask_question, LLMError, LLMRateLimitError, LLMTimeoutError
-from import_data import import_cpu_text_to_db, import_gpu_text_to_db, parse_bool
+from import_data import import_cpu_text_to_db, import_gpu_text_to_db, parse_bool, gpu_values
 import csv_store
 import github_client
 import pages
@@ -265,6 +265,17 @@ class GPUSpecResponse(BaseModel):
     memory_gb: Optional[int] = None
     memory_type: Optional[str] = None
     tdp_watts: Optional[int] = None
+    architecture: Optional[str] = None
+    launch_year: Optional[int] = None
+    memory_bandwidth_tbs: Optional[float] = None
+    fp64_tflops: Optional[float] = None
+    fp32_tflops: Optional[float] = None
+    fp16_bf16_tensor_tflops: Optional[float] = None
+    fp8_tensor_tflops: Optional[float] = None
+    fp4_tensor_tflops: Optional[float] = None
+    interconnect: Optional[str] = None
+    interconnect_bandwidth_gbs: Optional[float] = None
+    pcie_interface: Optional[str] = None
     validated: bool = False
     slug: str = Field(description="URL slug of the spec page: /gpu/{slug}")
 
@@ -501,17 +512,18 @@ async def get_all_gpus(
 
 @app.get("/api/gpus/search", response_model=List[GPUSpecResponse])
 async def search_gpus(
-    q: str = Query(..., description="Search query (searches in model name, vendor, GPU model, form factor, and memory type)"),
+    q: str = Query(..., description="Search query (searches in model name, vendor, GPU model, form factor, memory type, and architecture)"),
     validated: Optional[bool] = Query(None, description="Only return validated (true) or unvalidated (false) entries"),
     db: Session = Depends(get_db)
 ):
-    """Search GPUs by name, vendor, model, form factor or memory type."""
+    """Search GPUs by name, vendor, model, form factor, memory type or architecture."""
     search_filter = or_(
         GPUSpec.gpu_model_name.ilike(f"%{q}%"),
         GPUSpec.vendor.ilike(f"%{q}%"),
         GPUSpec.gpu_model.ilike(f"%{q}%"),
         GPUSpec.form_factor.ilike(f"%{q}%"),
-        GPUSpec.memory_type.ilike(f"%{q}%")
+        GPUSpec.memory_type.ilike(f"%{q}%"),
+        GPUSpec.architecture.ilike(f"%{q}%")
     )
     query = db.query(GPUSpec).filter(search_filter)
     if validated is not None:
@@ -618,6 +630,17 @@ class GPUSpecCreate(BaseModel):
     memory_gb: Optional[int] = None
     memory_type: Optional[str] = None
     tdp_watts: Optional[int] = None
+    architecture: Optional[str] = None
+    launch_year: Optional[int] = None
+    memory_bandwidth_tbs: Optional[float] = None
+    fp64_tflops: Optional[float] = None
+    fp32_tflops: Optional[float] = None
+    fp16_bf16_tensor_tflops: Optional[float] = None
+    fp8_tensor_tflops: Optional[float] = None
+    fp4_tensor_tflops: Optional[float] = None
+    interconnect: Optional[str] = None
+    interconnect_bandwidth_gbs: Optional[float] = None
+    pcie_interface: Optional[str] = None
     validated: bool = False
 
 
@@ -630,6 +653,17 @@ class GPUSpecUpdate(BaseModel):
     memory_gb: Optional[int] = None
     memory_type: Optional[str] = None
     tdp_watts: Optional[int] = None
+    architecture: Optional[str] = None
+    launch_year: Optional[int] = None
+    memory_bandwidth_tbs: Optional[float] = None
+    fp64_tflops: Optional[float] = None
+    fp32_tflops: Optional[float] = None
+    fp16_bf16_tensor_tflops: Optional[float] = None
+    fp8_tensor_tflops: Optional[float] = None
+    fp4_tensor_tflops: Optional[float] = None
+    interconnect: Optional[str] = None
+    interconnect_bandwidth_gbs: Optional[float] = None
+    pcie_interface: Optional[str] = None
     validated: Optional[bool] = None
 
 
@@ -1370,6 +1404,15 @@ async def export_excel(db: Session = Depends(get_db)):
     )
 
 
+def gpu_export_row(gpu: GPUSpec) -> dict:
+    """Return a GPU's CSV columns (as in gpu_spec_validated.csv) for exports."""
+    row = {}
+    for attr, header in csv_store.SCHEMAS["gpu"]["fields"]:
+        value = getattr(gpu, attr)
+        row[header] = bool(value) if attr == "validated" else ("" if value is None else value)
+    return row
+
+
 @app.get("/api/export/gpus/csv")
 async def export_gpus_csv(db: Session = Depends(get_db)):
     """Download all GPUs as CSV."""
@@ -1377,14 +1420,7 @@ async def export_gpus_csv(db: Session = Depends(get_db)):
 
     df = pd.DataFrame([{
         "ID": gpu.id,
-        "GPU Model Name": gpu.gpu_model_name,
-        "Vendor": gpu.vendor or "",
-        "GPU Model": gpu.gpu_model or "",
-        "Form Factor": gpu.form_factor or "",
-        "Memory (GB)": gpu.memory_gb or "",
-        "Memory Type": gpu.memory_type or "",
-        "TDP (W)": gpu.tdp_watts or "",
-        "Validated": bool(gpu.validated),
+        **gpu_export_row(gpu),
     } for gpu in gpus])
 
     stream = io.StringIO()
@@ -1407,14 +1443,7 @@ async def export_gpus_excel(db: Session = Depends(get_db)):
 
     df = pd.DataFrame([{
         "ID": gpu.id,
-        "GPU Model Name": gpu.gpu_model_name,
-        "Vendor": gpu.vendor or "",
-        "GPU Model": gpu.gpu_model or "",
-        "Form Factor": gpu.form_factor or "",
-        "Memory (GB)": gpu.memory_gb or "",
-        "Memory Type": gpu.memory_type or "",
-        "TDP (W)": gpu.tdp_watts or "",
-        "Validated": bool(gpu.validated),
+        **gpu_export_row(gpu),
     } for gpu in gpus])
 
     output = io.BytesIO()
@@ -1732,16 +1761,12 @@ async def import_gpu_csv_file(
                 errors.append(f"Row {idx + 2}: Missing GPU Model Name")
                 continue
 
-            db_gpu = GPUSpec(
-                gpu_model_name=gpu_model_name,
-                vendor=str(row.get('Vendor', '')).strip() or None,
-                gpu_model=str(row.get('GPU Model', '')).strip() or None,
-                form_factor=str(row.get('Form Factor', '')).strip() or None,
-                memory_gb=clean_number(row.get('Memory (GB)')),
-                memory_type=str(row.get('Memory Type', '')).strip() or None,
-                tdp_watts=clean_number(row.get('TDP (W)')),
-                validated=parse_bool(row.get('Validated')),
+            values = gpu_values(
+                lambda header: None if pd.isna(row.get(header)) else row.get(header),
+                number=clean_number,
             )
+            values["gpu_model_name"] = gpu_model_name
+            db_gpu = GPUSpec(**values)
             db.add(db_gpu)
             imported += 1
 
@@ -1803,16 +1828,12 @@ async def import_gpu_csv_from_repo(
                 errors.append(f"Row {idx + 2}: Missing GPU Model Name")
                 continue
 
-            db_gpu = GPUSpec(
-                gpu_model_name=gpu_model_name,
-                vendor=str(row.get('Vendor', '')).strip() or None,
-                gpu_model=str(row.get('GPU Model', '')).strip() or None,
-                form_factor=str(row.get('Form Factor', '')).strip() or None,
-                memory_gb=clean_number(row.get('Memory (GB)')),
-                memory_type=str(row.get('Memory Type', '')).strip() or None,
-                tdp_watts=clean_number(row.get('TDP (W)')),
-                validated=parse_bool(row.get('Validated')),
+            values = gpu_values(
+                lambda header: None if pd.isna(row.get(header)) else row.get(header),
+                number=clean_number,
             )
+            values["gpu_model_name"] = gpu_model_name
+            db_gpu = GPUSpec(**values)
             db.add(db_gpu)
             imported += 1
 

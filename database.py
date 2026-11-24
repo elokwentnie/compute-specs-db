@@ -67,6 +67,17 @@ class GPUSpec(Base):
     memory_gb = Column(Integer)
     memory_type = Column(String)
     tdp_watts = Column(Integer)
+    architecture = Column(String, index=True)
+    launch_year = Column(Integer)
+    memory_bandwidth_tbs = Column(Float)
+    fp64_tflops = Column(Float)
+    fp32_tflops = Column(Float)
+    fp16_bf16_tensor_tflops = Column(Float)
+    fp8_tensor_tflops = Column(Float)
+    fp4_tensor_tflops = Column(Float)
+    interconnect = Column(String)
+    interconnect_bandwidth_gbs = Column(Float)
+    pcie_interface = Column(String)
     validated = Column(Boolean, nullable=False, default=False, index=True)
 
     @property
@@ -80,22 +91,27 @@ class GPUSpec(Base):
         return model_slug(self.gpu_model_name)
 
 
-def _add_missing_validated_columns():
-    """Add the ``validated`` column to tables created before it existed."""
+def _add_missing_columns():
+    """Add columns that were introduced after a table was first created."""
     inspector = inspect(engine)
     with engine.begin() as conn:
-        for table in ("cpu_specs", "gpu_specs"):
-            columns = {col["name"] for col in inspector.get_columns(table)}
-            if "validated" not in columns:
-                conn.execute(text(
-                    f"ALTER TABLE {table} ADD COLUMN validated BOOLEAN NOT NULL DEFAULT 0"
-                ))
+        for model in (CPUSpec, GPUSpec):
+            table = model.__table__
+            existing = {col["name"] for col in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing:
+                    continue
+                if column.name == "validated":
+                    ddl = "BOOLEAN NOT NULL DEFAULT 0"
+                else:
+                    ddl = column.type.compile(dialect=engine.dialect)
+                conn.execute(text(f"ALTER TABLE {table.name} ADD COLUMN {column.name} {ddl}"))
 
 
 def init_db():
     """Create tables and apply small schema upgrades."""
     Base.metadata.create_all(bind=engine)
-    _add_missing_validated_columns()
+    _add_missing_columns()
 
 
 def get_db():

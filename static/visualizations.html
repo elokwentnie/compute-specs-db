@@ -297,7 +297,15 @@
 
         const gpuAxisOptions = [
             { value: 'tdp_watts', label: 'TDP (W)' },
-            { value: 'memory_gb', label: 'Memory (GB)' }
+            { value: 'memory_gb', label: 'Memory (GB)' },
+            { value: 'memory_bandwidth_tbs', label: 'Memory Bandwidth (TB/s)' },
+            { value: 'launch_year', label: 'Launch Year' },
+            { value: 'fp64_tflops', label: 'FP64 (TFLOPS)' },
+            { value: 'fp32_tflops', label: 'FP32 (TFLOPS)' },
+            { value: 'fp16_bf16_tensor_tflops', label: 'FP16/BF16 Tensor, dense (TFLOPS)' },
+            { value: 'fp8_tensor_tflops', label: 'FP8 Tensor, dense (TFLOPS)' },
+            { value: 'fp4_tensor_tflops', label: 'FP4 Tensor, dense (TFLOPS)' },
+            { value: 'interconnect_bandwidth_gbs', label: 'Interconnect Bandwidth (GB/s)' }
         ];
 
         function populateAxisSelectors() {
@@ -707,7 +715,18 @@
                     { key: 'form_factor', label: 'Form Factor', type: 'text' },
                     { key: 'memory_gb', label: 'Memory', type: 'number', higher: 'better', unit: 'GB', format: v => v != null ? v : '-' },
                     { key: 'memory_type', label: 'Memory Type', type: 'text' },
-                    { key: 'tdp_watts', label: 'TDP', type: 'number', higher: 'worse', unit: 'W', format: v => v || '-' }
+                    { key: 'architecture', label: 'Architecture', type: 'text' },
+                    { key: 'launch_year', label: 'Launch Year', type: 'number', higher: 'better', format: v => v || '-' },
+                    { key: 'memory_bandwidth_tbs', label: 'Memory Bandwidth', type: 'number', higher: 'better', unit: 'TB/s', format: v => v != null ? v : '-' },
+                    { key: 'tdp_watts', label: 'TDP', type: 'number', higher: 'worse', unit: 'W', format: v => v || '-' },
+                    { key: 'fp64_tflops', label: 'FP64 (vector)', type: 'number', higher: 'better', unit: 'TFLOPS', format: v => v != null ? v : '-' },
+                    { key: 'fp32_tflops', label: 'FP32 (vector)', type: 'number', higher: 'better', unit: 'TFLOPS', format: v => v != null ? v : '-' },
+                    { key: 'fp16_bf16_tensor_tflops', label: 'FP16/BF16 Tensor (dense)', type: 'number', higher: 'better', unit: 'TFLOPS', format: v => v != null ? v : '-' },
+                    { key: 'fp8_tensor_tflops', label: 'FP8 Tensor (dense)', type: 'number', higher: 'better', unit: 'TFLOPS', format: v => v != null ? v : '-' },
+                    { key: 'fp4_tensor_tflops', label: 'FP4 Tensor (dense)', type: 'number', higher: 'better', unit: 'TFLOPS', format: v => v != null ? v : '-' },
+                    { key: 'interconnect', label: 'Interconnect', type: 'text' },
+                    { key: 'interconnect_bandwidth_gbs', label: 'Interconnect Bandwidth', type: 'number', higher: 'better', unit: 'GB/s', format: v => v != null ? v : '-' },
+                    { key: 'pcie_interface', label: 'PCIe Interface', type: 'text' }
                 ];
             }
         }

@@ -260,10 +260,17 @@
                             <th class="sortable-gpu" data-sort="validated">Val.</th>
                             <th class="sortable-gpu" data-sort="vendor">Vendor</th>
                             <th class="sortable-gpu" data-sort="gpu_model">GPU Model</th>
+                            <th class="sortable-gpu" data-sort="architecture">Architecture</th>
+                            <th class="sortable-gpu" data-sort="launch_year">Year</th>
                             <th class="sortable-gpu" data-sort="form_factor">Form Factor</th>
                             <th class="sortable-gpu" data-sort="memory_gb">Memory (GB)</th>
                             <th class="sortable-gpu" data-sort="memory_type">Memory Type</th>
+                            <th class="sortable-gpu" data-sort="memory_bandwidth_tbs" title="Memory bandwidth">BW (TB/s)</th>
                             <th class="sortable-gpu" data-sort="tdp_watts">TDP (W)</th>
+                            <th class="sortable-gpu" data-sort="fp64_tflops" title="FP64 vector TFLOPS">FP64 TF</th>
+                            <th class="sortable-gpu" data-sort="fp16_bf16_tensor_tflops" title="FP16/BF16 tensor TFLOPS, dense (no sparsity)">BF16 TF</th>
+                            <th class="sortable-gpu" data-sort="fp8_tensor_tflops" title="FP8 tensor TFLOPS, dense (no sparsity)">FP8 TF</th>
+                            <th class="sortable-gpu" data-sort="fp4_tensor_tflops" title="FP4 tensor TFLOPS, dense (no sparsity)">FP4 TF</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody"><!--SSR:CPU_ROWS--></tbody>
@@ -418,7 +425,7 @@
 
             searchInput.placeholder = tab === 'cpu'
                 ? 'Search by model, family, codename, or CPU model (e.g., Milan, EPYC, Xeon)...'
-                : 'Search by model, vendor, form factor, or memory type (e.g., H100, NVIDIA, HBM3)...';
+                : 'Search by model, vendor, architecture, form factor, or memory type (e.g., H100, Blackwell, HBM3)...';
 
             renderStats();
             syncUrl('');
@@ -550,10 +557,17 @@
                         <td>${validatedPill(gpu.validated)}</td>
                         <td>${vendorBadge}</td>
                         <td>${esc(gpu.gpu_model || '-')}</td>
+                        <td>${esc(gpu.architecture || '-')}</td>
+                        <td>${gpu.launch_year ?? '-'}</td>
                         <td>${esc(gpu.form_factor || '-')}</td>
                         <td>${gpu.memory_gb ?? '-'}</td>
                         <td>${esc(gpu.memory_type || '-')}</td>
+                        <td>${gpu.memory_bandwidth_tbs ?? '-'}</td>
                         <td>${gpu.tdp_watts ?? '-'}</td>
+                        <td>${gpu.fp64_tflops ?? '-'}</td>
+                        <td>${gpu.fp16_bf16_tensor_tflops ?? '-'}</td>
+                        <td>${gpu.fp8_tensor_tflops ?? '-'}</td>
+                        <td>${gpu.fp4_tensor_tflops ?? '-'}</td>
                     `;
                     tableBody.appendChild(row);
                 });

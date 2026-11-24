@@ -34,9 +34,17 @@ Table cpu_specs:
   Date filtering uses launch_year (integer), e.g. launch_year BETWEEN 2020 AND 2025
 
 Table gpu_specs:
-  id, gpu_model_name, vendor, gpu_model, form_factor, memory_gb, memory_type, tdp_watts, validated
+  id, gpu_model_name, vendor, gpu_model, architecture, launch_year, form_factor, memory_gb,
+  memory_type, memory_bandwidth_tbs, tdp_watts, fp64_tflops, fp32_tflops,
+  fp16_bf16_tensor_tflops, fp8_tensor_tflops, fp4_tensor_tflops, interconnect,
+  interconnect_bandwidth_gbs, pcie_interface, validated
 
-  vendor examples: 'NVIDIA', 'AMD'
+  vendor examples: 'NVIDIA', 'AMD', 'Intel'
+  architecture examples: 'Rubin', 'Blackwell Ultra', 'Blackwell', 'Hopper', 'Ada Lovelace', 'Ampere', 'Volta', 'CDNA 3'
+  Throughput columns are TFLOPS per GPU (per superchip for GB200/GB300/GH200 rows):
+  fp64/fp32 are vector (non-tensor); tensor columns are dense (without sparsity).
+  fp16_bf16_tensor_tflops is FP16 for GPUs without BF16 (Volta, Turing).
+  memory_bandwidth_tbs is TB/s; interconnect_bandwidth_gbs is GPU-to-GPU GB/s (NVLink, Infinity Fabric).
 
 validated (both tables) is 1 when the specs were manually checked against official
 sources, 0 when not yet verified. Filter with validated = 1 / validated = 0.
@@ -199,6 +207,17 @@ def _gpu_to_dict(gpu: GPUSpec) -> dict[str, Any]:
         "memory_gb": gpu.memory_gb,
         "memory_type": gpu.memory_type,
         "tdp_watts": gpu.tdp_watts,
+        "architecture": gpu.architecture,
+        "launch_year": gpu.launch_year,
+        "memory_bandwidth_tbs": gpu.memory_bandwidth_tbs,
+        "fp64_tflops": gpu.fp64_tflops,
+        "fp32_tflops": gpu.fp32_tflops,
+        "fp16_bf16_tensor_tflops": gpu.fp16_bf16_tensor_tflops,
+        "fp8_tensor_tflops": gpu.fp8_tensor_tflops,
+        "fp4_tensor_tflops": gpu.fp4_tensor_tflops,
+        "interconnect": gpu.interconnect,
+        "interconnect_bandwidth_gbs": gpu.interconnect_bandwidth_gbs,
+        "pcie_interface": gpu.pcie_interface,
         "validated": bool(gpu.validated),
     }
 
@@ -329,6 +348,7 @@ def _search_gpus(db: Session, q: str) -> list[dict[str, Any]]:
         GPUSpec.gpu_model.ilike(f"%{q}%"),
         GPUSpec.form_factor.ilike(f"%{q}%"),
         GPUSpec.memory_type.ilike(f"%{q}%"),
+        GPUSpec.architecture.ilike(f"%{q}%"),
     )
     gpus = db.query(GPUSpec).filter(search_filter).limit(MAX_SEARCH_RESULTS).all()
     return [_gpu_to_dict(gpu) for gpu in gpus]

@@ -89,7 +89,7 @@ def test_append_new_row_uses_header_order():
         "tdp_watts": 350, "validated": True,
     }
     new = csv_store.serialize(csv_store.upsert(doc, "gpu", None, values))
-    assert new == text + "Test GPU X1,TestCo,X1,PCIe card,48,GDDR7,350,True\n"
+    assert new == text + "Test GPU X1,TestCo,X1,,,PCIe card,48,GDDR7,,350,,,,,,,,,True\n"
 
 
 def test_values_with_commas_are_quoted_and_newlines_flattened():
@@ -97,7 +97,7 @@ def test_values_with_commas_are_quoted_and_newlines_flattened():
     new = csv_store.serialize(csv_store.upsert(doc, "gpu", None, {
         "gpu_model_name": "Odd, Name", "form_factor": "line1\nline2", "validated": False,
     }))
-    assert new.endswith('"Odd, Name",,,line1 line2,,,,False\n')
+    assert new.endswith('"Odd, Name",,,,,line1 line2,,,,,,,,,,,,,False\n')
     assert csv_store.parse(new).rows[-1][0] == "Odd, Name"
 
 
