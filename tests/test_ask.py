@@ -70,6 +70,8 @@ def test_answer_with_tools_and_page_links(ask_client, monkeypatch):
     assert "/cpu/amd-epyc-9654" in body["answer"]
     assert any(s.get("url") == "/cpu/amd-epyc-9654" for s in body["sources"])
     assert fake.calls[0]["model"] == "openai/gpt-oss-120b"
+    assert fake.calls[0]["reasoning_effort"] == "low"  # default effort made answers take 15+ s
+    assert fake.calls[0]["max_completion_tokens"] > 0
 
     system_prompt = fake.calls[0]["messages"][0]["content"]
     assert "/compare/" in system_prompt and "Report an error" in system_prompt and "'Genoa'" in system_prompt
@@ -109,3 +111,16 @@ def test_provider_errors_use_a_status_cloudflare_passes_through(ask_client, monk
     response = ask_client.post("/api/ask", json={"question": "Which GPU has the most memory?"})
     assert response.status_code == 503
     assert "unavailable" in response.json()["detail"]
+
+
+def test_sql_rows_without_id_still_get_source_links(ask_client, monkeypatch):
+    fake = FakeGroq([
+        reply(tool_calls=[tool_call("run_sql", {
+            "query": "SELECT gpu_model_name, memory_gb FROM gpu_specs ORDER BY memory_gb DESC LIMIT 1"})]),
+        reply("The GPU with the most memory is listed above."),
+    ])
+    use_fake(monkeypatch, fake)
+    body = ask_client.post("/api/ask", json={"question": "Which GPU has the most memory?"}).json()
+    assert body["sources"] and body["sources"][0]["url"].startswith("/gpu/")
+    tool_message = next(m for m in fake.calls[1]["messages"] if m["role"] == "tool")
+    assert "null" not in tool_message["content"]  # empty fields are dropped before the model reads them

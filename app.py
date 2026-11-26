@@ -470,7 +470,7 @@ class AskResponse(BaseModel):
 
 @app.post("/api/ask", response_model=AskResponse)
 @limiter.limit("10/minute")
-async def ask(
+def ask(  # sync on purpose: FastAPI runs it in a thread, so the slow Groq call doesn't block other requests
     request: Request,
     payload: AskRequest,
     db: Session = Depends(get_db),
