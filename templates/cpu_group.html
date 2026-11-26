@@ -1,10 +1,12 @@
 {% extends "base.html" %}
-{% from "macros.html" import cpu_table, link_list %}
+{% from "macros.html" import cpu_table, link_list, written_intro, facts_table, faq_section %}
 
 {% block subheading %}<p>{{ summary.count }} model{{ "s" if summary.count != 1 }}{% if summary.years %} · {{ summary.years }}{% endif %}</p>{% endblock %}
 
 {% block content %}
 <section class="page-section">
+    {{ written_intro(intro) }}
+    {% if facts %}{{ facts_table(facts, group_label ~ " platform facts") }}{% endif %}
     <p class="lead">
         Compute Specs DB lists {{ summary.count }} {{ group_label }} processor{{ "s" if summary.count != 1 }}{% if summary.years %} launched {{ "in" if "–" not in summary.years else "between" }} {{ summary.years | replace("–", " and ") }}{% endif %}{% if summary.cores %}, with {{ summary.cores }} cores{% endif %}{% if summary.tdp %} and a TDP of {{ summary.tdp }}{% endif %}.
         {% if summary.max_l3 %}The largest L3 cache in the group is {{ summary.max_l3 }}.{% endif %}
@@ -21,4 +23,6 @@
     <h2>{{ "All " if summary.count != 1 }}{{ group_label }} processor{{ "s" if summary.count != 1 }}</h2>
     {{ cpu_table(cpus, show_column) }}
 </section>
+
+{{ faq_section(faq) }}
 {% endblock %}

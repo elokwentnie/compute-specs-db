@@ -498,6 +498,11 @@ header h1 {
     margin-bottom: 0;
 }
 
+.browse-toolbar .browse-show-group {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+}
+
 .browse-toolbar .batch-switch {
     padding-bottom: 10px;
 }
@@ -669,4 +674,27 @@ body.has-batch-bar {
     padding: 10px 14px;
     font-size: 14px;
     margin-bottom: 2px;
+}
+
+/* ---------- Error reports ---------- */
+.report-values {
+    width: auto;
+    margin: 8px 0 12px;
+    border-collapse: collapse;
+}
+
+.report-values th,
+.report-values td {
+    padding: 4px 16px 4px 0;
+    text-align: left;
+    border: none;
+    background: none;
+    font-size: 14px;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.report-values th {
+    color: var(--text-secondary);
+    font-weight: 500;
 }

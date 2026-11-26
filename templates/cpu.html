@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import report_form, validated_pill, cpu_table, validation_note %}
+{% from "macros.html" import report_form, comparison_links, validated_pill, cpu_table, validation_note %}
 
 {% block heading %}{{ cpu.name }} specifications{% endblock %}
 {% block subheading %}<p>{{ [cpu.family, cpu.codename, cpu.launch_year] | select | join(" · ") }}</p>{% endblock %}
@@ -33,6 +33,7 @@
                 <li><a href="/api/export/csv">All CPUs as CSV</a></li>
                 <li><a href="/?q={{ cpu.cpu_model | urlencode }}">Find in the data table</a></li>
             </ul>
+            {% if comparisons %}{{ comparison_links(comparisons, "Compare") }}{% endif %}
         </aside>
     </div>
 </section>

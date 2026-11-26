@@ -35,3 +35,6 @@ cpu_export_*.xlsx
 ~$*.xlsx
 *.xlsx
 
+
+# Local Claude Code preview config (contains machine-specific paths)
+.claude/launch.json

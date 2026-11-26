@@ -109,7 +109,8 @@ def test_titles_are_unique_and_fit_in_search_results(client):
         assert title not in titles, (path, titles.get(title))
         titles[title] = path
     # Short titles keep the site name.
-    assert page_title(client.get("/gpus/amd").text) == "AMD Datacenter GPU List: Specs of All 9 Models"
+    amd = sum(g["vendor"] == "AMD" for g in client.get("/api/gpus", params={"limit": 1000}).json())
+    assert page_title(client.get("/gpus/amd").text) == f"AMD Datacenter GPU List: Specs of All {amd} Models"
     assert page_title(client.get("/cpus/codename/genoa").text).endswith(" — Compute Specs DB")
 
 

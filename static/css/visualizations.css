@@ -721,3 +721,26 @@
     border-color: var(--border-strong);
     color: var(--text-primary);
 }
+
+/* ---------- Comparison exports ---------- */
+.comparison-download-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+}
+
+.comparison-export-status {
+    margin-right: auto;
+    font-size: 14px;
+    color: var(--success-text);
+    overflow-wrap: anywhere;
+}
+
+.comparison-source {
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+}

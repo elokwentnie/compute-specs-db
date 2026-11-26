@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "macros.html" import validated_pill, link_list %}
+
+{% block subheading %}<p>{{ "Processor" if kind == "cpu" else "GPU" }} specifications side by side</p>{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <div class="table-wrap">
+        <table class="compare-table">
+            <caption>{{ a.name }} vs {{ b.name }} specifications</caption>
+            <thead>
+                <tr>
+                    <th scope="col"><span class="visually-hidden">Specification</span></th>
+                    <th scope="col"><a class="model-link" href="/{{ kind }}/{{ a.slug }}">{{ a.name }}</a></th>
+                    <th scope="col"><a class="model-link" href="/{{ kind }}/{{ b.slug }}">{{ b.name }}</a></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for label, va, vb in rows %}
+                <tr><th scope="row">{{ label }}</th><td>{{ va }}</td><td>{{ vb }}</td></tr>
+                {% endfor %}
+                <tr><th scope="row">Status</th><td>{{ validated_pill(a.validated) }}</td><td>{{ validated_pill(b.validated) }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="compare-export" data-source="{{ source_url }}" data-title="{{ a.name }} vs {{ b.name }}" data-filename="{{ csv_url.rsplit('/', 1)[-1][:-4] }}">
+        <p class="export-actions">
+            <span class="export-label">Download:</span>
+            <a class="btn-link" href="{{ csv_url }}" download>CSV</a>
+            <button type="button" class="btn-link" data-export="png" hidden>PNG image</button>
+            <button type="button" class="btn-link" data-export="cite" hidden>Copy citation</button>
+            <span class="export-status" role="status"></span>
+        </p>
+        <p class="source-line">Source: <a href="{{ source_url }}">Compute Specs DB, {{ source_url }}</a>. Free to reuse under the MIT licence; please link back to this page.</p>
+    </div>
+</section>
+
+<section class="page-section">
+    <h2>Key differences</h2>
+    <ul class="difference-list">
+        {% for sentence in differences %}<li>{{ sentence }}</li>{% endfor %}
+    </ul>
+    <p class="note">This comparison only covers listed specifications, not measured performance. Real-world results depend on the workload, memory configuration and power settings.</p>
+    <div class="tool-callout">
+        <p><strong>Want to compare something else?</strong> Open this pair in the interactive comparison tool, then swap either side for any other {{ "processor" if kind == "cpu" else "GPU" }} in the database.</p>
+        <a class="btn-link" href="{{ tool_url }}">Open in the comparison tool →</a>
+    </div>
+    <p class="more-links">
+        <a href="/{{ kind }}/{{ a.slug }}">Full {{ a.name }} specs →</a>
+        <a href="/{{ kind }}/{{ b.slug }}">Full {{ b.name }} specs →</a>
+    </p>
+</section>
+
+{% if others %}
+<section class="page-section">
+    <h2>Other comparisons</h2>
+    {{ link_list(others) }}
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}<script src="/static/js/compare-export.js?v={{ asset_version }}" defer></script>{% endblock %}

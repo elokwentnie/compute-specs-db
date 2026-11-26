@@ -10,11 +10,22 @@ from groq import Groq
 from sqlalchemy import or_, text
 from sqlalchemy.orm import Session
 
+import content
 from database import CPUSpec, GPUSpec
+from utils import slugify
 
 logger = logging.getLogger(__name__)
 
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+# Groq retires models regularly (llama-3.3-70b-versatile was shut down on 2026-08-16),
+# so a retired or unknown model falls through to the next one in this list.
+# GROQ_MODEL (env) is tried first when set.
+DEFAULT_GROQ_MODELS = ("openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b")
+# Models in Groq's list that are not chat models (speech, safety classifiers).
+NON_CHAT_MODEL_MARKERS = ("whisper", "orpheus", "guard", "safeguard", "tts", "distil")
+GROQ_MODELS = tuple(dict.fromkeys(
+    m for m in (os.environ.get("GROQ_MODEL", "").strip(), *DEFAULT_GROQ_MODELS) if m
+))
+GROQ_MODEL = GROQ_MODELS[0]
 MAX_TOOL_ROUNDS = 3
 MAX_SQL_ROWS = 50
 MAX_SEARCH_RESULTS = 25
@@ -58,8 +69,22 @@ SYSTEM_PROMPT = f"""You are a helpful assistant for Compute Specs DB, a catalog 
 
 {SCHEMA_PROMPT}
 
+About the website (computespecsdb.com), for questions about the site itself:
+- Every model has a spec page: CPUs at /cpu/<slug>, GPUs at /gpu/<slug>. Tool results include each
+  model's "url"; link to it when you mention a model.
+- Overview pages: /cpus (all CPUs), /cpus/<family-slug> (e.g. /cpus/amd-epyc), /cpus/codename/<codename-slug>
+  (e.g. /cpus/codename/genoa, with a written intro, platform facts and an FAQ), /gpus and /gpus/<vendor-slug>.
+- /compare lists hand-picked side-by-side comparisons; the interactive tool on /visualizations
+  (section "Comparison Tool") compares any two models and can export CSV, PNG and a citation.
+- /about explains sources and validation. Specs come from manufacturers' official pages (Intel ARK, AMD,
+  NVIDIA, Ampere); generation codenames were confirmed with TechPowerUp's CPU database.
+- Wrong value? Use "Report an error" on the model's spec page (no account needed). Missing model? /propose.
+- Data downloads: CSV/Excel exports and a JSON API (/api/cpus, /api/gpus, docs at /docs). The data is free.
+
 Rules:
 - Answer ONLY using data returned by your tools. Never invent specifications.
+- For questions about a CPU generation/codename (socket, memory, launch, what it is), call
+  get_generation_info as well as searching the CPUs.
 - If data is missing, say you do not have that information in the database.
 - Cite exact model names from the database when possible.
 - Do not guess prices, availability, or benchmark scores — they are not in the database.
@@ -68,6 +93,8 @@ Rules:
 - If you cite a row whose validated value is false/0, mention that its specs are not yet verified.
 - For off-topic questions, politely redirect to hardware specs in the database.
 - This is a specs catalog, not buying advice. Keep answers concise and factual.
+- Format: short sentences or a simple "-" bullet list. No tables or headings. When you mention a model or
+  page, write its link as a markdown link with the site path, e.g. [AMD EPYC 9654](/cpu/amd-epyc-9654).
 """
 
 TOOLS = [
@@ -102,6 +129,23 @@ TOOLS = [
                     }
                 },
                 "required": ["q"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_generation_info",
+            "description": (
+                "Get the written overview of a CPU generation by codename (e.g. Genoa, Sapphire Rapids, Turin): "
+                "launch, platform facts such as socket and memory, and its page URL."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "codename": {"type": "string", "description": "Codename, e.g. Genoa or Granite Rapids"}
+                },
+                "required": ["codename"],
             },
         },
     },
@@ -163,10 +207,18 @@ def _get_live_schema_context(db: Session) -> str:
         for row in db.query(GPUSpec.vendor).distinct().order_by(GPUSpec.vendor).all()
         if row[0]
     ]
+    codenames = [
+        row[0]
+        for row in db.query(CPUSpec.codename).distinct().order_by(CPUSpec.codename).all()
+        if row[0]
+    ]
+    comparisons = [f"/compare/{a}-vs-{b}" for _, a, b in content.COMPARISONS]
     return (
         f"\nLive data hints (from the database right now):\n"
         f"  cpu_specs.family values: {', '.join(repr(f) for f in families)}\n"
+        f"  cpu_specs.codename values: {', '.join(repr(c) for c in codenames)}\n"
         f"  gpu_specs.vendor values: {', '.join(repr(v) for v in vendors)}\n"
+        f"  comparison pages: {', '.join(comparisons)}\n"
     )
 
 
@@ -180,6 +232,8 @@ def _cpu_to_dict(cpu: CPUSpec) -> dict[str, Any]:
     return {
         "type": "cpu",
         "id": cpu.id,
+        "name": cpu.name,
+        "url": f"/cpu/{cpu.slug}",
         "cpu_model_name": cpu.cpu_model_name,
         "family": cpu.family,
         "cpu_model": cpu.cpu_model,
@@ -200,6 +254,8 @@ def _gpu_to_dict(gpu: GPUSpec) -> dict[str, Any]:
     return {
         "type": "gpu",
         "id": gpu.id,
+        "name": gpu.name,
+        "url": f"/gpu/{gpu.slug}",
         "gpu_model_name": gpu.gpu_model_name,
         "vendor": gpu.vendor,
         "gpu_model": gpu.gpu_model,
@@ -354,6 +410,25 @@ def _search_gpus(db: Session, q: str) -> list[dict[str, Any]]:
     return [_gpu_to_dict(gpu) for gpu in gpus]
 
 
+def _get_generation_info(db: Session, codename: str) -> dict[str, Any]:
+    """Written intro and platform facts for a CPU generation, from content.py."""
+    wanted = slugify(codename or "")
+    match = next((name for name in content.GENERATIONS if slugify(name) == wanted), None)
+    if match is None:
+        match = next((name for name in content.GENERATIONS if wanted and wanted in slugify(name)), None)
+    if match is None:
+        return {"error": f"No written overview for '{codename}'. Known: {', '.join(content.GENERATIONS)}"}
+    written = content.GENERATIONS[match]
+    count = db.query(CPUSpec).filter(CPUSpec.codename == match).count()
+    return {
+        "codename": match,
+        "url": f"/cpus/codename/{slugify(match)}",
+        "models_in_database": count,
+        "intro": written.get("intro", []),
+        "facts": dict(written.get("facts", [])),
+    }
+
+
 def _get_stats(db: Session) -> dict[str, Any]:
     """Return summary statistics for CPUs and GPUs."""
     total = db.query(CPUSpec).count()
@@ -446,6 +521,8 @@ def execute_tool(name: str, args: dict[str, Any], db: Session) -> Any:
         return _search_gpus(db, args.get("q", ""))
     if name == "get_stats":
         return _get_stats(db)
+    if name == "get_generation_info":
+        return _get_generation_info(db, args.get("codename", ""))
     if name == "run_sql":
         return _run_sql(db, args.get("query", ""))
     raise ValueError(f"Unknown tool: {name}")
@@ -481,6 +558,19 @@ def _extract_sources(tool_results: list[Any]) -> list[dict[str, Any]]:
                     sources.append({"type": "gpu", **item})
 
     return sources[:10]
+
+
+def _with_page_urls(db: Session, sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Fill in ``name`` and ``url`` for sources that came from raw SQL rows."""
+    for source in sources:
+        if source.get("url"):
+            continue
+        model = CPUSpec if source.get("type") == "cpu" else GPUSpec
+        row = db.get(model, source.get("id"))
+        if row is not None:
+            source["name"] = row.name
+            source["url"] = f"/{source['type']}/{row.slug}"
+    return [s for s in sources if s.get("url")]
 
 
 class LLMError(Exception):
@@ -571,6 +661,63 @@ def _run_tool_calls(
         )
 
 
+def _model_unavailable(exc: Exception) -> bool:
+    """True when the model is retired, unknown or blocked for this key (worth trying another one)."""
+    text_ = str(exc).lower()
+    return getattr(exc, "status_code", None) in (400, 403, 404) and any(
+        marker in text_
+        for marker in ("decommissioned", "model_not_found", "does not exist", "not supported",
+                       "do not have access", "blocked", "permission")
+    )
+
+
+def _models_for_this_key(client: Groq) -> list[str]:
+    """Chat models this API key can use, according to Groq's models endpoint."""
+    try:
+        listed = [m.id for m in client.models.list().data if getattr(m, "active", True)]
+    except Exception:
+        logger.exception("Could not list Groq models")
+        return []
+    return [m for m in listed if not any(marker in m.lower() for marker in NON_CHAT_MODEL_MARKERS)]
+
+
+def _complete(client: Groq, **kwargs: Any) -> Any:
+    """chat.completions.create with the first usable model.
+
+    Tries GROQ_MODEL (or the defaults) first; if all of them are retired or blocked for
+    this key, asks Groq which models the key can use and tries those.
+    """
+    global GROQ_MODEL
+    last_exc: Exception | None = None
+    candidates = [GROQ_MODEL, *[m for m in GROQ_MODELS if m != GROQ_MODEL]]
+    tried: set[str] = set()
+    discovered = False
+    while candidates:
+        model = candidates.pop(0)
+        if model in tried:
+            continue
+        tried.add(model)
+        try:
+            response = client.chat.completions.create(model=model, **kwargs)
+        except Exception as exc:
+            if _model_unavailable(exc):
+                logger.warning("Groq model %s is unavailable (%s); trying the next one", model, exc)
+                last_exc = exc
+                if not candidates and not discovered:
+                    discovered = True
+                    available = _models_for_this_key(client)
+                    logger.warning("Models available to this Groq key: %s", ", ".join(available) or "none")
+                    preferred = [m for m in DEFAULT_GROQ_MODELS if m in available]
+                    candidates = preferred + [m for m in available if m not in preferred]
+                continue
+            raise
+        if model != GROQ_MODEL:
+            logger.warning("Switched the Ask model to %s; update GROQ_MODEL", model)
+            GROQ_MODEL = model
+        return response
+    raise last_exc or RuntimeError("No Groq model configured")
+
+
 def _synthesize_answer(client: Groq, messages: list[dict[str, Any]]) -> str:
     """Ask the model for a final answer from the tool results, without tools."""
     synthesis_messages = messages + [
@@ -582,11 +729,7 @@ def _synthesize_answer(client: Groq, messages: list[dict[str, Any]]) -> str:
             ),
         }
     ]
-    response = client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=synthesis_messages,
-        temperature=0.2,
-    )
+    response = _complete(client, messages=synthesis_messages, temperature=0.2)
     answer = (response.choices[0].message.content or "").strip()
     if _looks_like_tool_call_text(answer):
         return "I found relevant data but could not format the answer. Please try rephrasing."
@@ -635,8 +778,8 @@ def ask_question(question: str, db: Session) -> dict[str, Any]:
 
     for round_num in range(MAX_TOOL_ROUNDS):
         try:
-            response = client.chat.completions.create(
-                model=GROQ_MODEL,
+            response = _complete(
+                client,
                 messages=messages,
                 tools=TOOLS,
                 tool_choice="auto",
@@ -648,8 +791,8 @@ def ask_question(question: str, db: Session) -> dict[str, Any]:
                 raise LLMRateLimitError("Groq rate limit exceeded") from exc
             if "Timeout" in exc_name:
                 raise LLMTimeoutError("Groq request timed out") from exc
-            logger.exception("Groq API error")
-            raise LLMError("Failed to get a response from the language model") from exc
+            logger.exception("Groq API error (model %s): %s", GROQ_MODEL, exc)
+            raise LLMError("The assistant is unavailable right now. Please try again later.") from exc
 
         choice = response.choices[0]
         message = choice.message
@@ -703,7 +846,7 @@ def ask_question(question: str, db: Session) -> dict[str, Any]:
                 break
             return {
                 "answer": content,
-                "sources": _extract_sources(all_tool_results),
+                "sources": _with_page_urls(db, _extract_sources(all_tool_results)),
                 "tools_used": tools_used,
             }
 
@@ -715,12 +858,12 @@ def ask_question(question: str, db: Session) -> dict[str, Any]:
             answer = "I found data but could not summarize it. Please try a simpler question."
         return {
             "answer": answer,
-            "sources": _extract_sources(all_tool_results),
+            "sources": _with_page_urls(db, _extract_sources(all_tool_results)),
             "tools_used": tools_used,
         }
 
     return {
         "answer": "I need more steps to answer that question. Please try a simpler query.",
-        "sources": _extract_sources(all_tool_results),
+        "sources": _with_page_urls(db, _extract_sources(all_tool_results)),
         "tools_used": tools_used,
     }

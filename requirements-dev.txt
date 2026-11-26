@@ -1,0 +1,5 @@
+# Everything needed to run the test suite: pip install -r requirements-dev.txt
+-r requirements.txt
+pytest>=8,<10
+# Starlette's TestClient in this FastAPI version needs the httpx API from before 0.28.
+httpx>=0.24,<0.28

@@ -139,3 +139,62 @@
     </details>
 </section>
 {%- endmacro %}
+
+{% macro written_intro(paragraphs) -%}
+{% for paragraph in paragraphs %}<p class="lead written">{{ paragraph }}</p>{% endfor %}
+{%- endmacro %}
+
+{% macro facts_table(facts, caption) -%}
+<div class="table-wrap facts-wrap">
+    <table class="spec-table">
+        <caption>{{ caption }}</caption>
+        <tbody>
+            {% for label, value in facts %}
+            <tr><th scope="row">{{ label }}</th><td>{{ value }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{%- endmacro %}
+
+{% macro spec_guide(guide, heading) -%}
+<section class="page-section">
+    <h2>{{ heading }}</h2>
+    <dl class="guide-list">
+        {% for term, text in guide %}
+        <div><dt>{{ term }}</dt><dd>{{ text }}</dd></div>
+        {% endfor %}
+    </dl>
+</section>
+{%- endmacro %}
+
+{% macro faq_section(faq) -%}
+{% if faq %}
+<section class="page-section faq">
+    <h2>Frequently asked questions</h2>
+    <div class="faq-search" hidden>
+        <label class="visually-hidden" for="faq-search-page">Search the questions</label>
+        <input type="search" id="faq-search-page" placeholder="Search questions..." autocomplete="off">
+        <p class="faq-empty" hidden>No questions match your search.</p>
+    </div>
+    <div class="faq-list">
+        {% for item in faq %}
+        <details class="faq-item">
+            <summary><h3>{{ item.q }}</h3></summary>
+            <div class="faq-answer"><p>{{ item.a }}{% for kind, model in item.models or [] %} <a href="/{{ kind }}/{{ model.slug }}">{{ model.name }}</a>{{ "," if not loop.last else "." }}{% endfor %}</p></div>
+        </details>
+        {% endfor %}
+    </div>
+    <script src="/static/js/faq.js?v={{ asset_version }}" defer></script>
+</section>
+{% endif %}
+{%- endmacro %}
+
+{% macro comparison_links(pairs, heading="Comparisons") -%}
+{% if pairs %}
+<h2>{{ heading }}</h2>
+<ul class="link-list">
+    {% for pair in pairs %}<li><a href="{{ pair.url }}">{{ pair.label }}</a></li>{% endfor %}
+</ul>
+{% endif %}
+{%- endmacro %}

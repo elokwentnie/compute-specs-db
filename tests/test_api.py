@@ -193,7 +193,8 @@ def test_edit_and_rename_gpu(client, fake_github):
     )
 
     assert response.status_code == 200
-    assert fake_github.commits[-1].startswith("Rename GPU:")
+    assert fake_github.commits[-2].startswith("Rename GPU:")
+    assert fake_github.commits[-1].startswith("Redirect old GPU URL:")
     diff = changed_lines(before, fake_github.files[GPU_PATH])
     assert len(diff) == 2
     assert diff[1].startswith("+" + gpu["gpu_model_name"] + " Rev2,") and ",999," in diff[1] and diff[1].endswith(",True")

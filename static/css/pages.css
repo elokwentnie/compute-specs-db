@@ -393,3 +393,277 @@ header h1 {
     font-weight: 600;
     text-decoration: underline;
 }
+
+/* ---------- Hand-written content, facts, guides and FAQ ---------- */
+.lead.written {
+    color: var(--text-primary);
+    margin-bottom: 14px;
+}
+
+.facts-wrap {
+    max-width: 640px;
+    margin: 8px 0 24px;
+}
+
+.guide-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px 24px;
+}
+
+.guide-list dt {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.guide-list dd {
+    color: var(--text-secondary);
+}
+
+/* ---------- FAQ: a bordered list of expandable questions ---------- */
+.faq-search input {
+    width: 100%;
+    max-width: 420px;
+    margin-top: 8px;
+    padding: 9px 12px;
+    font: inherit;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+}
+
+.faq-search input:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+}
+
+.faq-empty {
+    margin: 12px 0 0;
+    color: var(--text-secondary);
+}
+
+/* Each item draws the line above it, so filtering never leaves a double border. */
+.faq-list {
+    margin-top: 12px;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-surface);
+}
+
+.faq-item {
+    border-top: 1px solid var(--border);
+}
+
+.faq-list:not(:has(.faq-item:not([hidden]))) {
+    display: none;
+}
+
+.faq-item summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 18px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+    display: none;
+}
+
+.faq-item summary::after {
+    content: "";
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin-right: 4px;
+    border-right: 2px solid var(--text-secondary);
+    border-bottom: 2px solid var(--text-secondary);
+    transform: rotate(45deg);
+    transition: transform 0.15s ease;
+}
+
+.faq-item[open] summary::after {
+    transform: rotate(-135deg);
+}
+
+.faq-item summary:hover {
+    background: var(--accent-subtle);
+}
+
+.faq-item summary:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+}
+
+.faq-item summary h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.faq-answer {
+    padding: 0 18px 16px;
+    color: var(--text-secondary);
+}
+
+.faq-answer p {
+    margin: 0;
+    max-width: 75ch;
+}
+
+/* A centred reading column; the text itself stays left-aligned. */
+.prose {
+    max-width: 75ch;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.prose h2 {
+    margin-top: 28px;
+}
+
+.prose p + p {
+    margin-top: 10px;
+}
+
+/* ---------- Comparisons ---------- */
+.compare-table {
+    width: 100%;
+}
+
+.compare-table caption,
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.compare-table th[scope="row"] {
+    background: var(--bg-surface-raised);
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 14px;
+    width: 30%;
+}
+
+.compare-table thead th {
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 15px;
+}
+
+.compare-table td {
+    white-space: normal;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.difference-list {
+    padding-left: 20px;
+    max-width: 75ch;
+}
+
+.difference-list li + li {
+    margin-top: 6px;
+}
+
+.note {
+    margin-top: 14px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    max-width: 75ch;
+}
+
+.side-panel .link-list {
+    margin-top: 4px;
+}
+
+.compare-table th,
+.compare-table td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* ---------- Comparison downloads ---------- */
+.compare-export {
+    margin-top: 14px;
+}
+
+.export-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    margin: 0 0 6px;
+}
+
+.export-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.btn-link {
+    display: inline-block;
+    padding: 6px 12px;
+    font: inherit;
+    font-size: 0.9em;
+    color: var(--text-primary);
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.btn-link:hover {
+    border-color: var(--border-strong);
+}
+
+.btn-link:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+.export-status {
+    font-size: 0.9em;
+    color: var(--success-text);
+}
+
+.source-line {
+    margin: 0;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+}
+
+/* ---------- Link to the interactive comparison tool ---------- */
+.tool-callout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    margin: 18px 0;
+    padding: 14px 18px;
+    background: var(--accent-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.tool-callout p {
+    flex: 1 1 320px;
+    margin: 0;
+}
+
+.tool-callout .btn-link {
+    flex: none;
+}

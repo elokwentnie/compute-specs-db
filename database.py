@@ -55,6 +55,16 @@ class CPUSpec(Base):
         return round(self.tdp_watts / self.threads, 2)
 
 
+class SlugRedirect(Base):
+    """Old spec page URL of a renamed model, pointing at the model's current name."""
+    __tablename__ = "slug_redirects"
+
+    id = Column(Integer, primary_key=True, index=True)
+    kind = Column(String, nullable=False)
+    old_slug = Column(String, nullable=False, index=True)
+    target_name = Column(String, nullable=False)
+
+
 class GPUSpec(Base):
     """A GPU row."""
     __tablename__ = "gpu_specs"

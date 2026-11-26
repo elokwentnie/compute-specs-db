@@ -33,14 +33,15 @@ See the API docs link from the website.
 This project currently focuses on HPC and datacenter CPUs (Intel Xeon, AMD EPYC, Opteron, etc.). GPU and ARM processor data is planned for future releases. If you spot missing entries or incorrect specs, contributions are welcome.
 
 ## Data validation
-Every CPU and GPU has a **Validated** flag (`Validated` column in the CSVs, `validated` field in the API). Validated entries have been manually checked by [me](@elokwentnie) against official manufacturer sources and trusted hardware databases. Unverified entries have not been checked yet. They are labelled in the table and can be filtered out with `?validated=true`.
+Every CPU and GPU has a **Validated** flag (`Validated` column in the CSVs, `validated` field in the API). Validated entries have been manually checked by [me](@elokwentnie) against official manufacturer sources. Unverified entries have not been checked yet. They are labelled in the table and can be filtered out with `?validated=true`.
 
 Sources used for validation:
 
 - [Intel — Official product specifications](https://www.intel.com/content/www/us/en/products/overview.html)
 - [AMD — Official processor specifications](https://www.amd.com/en/products/specifications/processors.html)
-- [TechPowerUp — CPU Database](https://www.techpowerup.com/)
-- [PassMark — CPU Benchmark Charts](https://www.cpubenchmark.net/)
+- [NVIDIA — Data center GPU specifications](https://www.nvidia.com/en-us/data-center/)
+- [Ampere — Altra processor specifications](https://amperecomputing.com/products/processors)
+- [TechPowerUp — CPU database](https://www.techpowerup.com/) (mainly to confirm processor codenames)
 
 Of course, it's possible I made a mistake, so if you find any inaccuracies, please [open an issue](https://github.com/elokwentnie/compute-specs-db/issues) on GitHub.
 
@@ -48,18 +49,22 @@ Of course, it's possible I made a mistake, so if you find any inaccuracies, plea
 ```
 compute-specs-db/
 ├── app.py                      # FastAPI application
-├── pages.py                    # Server-rendered spec pages (/cpu/*, /cpus/*, /gpu/*, /gpus/*)
+├── pages.py                    # Server-rendered pages (specs, overviews, /compare, /about, /llms.txt)
+├── content.py                  # Hand-written intros, platform facts and the list of comparisons
+├── redirects.py                # 301s from old URLs of renamed models (stored in redirects.csv)
 ├── auth.py                     # JWT authentication helpers
 ├── database.py                 # SQLAlchemy models/config
 ├── import_data.py              # CSV import utility
 ├── csv_store.py                # Format-preserving CSV edits + GitHub write-through
 ├── github_client.py            # Minimal GitHub REST client (contents + issues)
-├── proposals.py                # Public proposals stored as GitHub issues
+├── proposals.py                # Public proposals and error reports stored as GitHub issues
 ├── utils.py                    # Helpers (generation/codename logic)
 ├── requirements.txt            # Python dependencies
+├── requirements-dev.txt        # Test dependencies (pytest, pinned httpx)
 ├── Procfile                    # Render deployment entrypoint
 ├── cpu_spec_validated.csv      # Source data file (CPUs)
 ├── gpu_spec_validated.csv      # Source data file (GPUs)
+├── redirects.csv               # Old slug -> current model name, written on renames
 ├── tests/                      # pytest suite (no network: GitHub is faked)
 ├── .github/
 │   └── ISSUE_TEMPLATE/
@@ -115,7 +120,7 @@ If you have a `cpu_database.db` from before the `Validated` column existed, dele
 Run the tests with:
 
 ```bash
-pip install pytest httpx
+pip install -r requirements-dev.txt
 pytest
 ```
 

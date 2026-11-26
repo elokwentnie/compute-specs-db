@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import link_list %}
+{% from "macros.html" import link_list, spec_guide, comparison_links %}
 
 {% block heading %}Server CPU specifications{% endblock %}
 {% block subheading %}<p>{{ summary.count }} processors{% if summary.years %} · {{ summary.years }}{% endif %}</p>{% endblock %}
@@ -24,6 +24,12 @@
     <h3>{{ vendor }}</h3>
     {{ link_list(links) }}
     {% endfor %}
+</section>
+
+{{ spec_guide(guide, "How to read CPU specs") }}
+
+<section class="page-section">
+    {{ comparison_links(cpu_comparisons, "Popular comparisons") }}
 </section>
 
 <section class="page-section">
