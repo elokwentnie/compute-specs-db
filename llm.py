@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import time
 from typing import Any
 
 from groq import Groq
@@ -20,6 +21,10 @@ logger = logging.getLogger(__name__)
 # so a retired or unknown model falls through to the next one in this list.
 # GROQ_MODEL (env) is tried first when set.
 DEFAULT_GROQ_MODELS = ("openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b")
+# gpt-oss models "think" before answering; spec lookups need little of that, and the
+# default (medium) effort made answers take 15+ seconds.
+REASONING_EFFORT = os.environ.get("GROQ_REASONING_EFFORT", "low")
+MAX_COMPLETION_TOKENS = 1500
 # Models in Groq's list that are not chat models (speech, safety classifiers).
 NON_CHAT_MODEL_MARKERS = ("whisper", "orpheus", "guard", "safeguard", "tts", "distil")
 GROQ_MODELS = tuple(dict.fromkeys(
@@ -28,7 +33,7 @@ GROQ_MODELS = tuple(dict.fromkeys(
 GROQ_MODEL = GROQ_MODELS[0]
 MAX_TOOL_ROUNDS = 3
 MAX_SQL_ROWS = 50
-MAX_SEARCH_RESULTS = 25
+MAX_SEARCH_RESULTS = 10
 
 SCHEMA_PROMPT = """
 Database schema (SQLite):
@@ -88,6 +93,7 @@ Rules:
 - If data is missing, say you do not have that information in the database.
 - Cite exact model names from the database when possible.
 - Do not guess prices, availability, or benchmark scores — they are not in the database.
+- In run_sql, always SELECT the id and the model name column too, so answers can link to the model pages.
 - For ratios and rankings across many rows, use run_sql. For a single CPU/GPU after search, you may compute simple arithmetic.
 - When filtering CPUs by AMD or Intel, always use family LIKE '%AMD%' or family LIKE '%Intel%'.
 - If you cite a row whose validated value is false/0, mention that its specs are not yet verified.
@@ -546,6 +552,12 @@ def _extract_sources(tool_results: list[Any]) -> list[dict[str, Any]]:
                 if key not in seen:
                     seen.add(key)
                     sources.append(item)
+            elif item.get("id") is None and (item.get("cpu_model_name") or item.get("gpu_model_name")):
+                kind = "cpu" if item.get("cpu_model_name") else "gpu"
+                key = (kind, item.get(f"{kind}_model_name"))
+                if key not in seen:
+                    seen.add(key)
+                    sources.append({"type": kind, **item})
             elif "cpu_model_name" in item and item.get("id") is not None:
                 key = ("cpu", item["id"])
                 if key not in seen:
@@ -566,7 +578,11 @@ def _with_page_urls(db: Session, sources: list[dict[str, Any]]) -> list[dict[str
         if source.get("url"):
             continue
         model = CPUSpec if source.get("type") == "cpu" else GPUSpec
-        row = db.get(model, source.get("id"))
+        if source.get("id") is not None:
+            row = db.get(model, source["id"])
+        else:
+            name_column = model.cpu_model_name if model is CPUSpec else model.gpu_model_name
+            row = db.query(model).filter(name_column == source.get(f"{source['type']}_model_name")).first()
         if row is not None:
             source["name"] = row.name
             source["url"] = f"/{source['type']}/{row.slug}"
@@ -620,6 +636,15 @@ def _parse_text_tool_calls(content: str) -> list[dict[str, Any]]:
     return parsed
 
 
+def _compact(result: Any) -> Any:
+    """Drop empty fields from tool results: fewer tokens for the model to read."""
+    if isinstance(result, list):
+        return [_compact(item) for item in result]
+    if isinstance(result, dict):
+        return {k: v for k, v in result.items() if v not in (None, "", [])}
+    return result
+
+
 def _run_tool_calls(
     tool_calls: list[Any],
     db: Session,
@@ -647,7 +672,7 @@ def _run_tool_calls(
         logger.info("LLM tool call: %s", tool_name)
 
         try:
-            result = execute_tool(tool_name, tool_args, db)
+            result = _compact(execute_tool(tool_name, tool_args, db))
         except Exception as exc:
             result = {"error": str(exc)}
 
@@ -697,8 +722,12 @@ def _complete(client: Groq, **kwargs: Any) -> Any:
         if model in tried:
             continue
         tried.add(model)
+        extra = {"max_completion_tokens": MAX_COMPLETION_TOKENS}
+        if model.startswith("openai/gpt-oss"):
+            extra["reasoning_effort"] = REASONING_EFFORT
+        started = time.monotonic()
         try:
-            response = client.chat.completions.create(model=model, **kwargs)
+            response = client.chat.completions.create(model=model, **extra, **kwargs)
         except Exception as exc:
             if _model_unavailable(exc):
                 logger.warning("Groq model %s is unavailable (%s); trying the next one", model, exc)
@@ -711,6 +740,10 @@ def _complete(client: Groq, **kwargs: Any) -> Any:
                     candidates = preferred + [m for m in available if m not in preferred]
                 continue
             raise
+        usage = getattr(response, "usage", None)
+        logger.info("Groq %s answered in %.1fs (prompt %s, completion %s tokens)", model,
+                    time.monotonic() - started, getattr(usage, "prompt_tokens", "?"),
+                    getattr(usage, "completion_tokens", "?"))
         if model != GROQ_MODEL:
             logger.warning("Switched the Ask model to %s; update GROQ_MODEL", model)
             GROQ_MODEL = model
