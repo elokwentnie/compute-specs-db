@@ -47,6 +47,7 @@
 </head>
 <body>
     <div class="header">
+        <a href="/" class="home-button" title="Back to the home page"><span class="home-button-arrow" aria-hidden="true">‹</span> Compute Specs DB</a>
         <button type="button" class="theme-toggle" aria-label="Toggle dark mode" title="Dark mode">
             <span class="theme-toggle-icon">🌙</span>
         </button>
@@ -158,7 +159,7 @@
             </div>
         </div>
 
-        <div class="chart-container">
+        <div class="chart-container" id="compare-tool">
             <div class="chart-title text-center" id="comparisonTitle">CPU Comparison Tool</div>
             <div class="comparison-controls">
                 <div class="comparison-selectors">
@@ -183,9 +184,18 @@
             </div>
             <div id="comparisonResult" class="hidden">
                 <div class="comparison-download-row">
+                    <span class="comparison-export-status" id="comparisonExportStatus" role="status"></span>
                     <button id="downloadComparison" class="download-btn">
                         <span>💾</span>
-                        <span>Download Comparison</span>
+                        <span>CSV</span>
+                    </button>
+                    <button id="downloadComparisonPng" class="download-btn">
+                        <span>🖼️</span>
+                        <span>PNG image</span>
+                    </button>
+                    <button id="copyComparisonCitation" class="download-btn">
+                        <span>📋</span>
+                        <span>Copy citation</span>
                     </button>
                 </div>
                 <div class="comparison-table-container">
@@ -202,6 +212,7 @@
                         </tbody>
                     </table>
                 </div>
+                <p class="comparison-source">Source: <a id="comparisonSourceLink" href="/visualizations">Compute Specs DB</a>. Free to reuse under the MIT licence; please link back to this page.</p>
             </div>
         </div>
     </main>
@@ -212,8 +223,9 @@
         <div class="data-footer-sources">
             <a href="https://www.intel.com/content/www/us/en/products/overview.html" target="_blank" rel="noopener">Intel</a>
             <a href="https://www.amd.com/en/products/specifications/processors.html" target="_blank" rel="noopener">AMD</a>
+            <a href="https://www.nvidia.com/en-us/data-center/" target="_blank" rel="noopener">NVIDIA</a>
+            <a href="https://amperecomputing.com/products/processors" target="_blank" rel="noopener">Ampere</a>
             <a href="https://www.techpowerup.com/" target="_blank" rel="noopener">TechPowerUp</a>
-            <a href="https://www.cpubenchmark.net/" target="_blank" rel="noopener">PassMark</a>
         </div>
         <p>Found an error? <a href="https://github.com/elokwentnie/compute-specs-db/issues/new?template=report-data-error.yml" target="_blank" rel="noopener">Report it on GitHub</a> | <a href="/propose">Suggest a new CPU or GPU</a></p>
     </footer>
@@ -227,6 +239,8 @@
                     <a href="/cpus">CPUs</a>
                     <a href="/gpus">GPUs</a>
                     <a href="/visualizations">Visualizations</a>
+                    <a href="/compare">Comparisons</a>
+                    <a href="/about">About</a>
                     <a href="/docs" target="_blank">API Docs</a>
                     <a href="https://github.com/elokwentnie/compute-specs-db" target="_blank" rel="noopener">GitHub</a>
                     <a href="https://github.com/elokwentnie/compute-specs-db/issues/new/choose" target="_blank" rel="noopener">Contribute</a>
@@ -689,6 +703,70 @@
             const item2 = allData.find(d => d.id === id2);
             if (!item1 || !item2) { alert('Item not found'); return; }
             displayComparison(item1, item2);
+            // Keep the pair in the URL so the comparison can be shared or bookmarked.
+            const params = new URLSearchParams({ kind: dataSource, a: item1.slug, b: item2.slug });
+            history.replaceState(null, '', `${location.pathname}?${params}#compare-tool`);
+            const sourceLink = document.getElementById('comparisonSourceLink');
+            sourceLink.href = comparisonSourceUrl();
+            sourceLink.textContent = `Compute Specs DB, ${comparisonSourceUrl()}`;
+        }
+
+        // The shareable URL of the current comparison, used in the CSV, PNG and citation.
+        function comparisonSourceUrl() {
+            return `${location.origin}${location.pathname}${location.search}#compare-tool`;
+        }
+
+        function comparisonTitle() {
+            const { item1, item2, nameKey } = window.currentComparison;
+            return `${item1[nameKey] || 'Item 1'} vs ${item2[nameKey] || 'Item 2'}`;
+        }
+
+        function comparisonFilename() {
+            const { item1, item2 } = window.currentComparison;
+            return `${item1.slug || 'item-1'}-vs-${item2.slug || 'item-2'}`;
+        }
+
+        function showExportStatus(text) {
+            const el = document.getElementById('comparisonExportStatus');
+            el.textContent = text;
+            setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 4000);
+        }
+
+        document.getElementById('downloadComparisonPng').addEventListener('click', () => {
+            if (!window.currentComparison || !window.SpecExport) return;
+            const rows = SpecExport.tableRows(document.getElementById('comparisonTable'));
+            SpecExport.savePng(rows, comparisonTitle(), comparisonSourceUrl(), comparisonFilename())
+                .catch(() => showExportStatus('Could not create the image in this browser.'));
+        });
+
+        document.getElementById('copyComparisonCitation').addEventListener('click', async () => {
+            if (!window.currentComparison || !window.SpecExport) return;
+            showExportStatus(await SpecExport.copyCitation(comparisonTitle(), comparisonSourceUrl()));
+        });
+
+        // Links like /visualizations?kind=gpu&a=nvidia-h200-sxm&b=nvidia-h100-sxm#compare-tool
+        // (used by the comparison pages) open the tool with that pair already compared.
+        function readCompareParams() {
+            const params = new URLSearchParams(location.search);
+            const kind = params.get('kind');
+            return {
+                kind: kind === 'gpu' || kind === 'cpu' ? kind : null,
+                a: params.get('a'),
+                b: params.get('b'),
+            };
+        }
+
+        function applyCompareParams({ a, b }) {
+            if (!a && !b) return;
+            const s1 = document.getElementById('cpu1Select');
+            const s2 = document.getElementById('cpu2Select');
+            const first = allData.find(d => d.slug === a);
+            const second = allData.find(d => d.slug === b);
+            if (first) s1.value = String(first.id);
+            if (second) s2.value = String(second.id);
+            document.getElementById('compareButton').disabled = !s1.value || !s2.value;
+            if (first && second && first.id !== second.id) compareItems();
+            document.getElementById('compare-tool').scrollIntoView({ block: 'start' });
         }
 
         function getComparisonParams() {
@@ -814,6 +892,9 @@
                 }
                 csv += [esc(param.label), esc(d1 + u1), esc(d2 + u2), esc(diff)].join(',') + '\n';
             });
+            csv += '\n' + [esc('Source'), esc(`Compute Specs DB, ${comparisonSourceUrl()}`)].join(',') + '\n';
+            csv += [esc('Licence'), esc(`MIT, please credit Compute Specs DB (${location.origin}/about)`)].join(',') + '\n';
+            csv += [esc('Downloaded'), esc(new Date().toISOString().slice(0, 10))].join(',') + '\n';
 
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
@@ -851,9 +932,15 @@
         });
 
         // Plotly is loaded with defer; deferred scripts finish before DOMContentLoaded.
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            const linked = readCompareParams();
+            if (linked.kind) {
+                dataSource = linked.kind;
+                document.getElementById('dataSource').value = linked.kind;
+            }
             populateAxisSelectors();
-            loadData();
+            await loadData();
+            applyCompareParams(linked);
         });
 
         window.addEventListener('themechange', () => {
@@ -861,6 +948,7 @@
         });
     </script>
     <script src="/static/js/theme.js"></script>
+    <script src="/static/js/compare-export.js" defer></script>
 </body>
 </html>
 

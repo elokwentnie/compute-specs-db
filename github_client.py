@@ -102,8 +102,8 @@ def get_file(path: str) -> tuple[str, str]:
     return text, data["sha"]
 
 
-def put_file(path: str, text: str, sha: str, message: str) -> dict:
-    """Commit new contents for a file.
+def put_file(path: str, text: str, sha: str | None, message: str) -> dict:
+    """Commit new contents for a file, or create it when ``sha`` is None.
 
     Raises:
         GitHubConflict: If ``sha`` is stale.
@@ -111,9 +111,10 @@ def put_file(path: str, text: str, sha: str, message: str) -> dict:
     payload = {
         "message": message,
         "content": base64.b64encode(text.encode("utf-8")).decode("ascii"),
-        "sha": sha,
         "branch": branch(),
     }
+    if sha:  # omitted when creating a new file
+        payload["sha"] = sha
     try:
         return _request("PUT", f"/repos/{repo()}/contents/{path}", json=payload).json()
     except GitHubError as exc:

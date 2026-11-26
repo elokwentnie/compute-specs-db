@@ -336,6 +336,50 @@ header p,
     border-color: var(--border-strong);
 }
 
+/* Headers with the home link get room above the title for it (and the theme toggle). */
+header:has(.home-button),
+.header:has(.home-button) {
+    padding-top: 68px;
+}
+
+/* Home link: the site name in the top-left corner of every subpage header. */
+.home-button {
+    position: absolute;
+    top: 22px;
+    left: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 2px;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: color 0.15s;
+    z-index: 1;
+}
+
+.home-button-arrow {
+    font-size: 1.3em;
+    line-height: 1;
+    transition: transform 0.15s;
+}
+
+.home-button:hover {
+    color: #ffffff;
+}
+
+.home-button:hover .home-button-arrow {
+    transform: translateX(-3px);
+}
+
+.home-button:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
 /* Theme toggle button */
 .theme-toggle {
     position: absolute;

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import report_form, validated_pill, gpu_table, validation_note %}
+{% from "macros.html" import report_form, comparison_links, validated_pill, gpu_table, validation_note %}
 
 {% block heading %}{{ gpu.name }} specifications{% endblock %}
 {% block subheading %}<p>{{ [gpu.vendor, gpu.form_factor] | select | join(" · ") }}</p>{% endblock %}
@@ -30,6 +30,7 @@
                 <li><a href="/api/export/gpus/csv">All GPUs as CSV</a></li>
                 <li><a href="/?tab=gpu&amp;q={{ gpu.gpu_model | urlencode }}">Find in the data table</a></li>
             </ul>
+            {% if comparisons %}{{ comparison_links(comparisons, "Compare") }}{% endif %}
         </aside>
     </div>
 </section>

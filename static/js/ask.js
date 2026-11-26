@@ -2,11 +2,63 @@
     'use strict';
 
     const EXAMPLE_PROMPTS = [
-        'How many CPUs are in the database?',
         'Which CPUs have the lowest TDP per core?',
         'Compare EPYC 7763 and EPYC 9654',
-        'Which GPU has the most memory?',
+        'Which GPU has the most FP8 tensor TFLOPS?',
+        'What socket and memory does Genoa use?',
     ];
+
+    // Only links into this site are made clickable in answers.
+    const SITE_PATH = /^\/(cpu|gpu|cpus|gpus|compare|about|propose|visualizations|docs|api)(\/[^\s)]*)?$/;
+
+    // Builds answer text as DOM nodes (never innerHTML): **bold**, [label](/path) links,
+    // bare site paths such as /cpu/amd-epyc-9654, and line breaks.
+    function renderRichText(container, text) {
+        const pattern = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)\s]+)\)|(\/(?:cpu|gpu|cpus|gpus|compare)\/[a-z0-9-]+(?:\/[a-z0-9-]+)?)/g;
+        String(text).split('\n').forEach(function (line, index) {
+            if (index > 0) container.appendChild(document.createElement('br'));
+            let last = 0;
+            let match;
+            while ((match = pattern.exec(line)) !== null) {
+                if (match.index > last) container.appendChild(document.createTextNode(line.slice(last, match.index)));
+                if (match[1]) {
+                    const strong = document.createElement('strong');
+                    strong.textContent = match[1];
+                    container.appendChild(strong);
+                } else {
+                    const label = match[2] || match[4];
+                    const href = (match[3] || match[4]).replace(/^https:\/\/computespecsdb\.com/, '');
+                    if (SITE_PATH.test(href)) {
+                        const link = document.createElement('a');
+                        link.href = href;
+                        link.textContent = label;
+                        container.appendChild(link);
+                    } else {
+                        container.appendChild(document.createTextNode(label));
+                    }
+                }
+                last = pattern.lastIndex;
+            }
+            if (last < line.length) container.appendChild(document.createTextNode(line.slice(last)));
+        });
+    }
+
+    function appendSources(sources) {
+        const linked = (sources || []).filter(function (s) { return s && s.url && SITE_PATH.test(s.url); }).slice(0, 5);
+        if (!linked.length) return;
+        const div = document.createElement('div');
+        div.className = 'ask-sources';
+        div.appendChild(document.createTextNode('Sources: '));
+        linked.forEach(function (source, i) {
+            if (i > 0) div.appendChild(document.createTextNode(', '));
+            const link = document.createElement('a');
+            link.href = source.url;
+            link.textContent = source.name || source.cpu_model_name || source.gpu_model_name || source.url;
+            div.appendChild(link);
+        });
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
 
     const toggleBtn = document.getElementById('askToggle');
     const panel = document.getElementById('askPanel');
@@ -53,7 +105,8 @@
     function appendMessage(text, role) {
         const div = document.createElement('div');
         div.className = 'ask-message ask-message-' + role;
-        div.textContent = text;
+        if (role === 'assistant') renderRichText(div, text);
+        else div.textContent = text;
         messagesEl.appendChild(div);
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
@@ -114,6 +167,7 @@
             }
 
             appendMessage(data.answer || 'No answer received.', 'assistant');
+            appendSources(data.sources);
         } catch (err) {
             appendMessage('Could not reach the server. Check your connection and try again.', 'error');
         } finally {

@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT))
 
 import github_client  # noqa: E402
 
-APP_MODULES = ("app", "database", "import_data", "llm", "auth", "csv_store", "proposals", "pages")
+APP_MODULES = ("app", "database", "import_data", "llm", "auth", "csv_store", "proposals", "pages", "redirects", "content")
 
 
 class FakeGitHub:
@@ -32,14 +32,17 @@ class FakeGitHub:
 
     def get_file(self, path):
         self._check()
+        if path not in self.files:
+            raise github_client.GitHubError("Not Found", 404)
         return self.files[path], f"sha-{self.versions[path]}"
 
     def put_file(self, path, text, sha, message):
         self._check()
-        if sha != f"sha-{self.versions[path]}":
+        expected = f"sha-{self.versions[path]}" if path in self.files else None
+        if sha != expected:
             raise github_client.GitHubConflict("stale sha", 409)
         self.files[path] = text
-        self.versions[path] += 1
+        self.versions[path] = self.versions.get(path, 0) + 1
         self.commits.append(message)
         return {"commit": {"html_url": f"https://github.com/test/repo/commit/{len(self.commits)}"}}
 

@@ -56,3 +56,7 @@ NVIDIA P4,NVIDIA,P4,Pascal,2016,PCIe (1-slot low-profile),8,GDDR5,0.192,75,0.17,
 NVIDIA M40 24GB,NVIDIA,M40 24GB,Maxwell,2016,PCIe (dual-slot),24,GDDR5,0.288,250,0.21,7,,,,,,PCIe 3.0 x16,False
 NVIDIA M60,NVIDIA,M60,Maxwell,2015,"PCIe (dual-slot, 2 GPUs per board)",16,GDDR5,0.32,300,0.3,9.6,,,,,,PCIe 3.0 x16,False
 NVIDIA K80,NVIDIA,K80,Kepler,2014,"PCIe (dual-slot, 2 GPUs per board)",24,GDDR5,0.48,300,2.91,8.73,,,,,,PCIe 3.0 x16,False
+AMD Instinct MI100,AMD,MI100,CDNA,2020,PCIe (dual-slot),32,HBM2,1.2288,300,11.5,23.1,184.6,,,Infinity Fabric,276,PCIe 4.0 x16,False
+Intel Gaudi 2,Intel,Gaudi 2,Gaudi 2,2022,OAM module,96,HBM2e,2.45,600,,,,,,Ethernet (RoCE),,PCIe 4.0 x16,False
+Intel Gaudi 3,Intel,Gaudi 3,Gaudi 3,2024,OAM module,128,HBM2e,3.7,900,,,1835,1835,,Ethernet (RoCE),,PCIe 5.0 x16,False
+Intel Data Center GPU Max 1100,Intel,Max 1100,Xe-HPC,2023,PCIe (dual-slot),48,HBM2e,1.2288,300,22.2,22.2,,,,Xe Link,,PCIe 5.0 x16,False

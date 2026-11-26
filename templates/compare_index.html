@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "macros.html" import link_list %}
+
+{% block subheading %}<p>Popular server CPUs and datacenter GPUs, side by side</p>{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <p class="lead">Each comparison puts two models' listed specifications next to each other and points out where they differ. They cover specifications only, not benchmark results.</p>
+    <div class="tool-callout">
+        <p><strong>Not listed here?</strong> The interactive comparison tool lets you pick any two CPUs or GPUs from the database.</p>
+        <a class="btn-link" href="/visualizations#compare-tool">Open the comparison tool →</a>
+    </div>
+</section>
+{% if cpu_pairs %}
+<section class="page-section">
+    <h2>Server CPUs</h2>
+    {{ link_list(cpu_pairs) }}
+</section>
+{% endif %}
+{% if gpu_pairs %}
+<section class="page-section">
+    <h2>Datacenter GPUs</h2>
+    {{ link_list(gpu_pairs) }}
+</section>
+{% endif %}
+{% endblock %}

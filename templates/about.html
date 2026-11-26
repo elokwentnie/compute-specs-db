@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block subheading %}<p>Where the data comes from, how it is checked and how to use it</p>{% endblock %}
+
+{% block content %}
+<section class="page-section prose">
+    <p class="lead">
+        Compute Specs DB is a free, open catalog of server hardware specifications. It currently lists
+        {{ cpu_count }} server-class processors across {{ cpu_families }} product families and {{ codenames }}
+        generations, and {{ gpu_count }} datacenter GPUs and accelerators. Every model has its own page, and the
+        whole dataset can be searched, compared and downloaded.
+    </p>
+
+    <h2>Where the data comes from</h2>
+    <p>
+        Specifications are collected from manufacturers' official product pages and datasheets, such as Intel's
+        product specifications (ARK), AMD's processor and accelerator pages, NVIDIA's datasheets and Ampere's Altra
+        specifications. Processor generation codenames, which manufacturers don't always list, were confirmed
+        by hand with TechPowerUp's CPU database. Where sources disagree, the manufacturer's own documentation takes precedence.
+    </p>
+
+    <h2>How validation works</h2>
+    <p>
+        Each entry carries a status. <strong>Validated</strong> means the values have been checked by hand
+        against official manufacturer sources. <strong>Unverified</strong> means the entry was added but has not
+        been checked yet, so treat it with care. {{ validated }} of {{ cpu_count + gpu_count }} entries are
+        currently validated.
+    </p>
+    <p>
+        Some values are simplifications: turbo frequency is the highest single-core boost, TDP is the default
+        rating even when a processor can be configured higher or lower, and maximum memory is the largest
+        amount one processor supports.
+    </p>
+
+    <h2>Corrections and new models</h2>
+    <p>
+        Every spec page has a <strong>Report an error</strong> form; no account is needed. Missing models can be
+        suggested on the <a href="/propose">suggestion page</a>. Reports and suggestions are reviewed by hand
+        before anything changes, and every change to the data is recorded in the
+        <a href="https://github.com/elokwentnie/compute-specs-db" target="_blank" rel="noopener">public GitHub repository</a>,
+        so the full history of each entry is visible.
+    </p>
+
+    <h2>Using the data</h2>
+    <p>
+        The data is free to use under the MIT licence. You can download
+        <a href="/api/export/csv">all CPUs as CSV</a> or <a href="/api/export/gpus/csv">all GPUs as CSV</a>,
+        or query the <a href="/docs">JSON API</a>. If you use it in an article, paper or tool, please link to the
+        relevant spec page or to this site.
+    </p>
+
+    <h2>Independence</h2>
+    <p>
+        Compute Specs DB is an independent open-source project. It is not affiliated with or endorsed by Intel,
+        AMD, NVIDIA or any other manufacturer, and product names are trademarks of their owners.
+    </p>
+</section>
+
+<section class="page-section faq prose">
+    <h2>Frequently asked questions</h2>
+    <div class="faq-search" hidden>
+        <label class="visually-hidden" for="faq-search-about">Search the questions</label>
+        <input type="search" id="faq-search-about" placeholder="Search questions..." autocomplete="off">
+        <p class="faq-empty" hidden>No questions match your search.</p>
+    </div>
+    <div class="faq-list">
+        <details class="faq-item">
+            <summary><h3>Is Compute Specs DB free?</h3></summary>
+            <div class="faq-answer"><p>Yes. The website, the API and the downloads are free, and the data is MIT-licensed.</p></div>
+        </details>
+        <details class="faq-item">
+            <summary><h3>Can I use the data in my own project or product?</h3></summary>
+            <div class="faq-answer"><p>Yes, including commercially, under the terms of the MIT licence. A link back is appreciated.</p></div>
+        </details>
+        <details class="faq-item">
+            <summary><h3>What does "unverified" mean?</h3></summary>
+            <div class="faq-answer"><p>The entry has not yet been checked against official manufacturer sources. It may still be correct, but double-check important values before relying on them.</p></div>
+        </details>
+        <details class="faq-item">
+            <summary><h3>Why is a processor or GPU missing?</h3></summary>
+            <div class="faq-answer"><p>The catalog focuses on server and datacenter hardware and grows over time. <a href="/propose">Suggest a missing model</a> and it will be reviewed.</p></div>
+        </details>
+        <details class="faq-item">
+            <summary><h3>Does the site include prices or benchmarks?</h3></summary>
+            <div class="faq-answer"><p>No. It lists manufacturer specifications only. Prices change too quickly to track reliably, and benchmark results depend heavily on the workload and configuration.</p></div>
+        </details>
+    </div>
+    <script src="/static/js/faq.js?v={{ asset_version }}" defer></script>
+</section>
+{% endblock %}

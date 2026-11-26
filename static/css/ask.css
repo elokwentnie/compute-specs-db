@@ -222,3 +222,19 @@
         bottom: 1rem;
     }
 }
+
+.ask-message-assistant a,
+.ask-sources a {
+    color: var(--text-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.ask-sources {
+    align-self: flex-start;
+    max-width: 90%;
+    margin-top: -0.25rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+}

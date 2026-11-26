@@ -147,7 +147,7 @@
         </div>
 
         <div class="api-links">
-            <div class="api-links-title">📡 Access JSON API:</div>
+            <div class="api-links-title">Explore the data and API:</div>
             <div class="api-links-container">
                 <a href="/api/cpus" target="_blank" class="api-link">
                     <span>📋</span>
@@ -160,6 +160,14 @@
                 <a href="/visualizations" class="api-link">
                     <span>📊</span>
                     <span>Visualizations</span>
+                </a>
+                <a href="/compare" class="api-link">
+                    <span>⚖️</span>
+                    <span>Comparisons</span>
+                </a>
+                <a href="/about" class="api-link">
+                    <span>📖</span>
+                    <span>About the data</span>
                 </a>
                 <a href="/api" target="_blank" class="api-link">
                     <span>ℹ️</span>
@@ -313,10 +321,11 @@
             <div class="data-footer-sources">
                 <a href="https://www.intel.com/content/www/us/en/products/overview.html" target="_blank" rel="noopener">Intel</a>
                 <a href="https://www.amd.com/en/products/specifications/processors.html" target="_blank" rel="noopener">AMD</a>
+                <a href="https://www.nvidia.com/en-us/data-center/" target="_blank" rel="noopener">NVIDIA</a>
+                <a href="https://amperecomputing.com/products/processors" target="_blank" rel="noopener">Ampere</a>
                 <a href="https://www.techpowerup.com/" target="_blank" rel="noopener">TechPowerUp</a>
-                <a href="https://www.cpubenchmark.net/" target="_blank" rel="noopener">PassMark</a>
             </div>
-            <p>Found an error? <a href="https://github.com/elokwentnie/compute-specs-db/issues/new?template=report-data-error.yml" target="_blank" rel="noopener">Report it on GitHub</a> | <a href="/propose">Suggest a new CPU or GPU</a></p>
+            <p>Found an error? Open the model's page and use <strong>Report an error</strong>, no account needed. | <a href="/propose">Suggest a new CPU or GPU</a> | <a href="/about">How the data is checked</a></p>
         </footer>
     </div>
 
@@ -329,6 +338,8 @@
                     <a href="/cpus">CPUs</a>
                     <a href="/gpus">GPUs</a>
                     <a href="/visualizations">Visualizations</a>
+                    <a href="/compare">Comparisons</a>
+                    <a href="/about">About</a>
                     <a href="/docs" target="_blank">API Docs</a>
                     <a href="https://github.com/elokwentnie/compute-specs-db" target="_blank" rel="noopener">GitHub</a>
                     <a href="https://github.com/elokwentnie/compute-specs-db/issues/new/choose" target="_blank" rel="noopener">Contribute</a>
@@ -384,6 +395,12 @@
             return String(value)
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        // Built by joining pieces so no link-shaped text is left in the page source
+        // (Google tried to crawl the literal "/gpu/${...}" template before).
+        function specUrl(kind, slug) {
+            return ['', kind, encodeURIComponent(slug)].join('/');
         }
 
         function validatedPill(validated) {
@@ -519,7 +536,7 @@
                         : '<span>-</span>';
                     row.innerHTML = `
                         <td>${cpu.id}</td>
-                        <td><strong><a class="model-link" href="/cpu/${encodeURIComponent(cpu.slug)}">${esc(cpu.cpu_model_name || '-')}</a></strong></td>
+                        <td><strong><a class="model-link" href="${specUrl('cpu', cpu.slug)}">${esc(cpu.cpu_model_name || '-')}</a></strong></td>
                         <td>${validatedPill(cpu.validated)}</td>
                         <td>${codenameBadge}</td>
                         <td>${esc(cpu.family || '-')}</td>
@@ -553,7 +570,7 @@
                         : '<span>-</span>';
                     row.innerHTML = `
                         <td>${gpu.id}</td>
-                        <td><strong><a class="model-link" href="/gpu/${encodeURIComponent(gpu.slug)}">${esc(gpu.gpu_model_name || '-')}</a></strong></td>
+                        <td><strong><a class="model-link" href="${specUrl('gpu', gpu.slug)}">${esc(gpu.gpu_model_name || '-')}</a></strong></td>
                         <td>${validatedPill(gpu.validated)}</td>
                         <td>${vendorBadge}</td>
                         <td>${esc(gpu.gpu_model || '-')}</td>

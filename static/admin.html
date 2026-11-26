@@ -25,6 +25,7 @@
 <body>
     <div class="container">
         <header>
+            <a href="/" class="home-button" title="Back to the home page"><span class="home-button-arrow" aria-hidden="true">‹</span> Compute Specs DB</a>
             <button type="button" class="theme-toggle" aria-label="Toggle dark mode" title="Dark mode">
                 <span class="theme-toggle-icon">🌙</span>
             </button>
@@ -50,6 +51,7 @@
         <div class="admin-panel" id="adminPanel">
             <div class="tabs" style="flex-wrap:wrap;">
                 <button class="tab" data-tab="proposals" onclick="switchTab('proposals')">📨 Proposals<span id="proposalCount" class="tab-count hidden"></span></button>
+                <button class="tab" data-tab="reports" onclick="switchTab('reports')">🐞 Error reports<span id="reportCount" class="tab-count hidden"></span></button>
                 <button class="tab" data-tab="browse" onclick="switchTab('browse')">📋 Browse CPUs</button>
                 <button class="tab active" data-tab="create" onclick="switchTab('create')">➕ Create CPU</button>
                 <button class="tab" data-tab="edit" onclick="switchTab('edit')">✏️ Edit CPU</button>
@@ -77,6 +79,19 @@
                 <div id="proposalsList"></div>
             </div>
 
+            <div id="reportsTab" class="tab-content">
+                <div class="proposals-toolbar">
+                    <h2>Error reports</h2>
+                    <button type="button" class="btn-secondary" onclick="loadReports()">Refresh</button>
+                </div>
+                <p class="browse-description">
+                    Wrong values reported with the <strong>Report an error</strong> form on spec pages. Each one is a GitHub issue labelled <code>data-error</code>.
+                    Check the source, then apply the fix (committed to the CSV on GitHub and the live database), or close the report.
+                </p>
+                <div id="reportsStatus" class="browse-status-text hidden"></div>
+                <div id="reportsList"></div>
+            </div>
+
             <div id="browseTab" class="tab-content">
                 <h2>Browse & Edit CPUs</h2>
                 <p class="browse-description">Search and click Edit to change any CPU. No need to look up IDs.</p>
@@ -84,6 +99,14 @@
                     <div class="form-group browse-search-group">
                         <label for="browseSearch">Search</label>
                         <input type="text" id="browseSearch" placeholder="Search by name, family, codename...">
+                    </div>
+                    <div class="form-group browse-show-group">
+                        <label for="browseShow">Show</label>
+                        <select id="browseShow">
+                            <option value="all">All</option>
+                            <option value="unverified">Unverified only</option>
+                            <option value="validated">Validated only</option>
+                        </select>
                     </div>
                     <details class="column-picker">
                         <summary>Columns</summary>
@@ -261,6 +284,14 @@
                     <div class="form-group browse-search-group">
                         <label for="browseGpuSearch">Search</label>
                         <input type="text" id="browseGpuSearch" placeholder="Search by name, vendor, memory type...">
+                    </div>
+                    <div class="form-group browse-show-group">
+                        <label for="browseGpuShow">Show</label>
+                        <select id="browseGpuShow">
+                            <option value="all">All</option>
+                            <option value="unverified">Unverified only</option>
+                            <option value="validated">Validated only</option>
+                        </select>
                     </div>
                     <details class="column-picker">
                         <summary>Columns</summary>
@@ -567,6 +598,8 @@
         let browseGpus = [];
         let proposals = [];
         let proposalsLoaded = false;
+        let reports = [];
+        let reportsLoaded = false;
 
         const SPEC_FIELDS = {
             cpu: [
@@ -743,6 +776,7 @@
                 showMessage('Login successful!', 'success');
                 await loadSyncInfo();
                 if (!proposalsLoaded) loadProposals();
+                if (!reportsLoaded) loadReports();  // fills the tab's count badge
                 // Open the tab from the URL hash, e.g. #edit/42.
                 history.replaceState({ ...(history.state || {}), route: location.hash.slice(1) }, '');
                 applyRoute();
@@ -772,7 +806,7 @@
         // ---------- Tabs and browser history ----------
         // Each tab gets a #hash history entry so browser Back works.
 
-        const TAB_NAMES = ['proposals', 'browse', 'create', 'edit', 'delete',
+        const TAB_NAMES = ['proposals', 'reports', 'browse', 'create', 'edit', 'delete',
             'browseGpu', 'createGpu', 'editGpu', 'deleteGpu', 'import'];
         try { history.scrollRestoration = 'manual'; } catch (_) {}
 
@@ -800,6 +834,7 @@
             if (tabName === 'browseGpu') ready = loadBrowse('gpu');
             // Load once; Refresh reloads explicitly so in-progress edits aren't wiped.
             if (tabName === 'proposals' && !proposalsLoaded) loadProposals();
+            if (tabName === 'reports' && !reportsLoaded) loadReports();
             return ready;
         }
 
@@ -835,7 +870,7 @@
         const BROWSE = {
             cpu: {
                 label: 'CPU', tab: 'browse', editTab: 'edit',
-                searchId: 'browseSearch', headId: 'browseTableHead', bodyId: 'browseTableBody',
+                searchId: 'browseSearch', showId: 'browseShow', headId: 'browseTableHead', bodyId: 'browseTableBody',
                 containerId: 'browseTableContainer', loadingId: 'browseLoading', emptyId: 'browseEmpty',
                 columns: [
                     { key: 'id', label: 'ID', default: true },
@@ -856,7 +891,7 @@
             },
             gpu: {
                 label: 'GPU', tab: 'browseGpu', editTab: 'editGpu',
-                searchId: 'browseGpuSearch', headId: 'browseGpuTableHead', bodyId: 'browseGpuTableBody',
+                searchId: 'browseGpuSearch', showId: 'browseGpuShow', headId: 'browseGpuTableHead', bodyId: 'browseGpuTableBody',
                 containerId: 'browseGpuTableContainer', loadingId: 'browseGpuLoading', emptyId: 'browseGpuEmpty',
                 columns: [
                     { key: 'id', label: 'ID', default: true },
@@ -965,9 +1000,11 @@
             const searchText = (document.getElementById(cfg.searchId).value || '').trim().toLowerCase();
             const textKeys = SPEC_FIELDS[kind].filter(f => f.type === 'text').map(f => f.key);
             const list = getList(kind);
-            const filtered = searchText
-                ? list.filter(item => textKeys.some(k => String(item[k] || '').toLowerCase().includes(searchText)))
-                : list;
+            // Filter on the saved flag, so a row toggled in batch mode stays visible until it is saved.
+            const show = document.getElementById(cfg.showId).value;
+            const filtered = list.filter(item =>
+                (show === 'all' || Boolean(item.validated) === (show === 'validated')) &&
+                (!searchText || textKeys.some(k => String(item[k] || '').toLowerCase().includes(searchText))));
             cfg.shown = filtered;
 
             const container = document.getElementById(cfg.containerId);
@@ -978,7 +1015,7 @@
             if (filtered.length === 0) {
                 tbody.innerHTML = '';
                 container.classList.add('hidden');
-                emptyEl.textContent = `No ${cfg.label}s match your search.`;
+                emptyEl.textContent = `No ${cfg.label}s match your search and filter.`;
                 emptyEl.classList.remove('hidden');
                 return;
             }
@@ -1351,6 +1388,12 @@
             document.getElementById(BROWSE[kind].searchId).addEventListener('input', () => {
                 if (getList(kind).length) renderBrowse(kind);
             });
+            const showSelect = document.getElementById(BROWSE[kind].showId);
+            showSelect.value = storageGet(`admin-show-${kind}`) || 'all';
+            showSelect.addEventListener('change', () => {
+                storageSet(`admin-show-${kind}`, showSelect.value);
+                if (getList(kind).length) renderBrowse(kind);
+            });
             renderColumnMenu(kind);
         });
         setBatchMode(storageGet('admin-batch-mode') === '1');
@@ -1552,6 +1595,170 @@
             }
         }
 
+        // ---------- Error reports ----------
+
+        async function loadReports() {
+            const status = document.getElementById('reportsStatus');
+            const list = document.getElementById('reportsList');
+            reportsLoaded = true;
+            status.textContent = 'Loading reports…';
+            status.classList.remove('hidden');
+            try {
+                reports = await apiFetch('/api/reports', { headers: getAuthHeaders() });
+            } catch (err) {
+                reports = [];
+                list.innerHTML = '';
+                status.textContent = 'Could not load reports: ' + err.message;
+                updateReportCount();
+                return;
+            }
+            updateReportCount();
+            if (reports.length === 0) {
+                list.innerHTML = '';
+                status.textContent = 'No open error reports. 🎉';
+                return;
+            }
+            status.classList.add('hidden');
+            list.innerHTML = reports.map(renderReport).join('');
+        }
+
+        function updateReportCount() {
+            const badge = document.getElementById('reportCount');
+            badge.textContent = reports.length;
+            badge.classList.toggle('hidden', reports.length === 0);
+        }
+
+        function shownValue(value) {
+            return value === null || value === undefined || value === '' ? '—' : String(value);
+        }
+
+        function renderReport(r) {
+            const n = r.number;
+            const opened = r.created_at ? new Date(r.created_at).toLocaleDateString() : '';
+            const head = `
+                <div class="proposal-head">
+                    <span class="kind-badge">${r.kind ? r.kind.toUpperCase() : '?'}</span>
+                    <h3>${escapeHtml(r.title)}</h3>
+                </div>
+                <div class="proposal-meta">
+                    <a href="${escapeHtml(r.url)}" target="_blank" rel="noopener">#${n} on GitHub</a>${opened ? ' · opened ' + escapeHtml(opened) : ''}${r.page_url ? ` · <a href="${escapeHtml(r.page_url)}" target="_blank">spec page</a>` : ''}
+                </div>`;
+
+            if (!r.parsed) {
+                return `<div class="proposal-card" id="report-${n}">${head}
+                    <div class="proposal-warning">This issue was not sent from the website form, so it has no machine-readable data. Read it on GitHub, fix the entry in the Edit tab if needed, then close it here.</div>
+                    ${reportCloseControls(n)}</div>`;
+            }
+
+            const missing = r.item_id === null
+                ? `<div class="proposal-warning">"${escapeHtml(r.name)}" is no longer in the database (renamed or deleted). Close this report.</div>`
+                : '';
+            const changed = r.single_field && r.item_id !== null && String(r.live_value ?? '') !== String(r.reported_current ?? '')
+                ? `<div class="proposal-warning">The value has changed since the report (now ${escapeHtml(shownValue(r.live_value))}). It may already be fixed.</div>`
+                : '';
+            const notes = r.notes ? `<div class="proposal-notes">${escapeHtml(r.notes)}</div>` : '';
+            const editButton = r.item_id !== null
+                ? `<button type="button" class="btn-secondary" onclick="editReportedItem('${r.kind}', ${r.item_id})">Open in Edit tab</button>`
+                : '';
+            const applyField = r.single_field && r.item_id !== null
+                ? `<div class="form-grid">
+                        <div class="form-group">
+                            <label for="report-value-${n}">New value for ${escapeHtml(r.field_label)}</label>
+                            <input type="text" id="report-value-${n}" value="${escapeHtml(String(r.suggested ?? ''))}">
+                        </div>
+                   </div>`
+                : '';
+            const applyButton = applyField ? `<button type="button" onclick="applyReport(${n})">Apply fix</button>` : '';
+
+            return `<div class="proposal-card" id="report-${n}">${head}
+                <table class="report-values">
+                    <tr><th>Model</th><td>${escapeHtml(r.name)}</td></tr>
+                    <tr><th>Field</th><td>${escapeHtml(r.field_label)}</td></tr>
+                    ${r.single_field ? `<tr><th>Value when reported</th><td>${escapeHtml(shownValue(r.reported_current))}</td></tr>` : ''}
+                    <tr><th>Suggested</th><td><strong>${escapeHtml(shownValue(r.suggested))}</strong></td></tr>
+                </table>
+                <div class="proposal-source"><strong>Source:</strong> ${r.source_url ? safeLink(r.source_url) : '—'}</div>
+                ${notes}
+                ${missing}
+                ${changed}
+                ${applyField}
+                <div class="proposal-actions">
+                    ${applyButton}
+                    ${editButton}
+                    <button type="button" class="btn-danger" onclick="toggleReportClose(${n})">Close…</button>
+                </div>
+                ${reportCloseControls(n, true)}
+            </div>`;
+        }
+
+        function reportCloseControls(n, hidden = false) {
+            return `<div class="reject-box${hidden ? ' hidden' : ''}" id="report-close-${n}">
+                <label for="report-message-${n}">Note (optional, posted publicly on the issue)</label>
+                <textarea id="report-message-${n}" maxlength="2000" placeholder="e.g. The official spec page lists 360 W"></textarea>
+                <div class="proposal-actions">
+                    <button type="button" onclick="closeReport(${n}, true)">Close as fixed</button>
+                    <button type="button" class="btn-danger" onclick="closeReport(${n}, false)">Dismiss (no change)</button>
+                </div>
+            </div>`;
+        }
+
+        function toggleReportClose(n) {
+            document.getElementById(`report-close-${n}`).classList.toggle('hidden');
+        }
+
+        function setReportBusy(n, busy) {
+            document.querySelectorAll(`#report-${n} button, #report-${n} input, #report-${n} textarea`)
+                .forEach(el => { el.disabled = busy; });
+        }
+
+        async function editReportedItem(kind, id) {
+            try {
+                const known = getList(kind).find(x => x.id === id);
+                openEditForm(kind, known || await apiFetch(`/api/${kind}s/${id}`));
+                switchTab(BROWSE[kind].editTab, { id });
+                window.scrollTo(0, 0);
+            } catch (err) {
+                showMessage(`Error loading ${BROWSE[kind].label}: ${err.message}`, 'error');
+            }
+        }
+
+        async function applyReport(n) {
+            const r = reports.find(x => x.number === n);
+            if (!r) return;
+            const value = document.getElementById(`report-value-${n}`).value.trim();
+            setReportBusy(n, true);
+            try {
+                const result = await apiFetch(`/api/reports/${n}/apply`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ value })
+                });
+                if (r.kind === 'cpu') browseCpus = []; else browseGpus = [];
+                showMessage(savedMessage(`${result.name}: ${r.field_label} changed from ${shownValue(result.old_value)} to ${shownValue(result.new_value)}, and #${n} was closed.`), 'success');
+                loadReports();
+            } catch (err) {
+                setReportBusy(n, false);
+                showMessage(`Could not apply #${n}: ${err.message}`, 'error');
+            }
+        }
+
+        async function closeReport(n, fixed) {
+            const message = document.getElementById(`report-message-${n}`).value.trim();
+            setReportBusy(n, true);
+            try {
+                await apiFetch(`/api/reports/${n}/close`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ fixed, message: message || null })
+                });
+                showMessage(`Closed report #${n}${fixed ? ' as fixed' : ''}.`, 'success');
+                loadReports();
+            } catch (err) {
+                setReportBusy(n, false);
+                showMessage(`Could not close #${n}: ${err.message}`, 'error');
+            }
+        }
+
         // ---------- Imports (database only) ----------
 
         async function importFromRepo() {
@@ -1636,6 +1843,8 @@
                 <nav class="site-footer-links">
                     <a href="/">Data Table</a>
                     <a href="/visualizations">Visualizations</a>
+                    <a href="/compare">Comparisons</a>
+                    <a href="/about">About</a>
                     <a href="/docs" target="_blank">API Docs</a>
                     <a href="https://github.com/elokwentnie/compute-specs-db" target="_blank" rel="noopener">GitHub</a>
                 </nav>

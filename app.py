@@ -39,6 +39,7 @@ import csv_store
 import github_client
 import pages
 import proposals
+import redirects
 
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "production")
 ENABLE_ADMIN_UI = os.environ.get("ENABLE_ADMIN_UI", "false").lower() == "true"
@@ -77,6 +78,18 @@ def auto_import_if_empty():
         db.close()
 
 auto_import_if_empty()
+
+
+def load_redirects():
+    db = SessionLocal()
+    try:
+        redirects.load_into_db(db)
+    except Exception:
+        logging.getLogger(__name__).exception("Could not load redirects")
+    finally:
+        db.close()
+
+load_redirects()
 
 app = FastAPI(
     title="Compute Specs DB API",
@@ -483,14 +496,16 @@ async def ask(
             status_code=429,
             detail="Too many requests to the language model. Please try again in a minute.",
         )
+    # 503 rather than 502/504: Cloudflare replaces 502 and 504 responses with its own
+    # plain "error code" page, which would hide these messages from the chat window.
     except LLMTimeoutError:
         raise HTTPException(
-            status_code=504,
+            status_code=503,
             detail="The request timed out. Please try a simpler question.",
         )
     except LLMError as exc:
         logger.exception("Ask feature error")
-        raise HTTPException(status_code=502, detail=str(exc))
+        raise HTTPException(status_code=503, detail=str(exc))
 
     return AskResponse(answer=result["answer"], sources=result.get("sources", []))
 
@@ -835,6 +850,9 @@ def _update_spec(db: Session, kind: str, item_id: int, changes: dict):
         setattr(item, field_name, value)
     db.commit()
     db.refresh(item)
+    new_name = values[csv_store.SCHEMAS[kind]["key_attr"]]
+    if new_name != old_name:
+        redirects.record_rename(db, kind, old_name, new_name)
     return item
 
 
@@ -909,6 +927,9 @@ def _update_specs_batch(db: Session, kind: str, updates: list) -> list:
     items = [entry[0] for entry in prepared]
     for item in items:
         db.refresh(item)
+    for _, old_name, values, _ in prepared:
+        if values[key] != old_name:
+            redirects.record_rename(db, kind, old_name, values[key])
     return items
 
 
@@ -1179,6 +1200,7 @@ def _submit_report(kind: str, item_id: int, payload: DataErrorReport, db: Sessio
         kind,
         getattr(item, csv_store.SCHEMAS[kind]["key_attr"]),
         f"{SITE_URL}/{kind}/{item.slug}",
+        payload.field,
         labels[payload.field],
         current,
         suggested,
@@ -1206,6 +1228,142 @@ def report_cpu_error(request: Request, cpu_id: int, payload: DataErrorReport, db
 def report_gpu_error(request: Request, gpu_id: int, payload: DataErrorReport, db: Session = Depends(get_db)):
     """Report a wrong GPU value; opens a GitHub issue."""
     return _submit_report("gpu", gpu_id, payload, db)
+
+
+# ---------- Reviewing data-error reports (admin) ----------
+
+class ApplyReportRequest(BaseModel):
+    """The value to store, as edited by the admin (defaults to the reported value)."""
+    value: Optional[str] = Field(None, max_length=PROPOSAL_MAX_TEXT)
+
+
+class CloseReportRequest(BaseModel):
+    fixed: bool = False
+    message: Optional[str] = Field(None, max_length=2000)
+
+
+SPEC_UPDATE_MODELS = {"cpu": CPUSpecUpdate, "gpu": GPUSpecUpdate}
+
+
+def _find_reported_item(db: Session, kind: str, name: str):
+    model = SPEC_MODELS[kind]
+    column = getattr(model, csv_store.SCHEMAS[kind]["key_attr"])
+    return db.query(model).filter(func.lower(column) == name.strip().lower()).first()
+
+
+def _load_open_report(number: int) -> tuple[dict, Optional[dict]]:
+    try:
+        issue = github_client.get_issue(number)
+    except github_client.GitHubError as exc:
+        status = 404 if exc.status == 404 else 502
+        raise HTTPException(status_code=status, detail=f"Could not load issue #{number}: {exc}")
+    if not proposals.is_open_report(issue):
+        raise HTTPException(status_code=409, detail=f"Issue #{number} is not an open data-error report")
+    return issue, proposals.parse_report(issue)
+
+
+def _close_report(number: int, message: str, label: str, reason: str) -> None:
+    try:
+        github_client.comment(number, message)
+        github_client.close_issue(number, [label], reason=reason)
+    except github_client.GitHubError as exc:
+        raise HTTPException(status_code=502, detail=f"Could not update issue #{number}: {exc}")
+
+
+@app.get("/api/reports")
+def list_reports(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    """List open data-error reports, with each entry's current value (requires authentication)"""
+    _require_github()
+    try:
+        issues = github_client.list_issues([proposals.REPORT_LABEL])
+    except github_client.GitHubError as exc:
+        raise HTTPException(status_code=502, detail=f"Could not load reports from GitHub: {exc}")
+
+    result = []
+    for issue in sorted(issues, key=lambda i: i["number"]):
+        payload = proposals.parse_report(issue)
+        entry = {
+            "number": issue["number"], "title": issue["title"], "url": issue["html_url"],
+            "created_at": issue.get("created_at"), "parsed": payload is not None,
+        }
+        if payload:
+            item = _find_reported_item(db, payload["kind"], payload["name"])
+            field = payload["field"]
+            entry.update(
+                kind=payload["kind"], name=payload["name"], field=field,
+                field_label=payload.get("field_label") or field,
+                reported_current=payload.get("current"), suggested=payload.get("suggested"),
+                source_url=payload.get("source_url"), notes=payload.get("notes"),
+                item_id=item.id if item else None,
+                page_url=f"/{payload['kind']}/{item.slug}" if item else None,
+                live_value=getattr(item, field, None) if item and field != proposals.REPORT_OTHER_FIELD else None,
+                single_field=field != proposals.REPORT_OTHER_FIELD,
+            )
+        result.append(entry)
+    return result
+
+
+@app.post("/api/reports/{number}/apply")
+@limiter.limit("30/minute")
+def apply_report(
+    request: Request,
+    number: int,
+    payload: ApplyReportRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Apply a reported fix to the entry (CSV on GitHub and database), then close the issue."""
+    _require_github()
+    _, report = _load_open_report(number)
+    if report is None or report["field"] == proposals.REPORT_OTHER_FIELD:
+        raise HTTPException(status_code=409, detail="This report has no single field to apply; edit the entry instead")
+    kind, field = report["kind"], report["field"]
+    item = _find_reported_item(db, kind, report["name"])
+    if item is None:
+        raise HTTPException(status_code=404, detail=f"'{report['name']}' is no longer in the database")
+
+    raw = payload.value if payload.value is not None else report.get("suggested")
+    raw = " ".join(str(raw or "").split())
+    try:
+        changes = SPEC_UPDATE_MODELS[kind](**{field: raw or None}).model_dump(exclude_unset=True)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=f"'{raw}' is not a valid value: {exc.errors()[0]['msg']}")
+
+    old_value = getattr(item, field)
+    item = _update_spec(db, kind, item.id, changes)
+    new_value = getattr(item, field)
+    label = report.get("field_label") or field
+    _close_report(
+        number,
+        f"Thanks for the report! **{label}** was changed from `{old_value}` to `{new_value}`.",
+        proposals.FIXED_LABEL, "completed",
+    )
+    return {"number": number, "field": field, "old_value": old_value, "new_value": new_value,
+            "name": getattr(item, csv_store.SCHEMAS[kind]["key_attr"])}
+
+
+@app.post("/api/reports/{number}/close")
+@limiter.limit("30/minute")
+def close_report(
+    request: Request,
+    number: int,
+    payload: CloseReportRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Close a report without changing data: as already fixed, or dismissed with a reason."""
+    _require_github()
+    _load_open_report(number)
+    note = (payload.message or "").strip()
+    if payload.fixed:
+        message = "Thanks for the report! The entry has been corrected."
+    else:
+        message = "Thanks for the report! After checking the sources, the entry was left unchanged."
+    if note:
+        message += f"\n\n{note}"
+    _close_report(number, message,
+                  proposals.FIXED_LABEL if payload.fixed else proposals.DISMISSED_LABEL,
+                  "completed" if payload.fixed else "not_planned")
+    return {"number": number, "closed": True, "fixed": payload.fixed}
 
 
 def _load_open_proposal(number: int) -> tuple[dict, str, Optional[dict]]:

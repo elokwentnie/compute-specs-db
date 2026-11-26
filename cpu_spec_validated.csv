@@ -176,7 +176,7 @@ AMD EPYC 7303P 16-Core Processor,AMD EPYC,EPYC 7303P,Milan,16,32,3.4,64,130,2023
 AMD EPYC 7313P 16-Core Processor,AMD EPYC,EPYC 7313P,Milan,16,32,3.7,128,155,2021,4.0,True
 AMD EPYC 7443P 24-Core Processor,AMD EPYC,EPYC 7443P,Milan,24,48,4,128,200,2021,4.0,True
 AMD EPYC 7713 64-Core Processor,AMD EPYC,EPYC 7713,Milan,64,128,3.67,256,225,2021,4.0,True
-AMD EPYC 7373X 16-Core Processor,AMD EPYC,EPYC 7373X,Milan-X,16,32,3.8,768,240,2021,4.0,True
+AMD EPYC 7373X 16-Core Processor,AMD EPYC,EPYC 7373X,Milan-X,16,32,3.8,768,240,2022,4.0,False
 AMD EPYC 8324P 32-Core Processor,AMD EPYC,EPYC 8324P,Siena,32,64,3,128,180,2023,1.0,True
 AMD EPYC 8434PN 48-Core Processor,AMD EPYC,EPYC 8434PN,Siena,48,96,3,128,155,2023,1.0,True
 AMD EPYC 9224 24-Core Processor,AMD EPYC,EPYC 9224,Genoa,24,48,3.7,64,200,2022,6.0,True
@@ -427,3 +427,27 @@ Intel(R) Xeon(R) 6780E,Intel Xeon 6,Xeon 6780E,Sierra Forest,144,144,3,108,330,2
 Ampere(R) Altra(R) Processor Q80-30,Ampere Altra,Altra Q80-30,Quicksilver,80,80,3.0,32,210,2020,4.0,True
 Ampere(R) Altra(R) Max Processor M128-30,Ampere Altra Max,Altra Max M128-30,Mystique,128,128,3.0,16,250,2021,4.0,True
 NVIDIA Grace CPU C1,NVIDIA Grace,Grace,Grace,72,72,3.1,114,250,2023,0.24,True
+AMD EPYC 7401 24-Core Processor,AMD EPYC,EPYC 7401,Naples,24,48,3,64,170,2017,2,False
+AMD EPYC 7401P 24-Core Processor,AMD EPYC,EPYC 7401P,Naples,24,48,3,64,170,2017,2,False
+AMD EPYC 7281 16-Core Processor,AMD EPYC,EPYC 7281,Naples,16,32,2.7,32,170,2017,2,False
+AMD EPYC 7261 8-Core Processor,AMD EPYC,EPYC 7261,Naples,8,16,2.9,64,170,2017,2,False
+AMD EPYC 7251 8-Core Processor,AMD EPYC,EPYC 7251,Naples,8,16,2.9,32,120,2017,2,False
+AMD EPYC 4584PX 16-Core Processor,AMD EPYC,EPYC 4584PX,Raphael,16,32,5.7,128,120,2024,0.192,False
+AMD EPYC 4484PX 12-Core Processor,AMD EPYC,EPYC 4484PX,Raphael,12,24,5.6,128,120,2024,0.192,False
+AMD EPYC 4464P 12-Core Processor,AMD EPYC,EPYC 4464P,Raphael,12,24,5.4,64,65,2024,0.192,False
+AMD EPYC 4364P 8-Core Processor,AMD EPYC,EPYC 4364P,Raphael,8,16,5.4,32,105,2024,0.192,False
+AMD EPYC 4344P 8-Core Processor,AMD EPYC,EPYC 4344P,Raphael,8,16,5.3,32,65,2024,0.192,False
+AMD EPYC 4244P 6-Core Processor,AMD EPYC,EPYC 4244P,Raphael,6,12,5.1,32,65,2024,0.192,False
+AMD EPYC 4124P 4-Core Processor,AMD EPYC,EPYC 4124P,Raphael,4,8,5.1,16,65,2024,0.192,False
+Intel(R) Xeon(R) Platinum 8180 CPU @ 2.50,Intel Xeon Platinum,Platinum 8180,Skylake,28,56,3.8,38.5,205,2017,0.768,False
+Intel(R) Xeon(R) Platinum 8176 CPU @ 2.10,Intel Xeon Platinum,Platinum 8176,Skylake,28,56,3.8,38.5,165,2017,0.768,False
+Intel(R) Xeon(R) Platinum 8170 CPU @ 2.10,Intel Xeon Platinum,Platinum 8170,Skylake,26,52,3.7,35.75,165,2017,0.768,False
+Intel(R) Xeon(R) Platinum 8168 CPU @ 2.70,Intel Xeon Platinum,Platinum 8168,Skylake,24,48,3.7,33,205,2017,0.768,False
+Intel(R) Xeon(R) Platinum 8153 CPU @ 2.00,Intel Xeon Platinum,Platinum 8153,Skylake,16,32,2.8,22,125,2017,0.768,False
+Intel(R) Xeon(R) Gold 6154 CPU @ 3.00,Intel Xeon Gold,Gold 6154,Skylake,18,36,3.7,24.75,200,2017,0.768,False
+Intel(R) Xeon(R) Platinum 8270 CPU @ 2.70,Intel Xeon Platinum,Platinum 8270,Cascade Lake,26,52,4,35.75,205,2019,1,False
+Intel(R) Xeon(R) Platinum 8268 CPU @ 2.90,Intel Xeon Platinum,Platinum 8268,Cascade Lake,24,48,3.9,35.75,205,2019,1,False
+Intel(R) Xeon(R) Platinum 8253 CPU @ 2.20,Intel Xeon Platinum,Platinum 8253,Cascade Lake,16,32,3,22,125,2019,1,False
+Intel(R) Xeon(R) Platinum 9282 CPU @ 2.60,Intel Xeon Platinum,Platinum 9282,Cascade Lake,56,112,3.8,77,400,2019,,False
+Intel(R) Xeon(R) Gold 6246R CPU @ 3.40,Intel Xeon Gold,Gold 6246R,Cascade Lake,16,32,4.1,35.75,205,2020,1,False
+Intel(R) Xeon(R) Silver 4215R CPU @ 3.20,Intel Xeon Silver,Silver 4215R,Cascade Lake,8,16,4,11,130,2020,1,False

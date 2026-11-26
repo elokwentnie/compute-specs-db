@@ -64,6 +64,10 @@ def render_issue(kind: str, data: dict[str, Any], source_url: str, notes: str | 
 
 
 REPORT_LABEL = "data-error"
+FIXED_LABEL = "fixed"
+DISMISSED_LABEL = "dismissed"
+REPORT_MARKER = "<!-- report-data -->"
+_REPORT_BLOCK = re.compile(re.escape(REPORT_MARKER) + r"\s*````json\s*\n(.*?)\n````", re.DOTALL)
 REPORT_OTHER_FIELD = "other"
 
 
@@ -73,7 +77,7 @@ def report_fields(kind: str) -> list[tuple[str, str]]:
     return [*fields, (REPORT_OTHER_FIELD, "Other / several fields")]
 
 
-def render_report(kind: str, name: str, page_url: str, field_label: str, current: Any,
+def render_report(kind: str, name: str, page_url: str, field: str, field_label: str, current: Any,
                   suggested: str, source_url: str | None, notes: str | None) -> tuple[str, str]:
     """Return (title, body) for a data-error report issue."""
     schema = SCHEMAS[kind]
@@ -94,8 +98,32 @@ def render_report(kind: str, name: str, page_url: str, field_label: str, current
     ]
     if notes:
         lines += ["**Notes:**", "", "```text", notes.replace("```", "'''"), "```", ""]
-    lines.append("_Fix the entry in the admin panel if the report is correct, then close this issue._")
-    return title, "\n".join(lines) + "\n"
+    lines += ["_Review this report in the admin panel: apply the fix or dismiss it._", "", REPORT_MARKER]
+    payload = {
+        "kind": kind, "name": clean_name, "field": field, "field_label": field_label,
+        "current": current, "suggested": suggested, "source_url": source_url, "notes": notes,
+    }
+    payload_json = json.dumps(payload, indent=2, ensure_ascii=False).replace("`", "\\u0060")
+    return title, "\n".join(lines) + f"\n````json\n{payload_json}\n````\n"
+
+
+def parse_report(issue: dict[str, Any]) -> dict[str, Any] | None:
+    """Extract the report payload from a data-error issue, or None if it has none."""
+    match = _REPORT_BLOCK.search(issue.get("body") or "")
+    if not match:
+        return None
+    try:
+        payload = json.loads(match.group(1))
+    except ValueError:
+        return None
+    if payload.get("kind") not in SCHEMAS or not payload.get("name") or not payload.get("field"):
+        return None
+    return payload
+
+
+def is_open_report(issue: dict[str, Any]) -> bool:
+    labels = {label["name"] for label in issue.get("labels", [])}
+    return issue.get("state") == "open" and REPORT_LABEL in labels
 
 
 def parse_issue(issue: dict[str, Any]) -> dict[str, Any] | None:
